@@ -42,6 +42,7 @@ type UIBrandingSpec = pkgplugin.UIBrandingSpec
 type UIAuthSpec = pkgplugin.UIAuthSpec
 type UIPWASpec = pkgplugin.UIPWASpec
 type MCPToolSpec = pkgplugin.MCPToolSpec
+type AppModeSpec = pkgplugin.AppModeSpec
 
 // DefaultResourcePolicy re-exports the default policy constructor.
 var DefaultResourcePolicy = pkgplugin.DefaultResourcePolicy

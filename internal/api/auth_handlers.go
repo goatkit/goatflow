@@ -230,14 +230,11 @@ var HandleAuthLogin = func(c *gin.Context) {
 	// (auth tokens are httpOnly for security, but JS needs to know user is logged in)
 	httpcookie.SetAuthState(c, "goatflow_logged_in", "1", sessionTimeout)
 
-	redirectTarget := "/dashboard"
-	if strings.EqualFold(user.Role, "customer") {
-		redirectTarget = "/customer"
-	}
-
-	// Check if a plugin has set a custom landing page
-	if lp := shared.GetLandingPage(); lp != "" && redirectTarget == "/dashboard" {
-		redirectTarget = lp
+	// Customers' ids overlap agents' ids: never resolve an agent landing
+	// page for a customer login.
+	redirectTarget := "/customer"
+	if !strings.EqualFold(user.Role, "customer") {
+		redirectTarget = agentLandingRedirect(user.ID)
 	}
 
 	if strings.Contains(contentType, "application/json") {

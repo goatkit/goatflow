@@ -408,7 +408,37 @@ return &plugin.GKRegistration{
 }
 ```
 
-This pattern is ideal for standalone products built on the GoatKit platform — the plugin becomes the entire user experience while still leveraging GoatKit's auth, database, and plugin infrastructure.
+This pattern is ideal for standalone products built on the GoatKit platform — the plugin becomes the entire user experience while still leveraging GoatKit's auth, database, and plugin infrastructure. It applies to **every** agent, administrators included, which suits an instance that runs nothing but your plugin.
+
+### App Mode (per group)
+
+On a mixed instance — helpdesk agents, your plugin's users and administrators side by side — hide the helpdesk only for the agents who live in your plugin. `AppMode` is resolved per user from group membership, so adding someone to a group is the whole switch:
+
+```go
+AppMode: &plugin.AppModeSpec{
+    Groups:          []string{"coach", "coach_admin"},       // who gets the app; empty = every non-admin agent
+    LandingPage:     "/ui/goatcoach_coach/",                 // after login
+    HideMenuItems:   []string{"dashboard", "tickets", "queues", "phone_ticket", "email_ticket"},
+    HidePluginMenus: true,                                   // other plugins' agent menu entries go too
+    Branding:        &plugin.UIBrandingSpec{AppName: "GoatCoach", Icon: "fa-bullseye", Favicon: "data:image/svg+xml;base64,..."},
+},
+```
+
+What the platform does for an agent in one of the groups:
+
+- redirects them to `LandingPage` after login (password, second factor, passkey and SSO logins alike);
+- hides the listed menu items and, with `HidePluginMenus`, every other plugin's agent menu entry — your own entries stay;
+- shows your `Branding` in the standard shell: logo linking to the landing page — or, without a `Logo`, the `Icon` and `AppName` as a wordmark in the theme's own colours — favicon, page title, and `Color` as `--gk-ui-brand`.
+
+What it never does:
+
+- **touch administrators** — anyone in the `admin` group keeps the full helpdesk and the Administration menu, whatever other groups they hold, and `"admin"` in `HideMenuItems` is ignored;
+- **block pages** — navigation is hidden, not locked; `/tickets` and the rest stay reachable by URL, so links from your app into tickets and attachments keep working. Gate your own routes as usual;
+- **take over the login page or the customer portal**.
+
+Administrators can switch a plugin's app mode off without disabling the plugin (**Admin → Plugin Administration → plugin details → App mode**, stored as `Plugin::<name>::AppMode`). When several enabled plugins declare an app mode for the same agent, the first by plugin name wins. Hosts older than the version that introduced `AppMode` ignore the field, so you can declare it before raising `MinHostVersion`.
+
+The standard shell is the right one for an app-mode UI: the agent keeps the user menu, so they can still reach their profile (time zone, connected accounts, security) and log out.
 
 ## Routes
 

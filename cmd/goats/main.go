@@ -471,6 +471,10 @@ func main() {
 		return pluginMgr.LandingPage()
 	})
 
+	// Per-agent app mode (plugin AppMode): navigation, branding and the
+	// post-login landing page for the agents in a plugin's groups.
+	shared.SetAppModeProvider(api.AppModeForUser)
+
 	// Register core dashboard widgets plugin
 	dashboardPlugin := core.NewDashboardPlugin()
 	if err := pluginMgr.Register(context.Background(), dashboardPlugin); err != nil {

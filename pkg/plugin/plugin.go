@@ -67,6 +67,12 @@ type GKRegistration struct {
 	HideMenuItems []string `json:"hide_menu_items,omitempty"` // IDs of default menu items to hide (dashboard, tickets, queues, phone_ticket, email_ticket, admin)
 	LandingPage   string   `json:"landing_page,omitempty"`    // URL path to redirect to after login (e.g. "/myplugin")
 
+	// AppMode presents GoatFlow as this plugin's own application to the
+	// agents in AppMode.Groups; see AppModeSpec. Unlike HideMenuItems and
+	// LandingPage above, which apply to every agent, app mode is resolved
+	// per user and never applies to platform administrators.
+	AppMode *AppModeSpec `json:"app_mode,omitempty"`
+
 	// Access control — groups the plugin needs, auto-created on load
 	Groups []GroupSpec `json:"groups,omitempty"` // groups for RBAC (use "group:<name>" in route middleware)
 
@@ -110,6 +116,28 @@ type GKRegistration struct {
 type GroupSpec struct {
 	Name        string `json:"name"`        // group name, e.g. "myplugin-users"
 	Description string `json:"description"` // human-readable description for admin UI
+}
+
+// AppModeSpec turns GoatFlow into the plugin's application for the agents
+// who belong to any of Groups: after login they land on LandingPage, the
+// listed default menu items are hidden, other plugins' agent menu entries
+// can be hidden too, and the standard shell carries the plugin's name, logo
+// and favicon. Navigation is hidden, not blocked — the helpdesk pages stay
+// reachable by URL (ticket and attachment links from the app keep working).
+//
+// Platform administrators are never in app mode: they keep the full
+// helpdesk and the Administration menu, whatever groups they hold. Empty
+// Groups means every non-admin agent. The "admin" menu item is ignored in
+// HideMenuItems. An administrator can switch app mode off for a plugin
+// (Plugin::<name>::AppMode) without disabling the plugin; when several
+// enabled plugins declare app mode for the same agent, the first by plugin
+// name wins.
+type AppModeSpec struct {
+	Groups          []string        `json:"groups,omitempty"`            // agent groups the app applies to; empty = every non-admin agent
+	LandingPage     string          `json:"landing_page,omitempty"`      // post-login target, e.g. "/ui/myplugin_app/"
+	HideMenuItems   []string        `json:"hide_menu_items,omitempty"`   // dashboard, tickets, queues, phone_ticket, email_ticket
+	HidePluginMenus bool            `json:"hide_plugin_menus,omitempty"` // hide other plugins' agent menu entries
+	Branding        *UIBrandingSpec `json:"branding,omitempty"`          // app name, logo and favicon for the shell
 }
 
 // RouteSpec defines an HTTP route the plugin wants to handle.
@@ -505,6 +533,7 @@ type UINavItem struct {
 type UIBrandingSpec struct {
 	AppName string `json:"app_name,omitempty"`
 	Logo    string `json:"logo,omitempty"`    // URL or base64 data URI
+	Icon    string `json:"icon,omitempty"`    // FontAwesome class (e.g. "fa-bullseye") shown with AppName when there is no Logo; keeps the theme's colours
 	Favicon string `json:"favicon,omitempty"` // URL or base64 data URI
 	Color   string `json:"color,omitempty"`   // primary brand colour (hex)
 }

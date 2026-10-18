@@ -77,7 +77,7 @@ func HandlePluginList(c *gin.Context) {
 	plugins := make([]map[string]any, 0, len(manifests))
 	for _, m := range manifests {
 		loadedNames[m.Name] = true
-		plugins = append(plugins, map[string]any{
+		entry := map[string]any{
 			"name":        m.Name,
 			"version":     m.Version,
 			"icon":        m.Icon,
@@ -90,7 +90,11 @@ func HandlePluginList(c *gin.Context) {
 			"menuItems":   m.MenuItems,
 			"enabled":     pluginManager.IsEnabled(m.Name),
 			"loaded":      true,
-		})
+		}
+		if status := pluginManager.AppModeStatus(m.Name); status != nil {
+			entry["app_mode"] = status
+		}
+		plugins = append(plugins, entry)
 	}
 
 	// Add discovered but not loaded plugins (lazy loading)
@@ -851,6 +855,7 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 		pluginAdmin.POST("/:name/call/:fn", HandlePluginCall)
 		pluginAdmin.POST("/:name/enable", HandlePluginEnable)
 		pluginAdmin.POST("/:name/disable", HandlePluginDisable)
+		pluginAdmin.POST("/:name/app-mode", HandlePluginAppModeToggle)
 		pluginAdmin.POST("/:name/reset-crashloop", HandlePluginResetCrashLoop)
 		pluginAdmin.DELETE("/:name", HandlePluginUninstall)
 		pluginAdmin.POST("/upload", HandlePluginUpload)

@@ -91,7 +91,8 @@ Plugins return a `GKRegistration` from `GKRegister()` declaring their identity a
 - **Routes**: HTTP endpoints the plugin handles (method, path, handler, middleware)
 - **Widgets**: Dashboard widgets (location, size, handler, refresh settings)
 - **Menu Items**: Navigation entries — `agent` (top nav), `admin` (admin dashboard card), `profile` (Profile → Connected accounts, per-user settings), `customer` (portal nav); sorted by `Order`, labels may be i18n keys
-- **Navigation Control**: Hide default menu items (`HideMenuItems`) and set custom landing page (`LandingPage`) — enables plugin-as-app experiences
+- **Navigation Control**: Hide default menu items (`HideMenuItems`) and set custom landing page (`LandingPage`) for everyone — enables plugin-as-app experiences on a single-purpose instance
+- **App Mode**: `AppMode` does the same per agent group (landing page, hidden items, other plugins' menus, branding), resolved per user; administrators always keep the full helpdesk; switchable per plugin by an administrator
 - **Jobs**: Scheduled cron tasks (schedule, handler, timeout)
 - **Templates**: Template overrides/additions
 - **I18n**: Translations with namespace support

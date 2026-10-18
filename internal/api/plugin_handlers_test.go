@@ -707,6 +707,7 @@ var pluginAdminPathMarkers = []string{
 	"/call/",
 	"/enable",
 	"/disable",
+	"/app-mode",
 	"/upload",
 	"/logs",
 	"/reset-crashloop",

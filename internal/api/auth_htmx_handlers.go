@@ -397,23 +397,24 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 
 		// Respond based on request type
+		target := agentLandingRedirect(uint(userID))
 		contentType := c.GetHeader("Content-Type")
 		if c.GetHeader("HX-Request") == "true" {
-			c.Header("HX-Redirect", "/dashboard")
+			c.Header("HX-Redirect", target)
 			c.JSON(http.StatusOK, gin.H{
 				"success":  true,
-				"redirect": "/dashboard",
+				"redirect": target,
 			})
 			return
 		} else if strings.Contains(contentType, "application/json") {
 			// JSON fetch request (from login_2fa.pongo2 form)
 			c.JSON(http.StatusOK, gin.H{
 				"success":  true,
-				"redirect": "/dashboard",
+				"redirect": target,
 			})
 			return
 		}
 
-		c.Redirect(http.StatusFound, "/dashboard")
+		c.Redirect(http.StatusFound, target)
 	}
 }

@@ -3,10 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ t("app.title") }}{% endblock %}</title>
+    <title>{% block title %}{% if AppMode.AppName %}{{ AppMode.AppName }}{% else %}{{ t("app.title") }}{% endif %}{% endblock %}</title>
 
-    <!-- Favicon -->
+    <!-- Favicon (a plugin's app mode supplies its own) -->
+    {% if AppMode.Favicon %}
+    <link rel="icon" href="{{ AppMode.Favicon }}">
+    {% else %}
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v={{ assetVersion }}">
+    {% endif %}
+    {% if AppMode.Color %}
+    <style>:root { --gk-ui-brand: {{ AppMode.Color }}; }</style>
+    {% endif %}
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json?v={{ assetVersion }}">
@@ -304,8 +311,17 @@
                 <div class="flex h-16 justify-between">
                     <div class="flex">
                         <div class="flex flex-shrink-0 items-center">
-                            <a href="{{ dashboardHref }}" class="gk-logo-glow flex items-center" style="color: var(--gk-primary);">
+                            {# The logo links home: the app's landing page in app mode, else the dashboard. #}
+                            {% set logoHref = dashboardHref %}
+                            {% if AppMode.LandingPage %}{% set logoHref = AppMode.LandingPage %}{% endif %}
+                            <a href="{{ logoHref }}" class="gk-logo-glow flex items-center" style="color: var(--gk-primary);">
+                                {% if AppMode.Logo %}
+                                <img src="{{ AppMode.Logo }}" alt="{{ AppMode.AppName }}" class="h-8">
+                                {% elif AppMode.AppName %}
+                                <span class="text-lg font-semibold" style="color: var(--gk-ui-brand, var(--gk-primary));">{% if AppMode.Icon %}<i class="fa-solid {{ AppMode.Icon }} mr-2"></i>{% endif %}{{ AppMode.AppName }}</span>
+                                {% else %}
                                 <img src="/static/images/goatflow-logo.svg" alt="GoatFlow" class="h-8">
+                                {% endif %}
                             </a>
                         </div>
                         <div class="hidden sm:ml-6 sm:flex sm:space-x-2 sm:items-center">

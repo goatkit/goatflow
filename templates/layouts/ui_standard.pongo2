@@ -2,6 +2,8 @@
 {# Renders the plugin's ui_nav_items (label + icon + active + badge_count) for side/top; the default shell previously emitted no in-plugin nav. #}
 {% extends "layouts/base.pongo2" %}
 
+{% block title %}{% if PluginTitle %}{{ PluginTitle }} - {% endif %}{% if AppMode.AppName %}{{ AppMode.AppName }}{% else %}{{ t("app.title") }}{% endif %}{% endblock %}
+
 {% block content %}
 <div class="container mx-auto px-4 py-6">
     {% if ui_branding.app_name %}

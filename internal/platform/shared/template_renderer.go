@@ -90,6 +90,57 @@ func GetLandingPage() string {
 	return ""
 }
 
+// AppModeView is an agent's app mode as the shell and the post-login
+// redirect use it (see pkg/plugin.AppModeSpec): nil for agents who are not
+// in app mode, which includes every administrator.
+type AppModeView struct {
+	PluginName      string
+	LandingPage     string
+	HiddenNavItems  map[string]bool
+	HidePluginMenus bool
+	AppName         string
+	Logo            string
+	Icon            string
+	Favicon         string
+	Color           string
+}
+
+// AppModeProvider resolves the app mode of an agent by user ID. Installed
+// from the api package, which can read the agent's groups; shared cannot
+// without an import cycle.
+type AppModeProvider func(userID uint) *AppModeView
+
+var globalAppModeProvider AppModeProvider
+
+// SetAppModeProvider installs the app-mode resolver.
+func SetAppModeProvider(p AppModeProvider) {
+	globalAppModeProvider = p
+}
+
+// AppModeFor returns the app mode of an agent, or nil.
+func AppModeFor(userID uint) *AppModeView {
+	if globalAppModeProvider == nil || userID == 0 {
+		return nil
+	}
+	return globalAppModeProvider(userID)
+}
+
+// templateContext is what the shell templates read as AppMode. A map, not
+// the struct: pongo2 resolves Go field names, and a map keeps the template
+// keys independent of the Go type.
+func (v *AppModeView) templateContext() map[string]any {
+	return map[string]any{
+		"PluginName":      v.PluginName,
+		"LandingPage":     v.LandingPage,
+		"HidePluginMenus": v.HidePluginMenus,
+		"AppName":         v.AppName,
+		"Logo":            v.Logo,
+		"Icon":            v.Icon,
+		"Favicon":         v.Favicon,
+		"Color":           v.Color,
+	}
+}
+
 // TemplateRenderer handles template rendering with pongo2.
 type TemplateRenderer struct {
 	templateSet *pongo2.TemplateSet
@@ -208,17 +259,33 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 		}
 	}
 
+	// App mode: a non-admin agent whose groups put them in a plugin's app
+	// gets that plugin's navigation and branding. Administrators and
+	// customers never do.
+	var appMode *AppModeView
+	if !isCustomer && !isAdmin && !roleIsAdmin(c) {
+		appMode = AppModeFor(GetUserIDFromCtxUint(c, 0))
+	}
+	if appMode != nil {
+		ctx["AppMode"] = appMode.templateContext()
+	}
+
 	// Inject plugin menu items for navigation. Customer-side items are
 	// filtered against per-user plugin access so an unentitled customer
 	// doesn't see links they'd bounce off with a 403. Agent- and
 	// admin-side menus stay global — agents are cross-cutting staff
-	// whose access is gated at the route layer, not the menu.
+	// whose access is gated at the route layer, not the menu — except in
+	// app mode, where other plugins' entries are hidden on request.
 	if globalPluginMenuProvider != nil {
 		if _, hasIt := ctx["PluginAdminMenuItems"]; !hasIt {
 			ctx["PluginAdminMenuItems"] = globalPluginMenuProvider("admin")
 		}
 		if _, hasIt := ctx["PluginAgentMenuItems"]; !hasIt {
-			ctx["PluginAgentMenuItems"] = globalPluginMenuProvider("agent")
+			items := globalPluginMenuProvider("agent")
+			if appMode != nil && appMode.HidePluginMenus {
+				items = ownPluginMenuItems(items, appMode.PluginName)
+			}
+			ctx["PluginAgentMenuItems"] = items
 		}
 		// "profile": per-user settings pages (connected accounts such as a
 		// calendar), listed on the agent's own Profile page.
@@ -248,11 +315,21 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 		}
 	}
 
-	// Inject hidden nav items for navigation control
-	if globalHiddenMenuProvider != nil {
-		if _, hasIt := ctx["HiddenNavItems"]; !hasIt {
-			ctx["HiddenNavItems"] = globalHiddenMenuProvider()
+	// Inject hidden nav items for navigation control: the global set every
+	// enabled plugin asks for, plus the caller's app mode.
+	if _, hasIt := ctx["HiddenNavItems"]; !hasIt {
+		hidden := map[string]bool{}
+		if globalHiddenMenuProvider != nil {
+			for id, on := range globalHiddenMenuProvider() {
+				hidden[id] = on
+			}
 		}
+		if appMode != nil {
+			for id := range appMode.HiddenNavItems {
+				hidden[id] = true
+			}
+		}
+		ctx["HiddenNavItems"] = hidden
 	}
 
 	// Check for active/upcoming maintenance and add to context
@@ -293,6 +370,29 @@ func (r *TemplateRenderer) HTML(c *gin.Context, code int, name string, data inte
 		return
 	}
 	c.Data(code, "text/html; charset=utf-8", out)
+}
+
+// roleIsAdmin reports whether the auth middleware marked the caller's role
+// as Admin (the JWT claim set at login from admin-group membership).
+func roleIsAdmin(c *gin.Context) bool {
+	role, exists := c.Get("user_role")
+	if !exists {
+		return false
+	}
+	s, ok := role.(string)
+	return ok && s == "Admin"
+}
+
+// ownPluginMenuItems keeps only the agent menu entries declared by the
+// named plugin: in app mode the app's own entries stay, the rest go.
+func ownPluginMenuItems(items []map[string]any, pluginName string) []map[string]any {
+	kept := make([]map[string]any, 0, len(items))
+	for _, it := range items {
+		if name, _ := it["PluginName"].(string); name == pluginName {
+			kept = append(kept, it)
+		}
+	}
+	return kept
 }
 
 // getUserFromContext extracts the user from gin context (set by JWT middleware).

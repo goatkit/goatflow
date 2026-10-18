@@ -254,5 +254,5 @@ func createSession(c *gin.Context, user *models.User) {
 	httpcookie.SetAuth(c, "auth_token", token, sessionTimeout)
 	httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 	httpcookie.SetAuthState(c, "goatflow_logged_in", "1", sessionTimeout)
-	c.Redirect(http.StatusFound, "/dashboard")
+	c.Redirect(http.StatusFound, agentLandingRedirect(user.ID))
 }

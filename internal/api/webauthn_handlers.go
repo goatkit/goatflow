@@ -723,7 +723,7 @@ func completeAgentSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.Pe
 		c.SetCookie("goatflow_mode", userThemeMode, sessionTimeout, "/", "", false, false)
 	}
 	httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
-	c.JSON(http.StatusOK, gin.H{"success": true, "redirect": "/dashboard"})
+	c.JSON(http.StatusOK, gin.H{"success": true, "redirect": agentLandingRedirect(uint(session.UserID))})
 }
 
 func completeCustomerSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.PendingTOTPSession) {

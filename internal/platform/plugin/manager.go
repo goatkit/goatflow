@@ -66,6 +66,10 @@ type registeredPlugin struct {
 	manifest GKRegistration
 	enabled  bool
 
+	// appMode is the administrator switch for the manifest's AppMode
+	// (Plugin::<name>::AppMode); meaningless when none is declared.
+	appMode bool
+
 	// health tracks the most recent Ping probe outcome for this
 	// plugin. Guarded by Manager.mu. See health.go for the probe
 	// loop that updates it.
@@ -259,24 +263,24 @@ func pluginConfigKey(name string) string {
 	return "Plugin::" + name + "::Enabled"
 }
 
-// loadPluginEnabled checks if a plugin is enabled via sysconfig.
-// Queries sysconfig_modified then sysconfig_default for an explicit
-// enabled/disabled setting. If a valid "effective_value" is found,
-// that value is authoritative. If no sysconfig entry exists (fresh install
-// without seed data), defaults to enabled. A failed lookup leaves the plugin
-// disabled: treating a DB error as "enabled" would re-enable plugins an
-// administrator switched off.
-//
-// To disable example plugins in production, seed sysconfig_default with
-// effective_value="0" for Plugin::<name>::Enabled during DB migration.
+// loadPluginEnabled checks if a plugin is enabled via sysconfig; see
+// loadPluginSwitch. To disable example plugins in production, seed
+// sysconfig_default with effective_value="0" for Plugin::<name>::Enabled
+// during DB migration.
 func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
+	return m.loadPluginSwitch(ctx, name, pluginConfigKey(name))
+}
+
+// loadPluginSwitch reads an administrator switch for a plugin from sysconfig:
+// sysconfig_modified (overrides) first, then sysconfig_default. A valid
+// effective_value is authoritative; no entry (fresh install without seed
+// data) means on. A failed lookup leaves the switch off: treating a DB
+// error as "on" would re-enable what an administrator switched off.
+func (m *Manager) loadPluginSwitch(ctx context.Context, name, key string) bool {
 	if m.host == nil {
 		return true
 	}
 
-	key := pluginConfigKey(name)
-
-	// sysconfig_modified (user overrides) first, then sysconfig_default.
 	for _, query := range []string{`
 		SELECT effective_value FROM sysconfig_modified 
 		WHERE name = ? AND is_valid = 1 
@@ -288,7 +292,7 @@ func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 	`} {
 		rows, err := m.host.DBQuery(ctx, query, key)
 		if err != nil {
-			slog.Error("plugin enabled-state lookup failed; leaving plugin disabled", "plugin", name, "error", err)
+			slog.Error("plugin switch lookup failed; leaving it off", "plugin", name, "key", key, "error", err)
 			return false
 		}
 		if len(rows) > 0 {
@@ -298,22 +302,28 @@ func (m *Manager) loadPluginEnabled(ctx context.Context, name string) bool {
 		}
 	}
 
-	// No sysconfig entry found — default to enabled.
-	// Example plugins are disabled via sysconfig seed data in DB migrations,
-	// not via hardcoded logic here.
+	// No sysconfig entry found — on. Example plugins are disabled via
+	// sysconfig seed data in DB migrations, not via hardcoded logic here.
 	return true
 }
 
 // seedDefaultDisabled inserts a sysconfig_default entry to disable example
-// plugins on first registration. Only runs when the DB is reachable and
-// no entry already exists. This is a no-op for non-example plugins and
-// for test environments with mock hosts.
+// plugins on first registration. This is a no-op for non-example plugins.
 func (m *Manager) seedDefaultDisabled(ctx context.Context, name string) {
-	if m.host == nil || !defaultDisabledPlugins[name] {
+	if !defaultDisabledPlugins[name] {
 		return
 	}
+	m.seedPluginSwitch(ctx, name, pluginConfigKey(name), "Plugin enabled state", "0")
+}
 
-	key := pluginConfigKey(name)
+// seedPluginSwitch inserts the sysconfig_default row behind an administrator
+// switch, with the given initial value, so savePluginSwitch has a row to
+// modify. Only runs when the DB is reachable and no entry exists yet; a
+// no-op for test environments with mock hosts.
+func (m *Manager) seedPluginSwitch(ctx context.Context, name, key, description, value string) {
+	if m.host == nil {
+		return
+	}
 
 	// Check if an entry already exists in sysconfig_default
 	rows, err := m.host.DBQuery(ctx, `SELECT 1 FROM sysconfig_default WHERE name = ? LIMIT 1`, key)
@@ -321,38 +331,43 @@ func (m *Manager) seedDefaultDisabled(ctx context.Context, name string) {
 		return // DB error (mock/test) or entry already exists
 	}
 
-	// Seed disabled state — fill all NOT NULL columns
+	// Fill all NOT NULL columns
 	if _, err := m.host.DBExec(ctx, `
 		INSERT INTO sysconfig_default 
 		(name, description, navigation, is_invisible, is_readonly, is_required, is_valid, 
 		 has_configlevel, user_modification_possible, user_modification_active,
 		 xml_content_raw, xml_content_parsed, xml_filename, effective_value, 
 		 is_dirty, exclusive_lock_guid, create_by, change_by, create_time, change_time)
-		VALUES (?, 'Plugin enabled state', ?, 1, 0, 0, 1,
+		VALUES (?, ?, ?, 1, 0, 0, 1,
 		 0, 1, 0,
-		 '', '', '', '0',
+		 '', '', '', ?,
 		 0, '', 1, 1, NOW(), NOW())
-	`, key, "Admin::Plugins"); err != nil {
-		slog.Warn("failed to seed default-disabled plugin state", "plugin", name, "error", err)
+	`, key, description, "Admin::Plugins", value); err != nil {
+		slog.Warn("failed to seed plugin switch", "plugin", name, "key", key, "error", err)
 	}
 }
 
 // savePluginEnabled persists a plugin's enabled state to sysconfig_modified.
 func (m *Manager) savePluginEnabled(ctx context.Context, name string, enabled bool) error {
+	return m.savePluginSwitch(ctx, pluginConfigKey(name), enabled)
+}
+
+// savePluginSwitch persists an administrator switch to sysconfig_modified.
+// The sysconfig_default row must exist (seedPluginSwitch).
+func (m *Manager) savePluginSwitch(ctx context.Context, key string, on bool) error {
 	if m.host == nil {
 		return nil // No host API, can't persist
 	}
 
-	key := pluginConfigKey(name)
 	val := "1"
-	if !enabled {
+	if !on {
 		val = "0"
 	}
 
 	// Look up the sysconfig_default ID for this key
 	rows, err := m.host.DBQuery(ctx, `SELECT id FROM sysconfig_default WHERE name = ? LIMIT 1`, key)
 	if err != nil || len(rows) == 0 {
-		return fmt.Errorf("no sysconfig_default entry for %q — seed it first via seedDefaultDisabled", key)
+		return fmt.Errorf("no sysconfig_default entry for %q — seed it first via seedPluginSwitch", key)
 	}
 
 	defaultID := rows[0]["id"]
@@ -437,6 +452,7 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 		plugin:   p,
 		manifest: manifest,
 		enabled:  isEnabled,
+		appMode:  m.loadAppModeEnabled(ctx, manifest),
 		health:   healthInitForRegister(),
 	}
 

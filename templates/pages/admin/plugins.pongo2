@@ -342,7 +342,13 @@ const i18n = {
     enable: "{{ t('buttons.enable')|default:'Enable' }}",
     deletePlugin: "{{ t('admin.delete_plugin')|default:'Delete' }}",
     error: "{{ t('common.error')|default:'Error' }}",
-    confirmDeletePlugin: "{{ t('admin.confirm_delete_plugin')|default:'Are you sure you want to delete the plugin \"{name}\"?' }}"
+    confirmDeletePlugin: "{{ t('admin.confirm_delete_plugin')|default:'Are you sure you want to delete the plugin \"{name}\"?' }}",
+    appModeOn: "{{ t('admin.plugin_app_mode_on')|default:'App mode on' }}",
+    appModeOff: "{{ t('admin.plugin_app_mode_off')|default:'App mode off' }}",
+    appModeTurnOn: "{{ t('admin.plugin_app_mode_turn_on')|default:'Turn on' }}",
+    appModeTurnOff: "{{ t('admin.plugin_app_mode_turn_off')|default:'Turn off' }}",
+    appModeAllAgents: "{{ t('admin.plugin_app_mode_all_agents')|default:'All agents' }}",
+    appModeOtherPlugins: "{{ t('admin.plugin_app_mode_other_plugins')|default:'menus of other plugins' }}"
 };
 
 function escapeHtml(text) {
@@ -706,6 +712,38 @@ function showPluginDetails(name) {
             </div>`;
     }
 
+    if (plugin.app_mode) {
+        const am = plugin.app_mode;
+        const badge = (text) => `<span class="gk-badge gk-badge-muted font-mono">${escapeHtml(text)}</span>`;
+        const groups = (am.groups && am.groups.length) ? am.groups.map(badge).join(' ') : i18n.appModeAllAgents;
+        let hidden = (am.hide_menu_items || []).map(badge).join(' ');
+        if (am.hide_plugin_menus) {
+            hidden += ' ' + badge(i18n.appModeOtherPlugins);
+        }
+        html += `
+            <div class="gk-divider"></div>
+            <div>
+                <div class="text-sm font-semibold mb-2" style="${muted}">{{ t("admin.plugin_app_mode")|default:"App mode" }}</div>
+                <p class="text-sm mb-2" style="color: var(--gk-text-primary);">{{ t("admin.plugin_app_mode_help")|default:"Agents in these groups see GoatFlow as this plugin's application: they land on its page after login and the listed menu items are hidden. Administrators always keep the full helpdesk." }}</p>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div style="${muted}">{{ t("admin.plugin_app_mode_groups")|default:"Groups" }}</div>
+                    <div>${groups}</div>
+                    <div style="${muted}">{{ t("admin.plugin_app_mode_landing")|default:"Landing page" }}</div>
+                    <div><code class="gk-link-neon">${escapeHtml(am.landing_page || '/dashboard')}</code></div>
+                    <div style="${muted}">{{ t("admin.plugin_app_mode_hidden")|default:"Hidden menu items" }}</div>
+                    <div>${hidden.trim() || '-'}</div>
+                </div>
+                <div class="mt-3 flex items-center gap-3">
+                    ${am.enabled
+                        ? `<span class="gk-badge gk-badge-success">${i18n.appModeOn}</span>`
+                        : `<span class="gk-badge gk-badge-muted">${i18n.appModeOff}</span>`}
+                    <button type="button" class="gk-btn-secondary text-sm" onclick="toggleAppMode('${escapeHtml(plugin.name)}', ${am.enabled ? 'false' : 'true'})">
+                        ${am.enabled ? i18n.appModeTurnOff : i18n.appModeTurnOn}
+                    </button>
+                </div>
+            </div>`;
+    }
+
     html += '</div>';
     document.getElementById('modal-plugin-content').innerHTML = html;
     modal.classList.remove('hidden');
@@ -729,6 +767,27 @@ async function togglePlugin(name, enable) {
         } else {
             const data = await response.json();
             showToast('error', data.error || i18n.failedToPlugin.replace('{action}', action));
+        }
+    } catch (err) {
+        showToast('error', `${i18n.error}: ${err.message}`);
+    }
+}
+
+async function toggleAppMode(name, enable) {
+    try {
+        const response = await fetch(`/api/v1/plugins/${name}/app-mode`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: enable })
+        });
+        const data = await response.json();
+        if (response.ok) {
+            await loadPlugins();
+            showPluginDetails(name);
+            showToast('success', enable ? i18n.appModeOn : i18n.appModeOff);
+        } else {
+            showToast('error', data.error || i18n.failedToPlugin.replace('{action}', 'update'));
         }
     } catch (err) {
         showToast('error', `${i18n.error}: ${err.message}`);
