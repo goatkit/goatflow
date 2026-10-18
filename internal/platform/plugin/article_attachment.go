@@ -17,6 +17,10 @@ import (
 // code. Attachments are addressed by (articleID, fileID).
 type ArticleAttachmentStore interface {
 	ListArticleAttachments(ctx context.Context, db *sql.DB, articleID int64) ([]pkgplugin.ArticleAttachment, error)
+	// ReadArticleAttachment returns one attachment's metadata and content.
+	// It returns ErrAttachmentNotFound when the attachment does not exist
+	// (or is an HTML body part, which is not an attachment).
+	ReadArticleAttachment(ctx context.Context, db *sql.DB, articleID, fileID int64) (pkgplugin.ArticleAttachment, []byte, error)
 	WriteArticleAttachment(ctx context.Context, db *sql.DB, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error)
 	// DeleteArticleAttachment returns ErrAttachmentNotFound when the
 	// attachment does not exist on the article.
@@ -99,6 +103,28 @@ func (h *ProdHostAPI) ListArticleAttachments(ctx context.Context, articleID int6
 		return nil, fmt.Errorf("list article attachments: %w", err)
 	}
 	return atts, nil
+}
+
+// ReadArticleAttachment returns one attachment's metadata and content bytes.
+// Unlike the platform's agent attachment endpoints it is not gated by
+// helpdesk queue access: plugins enforce their own caller-level
+// authorisation before serving the bytes.
+func (h *ProdHostAPI) ReadArticleAttachment(ctx context.Context, articleID, fileID int64) (pkgplugin.ArticleAttachment, []byte, error) {
+	db, err := h.getDB("")
+	if err != nil {
+		return pkgplugin.ArticleAttachment{}, nil, err
+	}
+	if h.attachments == nil {
+		return pkgplugin.ArticleAttachment{}, nil, errNoAttachmentStore
+	}
+	att, content, err := h.attachments.ReadArticleAttachment(ctx, db, articleID, fileID)
+	if err != nil {
+		if errors.Is(err, ErrAttachmentNotFound) {
+			return pkgplugin.ArticleAttachment{}, nil, fmt.Errorf("attachment %d not found on article %d", fileID, articleID)
+		}
+		return pkgplugin.ArticleAttachment{}, nil, fmt.Errorf("read article attachment: %w", err)
+	}
+	return att, content, nil
 }
 
 // DeleteArticleAttachment removes one attachment from an article.

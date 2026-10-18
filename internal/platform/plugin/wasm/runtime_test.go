@@ -722,6 +722,10 @@ func (m *mockHostAPI) ListArticleAttachments(ctx context.Context, articleID int6
 func (m *mockHostAPI) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
 	return fmt.Errorf("not implemented")
 }
+
+func (m *mockHostAPI) ReadArticleAttachment(ctx context.Context, articleID, fileID int64) (plugin.ArticleAttachment, []byte, error) {
+	return plugin.ArticleAttachment{}, nil, fmt.Errorf("not implemented")
+}
 func (m *mockHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
 	return nil
 }
@@ -758,6 +762,10 @@ func (m *trackingHostAPI) ListArticleAttachments(ctx context.Context, articleID 
 }
 func (m *trackingHostAPI) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
 	return fmt.Errorf("not implemented")
+}
+
+func (m *trackingHostAPI) ReadArticleAttachment(ctx context.Context, articleID, fileID int64) (plugin.ArticleAttachment, []byte, error) {
+	return plugin.ArticleAttachment{}, nil, fmt.Errorf("not implemented")
 }
 func (m *trackingHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
 	return nil

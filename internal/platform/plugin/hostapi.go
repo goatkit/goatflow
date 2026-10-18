@@ -154,6 +154,11 @@ func (h *DefaultHostAPI) DeleteArticleAttachment(ctx context.Context, articleID,
 	return fmt.Errorf("article attachments not available in default host")
 }
 
+// ReadArticleAttachment is not available in default host.
+func (h *DefaultHostAPI) ReadArticleAttachment(ctx context.Context, articleID, fileID int64) (plugin.ArticleAttachment, []byte, error) {
+	return plugin.ArticleAttachment{}, nil, fmt.Errorf("article attachments not available in default host")
+}
+
 // CreateArticle is not available in default host.
 func (h *DefaultHostAPI) CreateArticle(ctx context.Context, ticketID, createdBy int64, subject, body string, visibleToCustomer bool) (int64, error) {
 	return 0, fmt.Errorf("article creation not available in default host")

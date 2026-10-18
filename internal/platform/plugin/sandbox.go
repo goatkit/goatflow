@@ -756,6 +756,16 @@ func (s *SandboxedHostAPI) DeleteArticleAttachment(ctx context.Context, articleI
 	return s.inner.DeleteArticleAttachment(ctx, articleID, attachmentID)
 }
 
+// ReadArticleAttachment returns attachment content. Needs article read; the
+// queue gate does not apply (plugin authorises the caller itself).
+func (s *SandboxedHostAPI) ReadArticleAttachment(ctx context.Context, articleID, fileID int64) (plugin.ArticleAttachment, []byte, error) {
+	if err := s.requirePermission("article", "read"); err != nil {
+		return plugin.ArticleAttachment{}, nil, err
+	}
+	ctx = context.WithValue(ctx, PluginCallerKey, s.pluginName)
+	return s.inner.ReadArticleAttachment(ctx, articleID, fileID)
+}
+
 // RenderMarkdownToPdf forwards to the inner host.
 func (s *SandboxedHostAPI) RenderMarkdownToPdf(ctx context.Context, markdown string, options plugin.PdfRenderOptions) ([]byte, error) {
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())

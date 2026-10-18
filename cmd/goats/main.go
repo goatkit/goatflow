@@ -46,6 +46,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/email/inbound/postmaster"
+	"github.com/goatkit/goatflow/internal/pdfthumb"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/cache"
 	"github.com/goatkit/goatflow/internal/platform/config"
@@ -393,6 +394,16 @@ func main() {
 	thumbSvc := service.NewThumbnailService(nil)
 	pluginHostOpts = append(pluginHostOpts, plugin.WithThumbnailService(
 		plugin.NewThumbnailGenerator(func(data []byte, contentType string, maxWidth, maxHeight int) ([]byte, string, error) {
+			// PDFs: rasterise page 1 with poppler's pdftoppm — the same path the
+			// platform attachment thumbnail route uses — so plugin-served
+			// previews match. Image types go through libvips as before.
+			if strings.EqualFold(strings.TrimSpace(contentType), "application/pdf") {
+				if png, err := pdfthumb.RenderPage1(data); err == nil {
+					return png, "image/png", nil
+				}
+				ph, phCT := service.GetPlaceholderThumbnail("application/pdf")
+				return ph, phCT, nil
+			}
 			return thumbSvc.GenerateThumbnail(data, contentType, service.ThumbnailOptions{
 				Width: maxWidth, Height: maxHeight, Quality: 85, Format: "jpeg",
 			})

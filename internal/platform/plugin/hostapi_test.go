@@ -446,6 +446,10 @@ func (m *testHostAPI) ListArticleAttachments(ctx context.Context, articleID int6
 func (m *testHostAPI) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
 	return fmt.Errorf("not implemented")
 }
+
+func (m *testHostAPI) ReadArticleAttachment(ctx context.Context, articleID, fileID int64) (ArticleAttachment, []byte, error) {
+	return ArticleAttachment{}, nil, fmt.Errorf("not implemented")
+}
 func (m *testHostAPI) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
 	return nil
 }

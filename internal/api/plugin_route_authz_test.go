@@ -37,6 +37,7 @@ func (p *authzEchoPlugin) GKRegister() plugin.GKRegistration {
 			{Method: "GET", Path: "/authz-echo/malformed", Handler: "echo_malformed", Middleware: []string{"plugin:authzecho"}},
 			{Method: "GET", Path: "/authz-echo/group", Handler: "echo_group", Middleware: []string{"auth", "group:" + p.group}},
 			{Method: "POST", Path: "/authz-echo/open", Handler: "echo_open", Middleware: []string{"auth"}},
+			{Method: "GET", Path: "/authz-echo/binary", Handler: "echo_binary", Middleware: []string{"auth"}},
 			{Method: "POST", Path: "/authz-echo/admin", Handler: "echo_admin", Middleware: []string{"admin"}},
 		},
 	}
@@ -45,6 +46,14 @@ func (p *authzEchoPlugin) GKRegister() plugin.GKRegistration {
 func (p *authzEchoPlugin) Init(context.Context, plugin.HostAPI) error { return nil }
 func (p *authzEchoPlugin) Shutdown(context.Context) error             { return nil }
 func (p *authzEchoPlugin) Call(_ context.Context, fn string, args json.RawMessage) (json.RawMessage, error) {
+	if fn == "echo_binary" {
+		return json.Marshal(map[string]any{
+			"_binary":             true,
+			"content_type":        "application/pdf",
+			"content_disposition": `attachment; filename="x.pdf"`,
+			"data":                "JVBERg==",
+		})
+	}
 	return json.Marshal(map[string]any{"fn": fn, "args": args})
 }
 
@@ -185,6 +194,23 @@ func TestPluginRouteMiddlewareGates(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A _binary plugin response streams the decoded bytes with the declared
+// content type, an optional plugin-set Content-Disposition, and no sniffing.
+func TestPluginRouteBinaryResponse(t *testing.T) {
+	f := newPluginAuthzFixture(t)
+	RebuildDynamicEngine()
+	dynMu.RLock()
+	eng := dynEngine
+	dynMu.RUnlock()
+
+	w := doAuthzRequest(eng, "GET", "/authz-echo/binary", f.agentJWT, "")
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	require.Equal(t, "application/pdf", w.Header().Get("Content-Type"))
+	require.Equal(t, `attachment; filename="x.pdf"`, w.Header().Get("Content-Disposition"))
+	require.Equal(t, "nosniff", w.Header().Get("X-Content-Type-Options"))
+	require.Equal(t, "%PDF", w.Body.String())
 }
 
 // Client-supplied values under the host's envelope keys never reach the

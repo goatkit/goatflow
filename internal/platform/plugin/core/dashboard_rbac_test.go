@@ -140,6 +140,10 @@ func (f *fakeHost) ListArticleAttachments(ctx context.Context, articleID int64) 
 func (f *fakeHost) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
 	return fmt.Errorf("not implemented")
 }
+
+func (f *fakeHost) ReadArticleAttachment(ctx context.Context, articleID, fileID int64) (plugin.ArticleAttachment, []byte, error) {
+	return plugin.ArticleAttachment{}, nil, fmt.Errorf("not implemented")
+}
 func (f *fakeHost) StoreFile(ctx context.Context, key string, data []byte, metadata map[string]string) error {
 	return nil
 }

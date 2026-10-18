@@ -49,6 +49,29 @@ func (PluginArticleAttachmentStore) ListArticleAttachments(ctx context.Context, 
 	return out, nil
 }
 
+// ReadArticleAttachment implements plugin.ArticleAttachmentStore. URL is left
+// empty: the plugin caller serves its own route (the platform's agent route
+// would be queue-gated for the plugin's users).
+func (PluginArticleAttachmentStore) ReadArticleAttachment(ctx context.Context, db *sql.DB, articleID, fileID int64) (pkgplugin.ArticleAttachment, []byte, error) {
+	a, content, err := storage.ForDB(db).GetAttachment(ctx, articleID, fileID)
+	if errors.Is(err, storage.ErrNotFound) {
+		return pkgplugin.ArticleAttachment{}, nil, plugin.ErrAttachmentNotFound
+	}
+	if err != nil {
+		return pkgplugin.ArticleAttachment{}, nil, err
+	}
+	if storage.IsHTMLBody(a) {
+		return pkgplugin.ArticleAttachment{}, nil, plugin.ErrAttachmentNotFound
+	}
+	return pkgplugin.ArticleAttachment{
+		ID:          a.FileID,
+		ArticleID:   a.ArticleID,
+		Filename:    a.Filename,
+		ContentType: a.ContentType,
+		Size:        a.Size,
+	}, content, nil
+}
+
 // WriteArticleAttachment implements plugin.ArticleAttachmentStore.
 func (PluginArticleAttachmentStore) WriteArticleAttachment(ctx context.Context, db *sql.DB, articleID, createdBy int64, filename, contentType string, content []byte) (int64, error) {
 	a, err := storage.ForDB(db).WriteAttachment(ctx, articleID, storage.NewAttachment{

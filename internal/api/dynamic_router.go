@@ -132,6 +132,12 @@ func RebuildDynamicEngine() {
 						if contentType, ok := response["content_type"].(string); ok {
 							if dataB64, ok := response["data"].(string); ok {
 								if decoded, err := base64.StdEncoding.DecodeString(dataB64); err == nil {
+									// Optional plugin-controlled disposition (e.g. "attachment;
+									// filename=…"); absent means the browser's default (inline).
+									if disp, ok := response["content_disposition"].(string); ok && disp != "" {
+										c.Header("Content-Disposition", disp)
+									}
+									c.Header("X-Content-Type-Options", "nosniff")
 									c.Data(http.StatusOK, contentType, decoded)
 									return
 								}

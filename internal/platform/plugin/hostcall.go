@@ -417,6 +417,23 @@ func DispatchHostCall(ctx context.Context, host HostAPI, method string, args jso
 		}
 		return json.Marshal(map[string]any{"attachments": atts})
 
+	case "read_article_attachment":
+		var req struct {
+			ArticleID    int64 `json:"article_id"`
+			AttachmentID int64 `json:"attachment_id"`
+		}
+		if err := json.Unmarshal(args, &req); err != nil {
+			return nil, err
+		}
+		att, content, err := host.ReadArticleAttachment(ctx, req.ArticleID, req.AttachmentID)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(map[string]any{
+			"attachment": att,
+			"content":    content, // []byte marshals to base64 over JSON
+		})
+
 	case "delete_article_attachment":
 		var req struct {
 			ArticleID    int64 `json:"article_id"`

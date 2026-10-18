@@ -345,6 +345,12 @@ type HostAPI interface {
 	// ListArticleAttachments returns metadata for every attachment on an
 	// article. Content is not included (download via the platform endpoint).
 	ListArticleAttachments(ctx context.Context, articleID int64) ([]ArticleAttachment, error)
+	// ReadArticleAttachment returns one attachment's metadata and raw content
+	// bytes (base64 over the RPC transport). URL may be empty: the caller
+	// serves its own route. The platform's agent attachment endpoints are
+	// gated by helpdesk queue access; this call is not, so plugins enforce
+	// their own caller-level authorisation before serving the bytes.
+	ReadArticleAttachment(ctx context.Context, articleID, fileID int64) (ArticleAttachment, []byte, error)
 	// DeleteArticleAttachment removes one attachment from an article.
 	DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error
 

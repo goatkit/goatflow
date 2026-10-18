@@ -156,6 +156,11 @@ func (h *recordingHost) DeleteArticleAttachment(ctx context.Context, aid, id int
 	h.rec(ctx, "DeleteArticleAttachment", aid, id)
 	return nil
 }
+
+func (h *recordingHost) ReadArticleAttachment(ctx context.Context, aid, id int64) (plugin.ArticleAttachment, []byte, error) {
+	h.rec(ctx, "ReadArticleAttachment", aid, id)
+	return plugin.ArticleAttachment{ID: id, ArticleID: aid, Filename: "x.pdf", ContentType: "application/pdf", Size: 3}, []byte("%PDF"), nil
+}
 func (h *recordingHost) CreateArticle(ctx context.Context, tid, by int64, s, b string, v bool) (int64, error) {
 	h.rec(ctx, "CreateArticle", tid, by, s, b, v)
 	return 12, nil
@@ -301,6 +306,10 @@ func TestHostAPIClientContract(t *testing.T) {
 	atts, err := c.ListArticleAttachments(ctx, 21)
 	must(err)
 	eq("ListArticleAttachments", atts, []plugin.ArticleAttachment{{ID: 1, ArticleID: 21, Filename: "x.pdf"}})
+	att, content, err := c.ReadArticleAttachment(ctx, 21, 1)
+	must(err)
+	eq("ReadArticleAttachment", []any{att.Filename, att.Size, string(content)}, []any{"x.pdf", int64(3), "%PDF"})
+	eq("ReadArticleAttachment args", host.args["ReadArticleAttachment"], []any{int64(21), int64(1)})
 	must(c.DeleteArticleAttachment(ctx, 21, 1))
 	eq("DeleteArticleAttachment args", host.args["DeleteArticleAttachment"], []any{int64(21), int64(1)})
 	artID, err := c.CreateArticle(ctx, 31, 2, "subj", "body", true)

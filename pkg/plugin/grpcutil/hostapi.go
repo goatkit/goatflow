@@ -263,6 +263,27 @@ func (c *HostAPIClient) ListArticleAttachments(ctx context.Context, articleID in
 	return out.Attachments, nil
 }
 
+// ReadArticleAttachment returns one attachment's metadata and content bytes.
+// The host does not apply helpdesk queue gates to this call; the plugin
+// enforces its own caller-level authorisation.
+func (c *HostAPIClient) ReadArticleAttachment(ctx context.Context, articleID, fileID int64) (plugin.ArticleAttachment, []byte, error) {
+	raw, err := c.call(ctx, "read_article_attachment", map[string]any{
+		"article_id":    articleID,
+		"attachment_id": fileID,
+	})
+	if err != nil {
+		return plugin.ArticleAttachment{}, nil, err
+	}
+	var out struct {
+		Attachment plugin.ArticleAttachment `json:"attachment"`
+		Content    []byte                   `json:"content"`
+	}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return plugin.ArticleAttachment{}, nil, err
+	}
+	return out.Attachment, out.Content, nil
+}
+
 // DeleteArticleAttachment removes one attachment from an article.
 func (c *HostAPIClient) DeleteArticleAttachment(ctx context.Context, articleID, attachmentID int64) error {
 	_, err := c.call(ctx, "delete_article_attachment", map[string]any{

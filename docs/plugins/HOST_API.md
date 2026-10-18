@@ -42,6 +42,7 @@ Every plugin call reaches the host through the plugin's **SandboxedHostAPI**, wh
 | `GenerateThumbnail` | `generate_thumbnail` | yes | yes | none |
 | `CreateArticleAttachment` | `create_article_attachment` | yes | yes | `article` write |
 | `ListArticleAttachments` | `list_article_attachments` | yes | yes | `article` read |
+| `ReadArticleAttachment` | `read_article_attachment` | yes | yes | `article` read |
 | `DeleteArticleAttachment` | `delete_article_attachment` | yes | yes | `article` write |
 | `CreateArticle` | `create_article` | yes | yes | `article` write |
 | `ChangeTicketStatus` | `change_ticket_status` | yes | yes | `ticket` write |
@@ -53,6 +54,7 @@ Every plugin call reaches the host through the plugin's **SandboxedHostAPI**, wh
 Notes:
 
 - **time_now:** returns `{"now": "<RFC 3339 time>"}` in the server's local time zone, offset included. Meant for WASM plugins: TinyGo has no time zone data, and ticket times are stored in server-local time.
+- **generate_thumbnail:** `application/pdf` input renders page 1 through poppler's `pdftoppm` (a file-type placeholder PNG when the PDF cannot be rendered); image types go through libvips.
 - "none" in the last column means the sandbox adds no permission check. The host still records the calling plugin.
 
 ## Call context and acting user

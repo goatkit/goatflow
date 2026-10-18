@@ -294,7 +294,7 @@ The handler returns `(json.RawMessage, error)`. The dynamic router
 - **Error response** — `{"error": "<msg>", "status": <N>}` with `N` in 400–599 maps to the matching HTTP status. Without a `status` field, a Go `error` return becomes HTTP 500. Use this to signal 400/404/502 etc. without every error surfacing as 200-OK-with-body.
 - **Redirect** — `{"redirect": "<url>", "status": <303>}` issues an HTTP redirect (default 303 See Other).
 - **HTML page** — `{"html": "<markup>", "title": "...", "active_page": "..."}` wraps the HTML in the platform's `plugin_wrapper.pongo2` layout. Set `"raw": true` to emit the HTML without the layout.
-- **Binary** — `{"_binary": true, "content_type": "...", "data": "<base64>"}` streams the decoded bytes with the given content type.
+- **Binary** — `{"_binary": true, "content_type": "...", "data": "<base64>"}` streams the decoded bytes with the given content type. Optional `"content_disposition"` sets the `Content-Disposition` header (for example `attachment; filename="report.pdf"`); without it the browser's default applies. Responses always carry `X-Content-Type-Options: nosniff`.
 - **JSON** (default) — any other JSON object is served as `application/json` with HTTP 200.
 
 ## Sandbox & Security Model
