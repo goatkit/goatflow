@@ -16,6 +16,27 @@ project adheres to [Semantic Versioning](https://semver.org/).
   which day a file was recorded, "tomorrow 09:00" - on the person rather than the server. The key
   is unspoofable like `_user_id`; a stored name the host cannot load is treated as unset. Platform
   pages still display times in the browser's zone, as before.
+- **Plugins can be an app for the agents in their groups.** `GKRegistration.AppMode` declares
+  which agent groups live in the plugin, where they land after login, which default menu items to
+  hide, whether other plugins' agent menu entries go too, and the app name, logo, favicon and
+  colour the standard shell shows them. It is resolved per user from group membership on every
+  page and at every login path (password, second factor, passkey, SSO), so a helpdesk team, a
+  plugin's users and administrators share one instance: administrators always keep the full
+  helpdesk and the Administration menu, and `"admin"` cannot be hidden. Navigation is hidden, not
+  blocked. Administrators can switch a plugin's app mode off in its details on Admin → Plugin
+  Administration (`POST /api/v1/plugins/:name/app-mode`, stored as `Plugin::<name>::AppMode`).
+  The existing global `HideMenuItems`/`LandingPage` still apply to everyone.
+- **Plugins can read article attachment bytes.** `ReadArticleAttachment(article_id, attachment_id)`
+  returns the attachment's metadata and content, so a plugin can serve its own download and preview
+  routes: the platform's agent attachment endpoints are gated by helpdesk queue access, which
+  plugin-only users (for example a coach on a helpdesk instance) do not have. The plugin enforces
+  its own caller-level authorisation; the host adds none beyond the `article` read permission.
+- **Plugin binary responses can set `Content-Disposition`.** A `content_disposition` string on a
+  `_binary` response is passed through as the header; every binary plugin response also carries
+  `X-Content-Type-Options: nosniff`.
+- **`GenerateThumbnail` rasterises PDFs.** `application/pdf` input renders page 1 through poppler's
+  `pdftoppm` (the same path as the platform attachment thumbnail route, with a file-type placeholder
+  when the PDF cannot be rendered); image types still go through libvips.
 
 ### Fixed
 - **The toolbox image builds without public keyservers.** `Dockerfile.toolbox` fetched Bun's release
