@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/goatkit/goatflow/internal/email/inbound/filters"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -182,4 +183,59 @@ func TestProcessStoresMailAttachments(t *testing.T) {
 			assert.Equal(t, "<logo@example.com>", string(cid))
 		})
 	}
+}
+
+// TestProcessAppliesNameAnnotations covers the priority, type and state names
+// set by postmaster filter rules (X-GoatFlow-Priority / -Type / -State) and
+// by the decision filter: known names set the new ticket's ids, unknown names
+// leave the defaults instead of failing the message.
+func TestProcessAppliesNameAnnotations(t *testing.T) {
+	db := postmasterTestDB(t)
+	ticketRepo := repository.NewTicketRepository(db)
+	articleRepo := repository.NewArticleRepository(db)
+	tp := NewTicketProcessor(
+		service.NewTicketService(ticketRepo, service.WithArticleRepository(articleRepo)),
+		WithTicketProcessorArticleLookup(articleRepo),
+		WithTicketProcessorDatabase(db),
+	)
+	pick := func(query string) (int, string) {
+		var id int
+		var name string
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(query)).Scan(&id, &name))
+		return id, name
+	}
+	priorityID, priorityName := pick(`SELECT id, name FROM ticket_priority WHERE valid_id = 1 ORDER BY id DESC LIMIT 1`)
+	typeID, typeName := pick(`SELECT id, name FROM ticket_type WHERE valid_id = 1 ORDER BY id DESC LIMIT 1`)
+	stateID, stateName := pick(`SELECT id, name FROM ticket_state WHERE valid_id = 1 AND name = 'open'`)
+
+	type ids struct{ priority, typ, state int }
+	process := func(uid string, annotations map[string]any) ids {
+		raw := []byte(strings.ReplaceAll("From: alice@example.com\nSubject: name annotations "+uid+"\nMessage-ID: <"+uid+"@example.com>\n\nbody\n", "\n", "\r\n"))
+		res, err := tp.Process(context.Background(), &connector.FetchedMessage{UID: uid, Raw: raw}, &filters.MessageContext{Annotations: annotations})
+		require.NoError(t, err)
+		require.Equal(t, "new_ticket", res.Action)
+		t.Cleanup(func() { deleteTicket(db, res.TicketID) })
+		var got ids
+		var typeCol sql.NullInt64
+		require.NoError(t, db.QueryRow(database.ConvertPlaceholders(
+			`SELECT ticket_priority_id, type_id, ticket_state_id FROM ticket WHERE id = ?`), res.TicketID).Scan(&got.priority, &typeCol, &got.state))
+		got.typ = int(typeCol.Int64)
+		return got
+	}
+
+	known := process("names-known", map[string]any{
+		filters.AnnotationPriorityNameOverride: priorityName,
+		filters.AnnotationTypeOverride:         typeName,
+		filters.AnnotationStateOverride:        stateName,
+	})
+	assert.Equal(t, ids{priorityID, typeID, stateID}, known)
+
+	baseline := process("names-none", nil)
+	require.NotEqual(t, known, baseline, "fixture names must differ from the defaults")
+	unknown := process("names-unknown", map[string]any{
+		filters.AnnotationPriorityNameOverride: "no such priority",
+		filters.AnnotationTypeOverride:         "no such type",
+		filters.AnnotationStateOverride:        "no such state",
+	})
+	assert.Equal(t, baseline, unknown, "unknown names keep the defaults")
 }

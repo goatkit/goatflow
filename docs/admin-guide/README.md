@@ -57,6 +57,7 @@ sections.
 | Email Identities | `/admin/email-identities` | Salutations, system addresses, signatures |
 | Inbound Mail Accounts | `/admin/mail-accounts` | POP3/IMAP mailboxes to fetch |
 | Postmaster Filters | `/admin/postmaster-filters` | Route incoming mail by header |
+| Mail Decision Filter | `/admin/postmaster-decision-filter` | Let goatkit-llm set queue, priority and type of new mail |
 | Auto Responses | `/admin/auto-responses` | Automatic email replies |
 | Queue Auto Responses | `/admin/queue-auto-responses` | Link auto responses to queues |
 | Ticket Notifications | `/admin/notification-events` | Notifications for ticket events |

@@ -1,0 +1,245 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("postmaster_decision_filter.title")|default:"Mail Decision Filter" }} - GoatFlow Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <!-- Page header -->
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("postmaster_decision_filter.title")|default:"Mail Decision Filter" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                    {{ t("postmaster_decision_filter.description")|default:"Let goatkit-llm choose the queue, priority and type of tickets created from new email." }}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin/postmaster-filters" class="gk-btn-secondary">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("common.back")|default:"Back" }}
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div id="decision-filter-i18n" class="hidden"
+        data-saved="{{ t("postmaster_decision_filter.saved")|default:"Decision filter settings saved" }}"
+        data-save-failed="{{ t("postmaster_decision_filter.save_failed")|default:"Failed to save decision filter settings" }}"></div>
+
+    <div class="max-w-4xl space-y-6">
+        {% if ConfigUnreadable %}
+        <div id="decision-filter-unreadable" role="alert" class="gk-card-glow rounded-lg p-4 text-sm" style="color: var(--gk-warning);">
+            {{ t("postmaster_decision_filter.config_unreadable")|default:"The stored settings could not be read, so the filter is off. Saving replaces them." }}
+        </div>
+        {% endif %}
+
+        <!-- How it works -->
+        <section class="gk-card-glow rounded-lg p-6">
+            <h2 class="text-lg font-medium mb-3" style="color: var(--gk-text-primary);">{{ t("postmaster_decision_filter.how_it_works")|default:"How it works" }}</h2>
+            <ul class="list-disc pl-5 space-y-1 text-sm" style="color: var(--gk-text-secondary);">
+                <li>{{ t("postmaster_decision_filter.help_threshold")|default:"Answers below the confidence threshold leave the ticket on normal routing." }}</li>
+                <li>{{ t("postmaster_decision_filter.help_precedence")|default:"Explicit PostMaster filter rules and follow-ups to existing tickets take precedence." }}</li>
+                <li>{{ t("postmaster_decision_filter.help_never_blocks")|default:"If goatkit-llm is unavailable or slow, mail is never blocked: the ticket is created with normal routing." }}</li>
+                <li>{{ t("postmaster_decision_filter.help_privacy")|default:"The email subject, sender and body are sent to the configured decide provider. A hosted provider is a third party." }}</li>
+            </ul>
+        </section>
+
+        <form id="decisionFilterForm" class="gk-card-glow rounded-lg p-8 space-y-8">
+            <!-- Enable -->
+            <div class="flex items-center justify-between gap-4 pb-6 border-b" style="border-color: var(--gk-border-default);">
+                <div>
+                    <p class="text-sm font-medium" style="color: var(--gk-text-primary);">{{ t("postmaster_decision_filter.enable")|default:"Enable decision filter" }}</p>
+                    <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("postmaster_decision_filter.enable_help")|default:"Classify new inbound mail before its ticket is created." }}</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="df-enabled" class="sr-only peer" {% if Settings.Enabled %}checked{% endif %}>
+                    <div class="w-11 h-6 rounded-full peer transition-colors" style="background: var(--gk-bg-tertiary);"></div>
+                    <div class="absolute left-[4px] top-0.5 w-5 h-5 bg-white rounded-full border transition peer-checked:translate-x-full peer-checked:border-white"
+                        style="border-color: var(--gk-border-default);"></div>
+                    <style>
+                        #df-enabled:checked + div { background: var(--gk-primary) !important; }
+                    </style>
+                </label>
+            </div>
+
+            <!-- Provider -->
+            <div class="pb-6 border-b" style="border-color: var(--gk-border-default);">
+                <label for="df-provider" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                    {{ t("postmaster_decision_filter.provider")|default:"Decide provider" }}
+                </label>
+                <select id="df-provider" class="gk-select-neon w-full">
+                    <option value="0">{{ t("postmaster_decision_filter.provider_default")|default:"Active decide provider" }}</option>
+                    {% if ProviderMissing %}
+                    <option value="{{ Settings.ProviderID }}" selected>{{ t("postmaster_decision_filter.provider_missing")|default:"Saved provider (not available)" }} #{{ Settings.ProviderID }}</option>
+                    {% endif %}
+                    {% for p in Providers %}
+                    <option value="{{ p.ID }}" {% if p.Selected %}selected{% endif %}>{{ p.Name }}{% if p.Model %} ({{ p.Model }}){% endif %}{% if p.Active %} - {{ t("postmaster_decision_filter.provider_active")|default:"active" }}{% endif %}</option>
+                    {% endfor %}
+                </select>
+                {% if ProvidersAvailable %}
+                <p class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("postmaster_decision_filter.provider_help")|default:"Only goatkit-llm providers with the decide purpose are listed." }}</p>
+                {% else %}
+                <p id="decision-provider-unavailable" class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("postmaster_decision_filter.llm_unavailable")|default:"goatkit-llm is not available, so only the active decide provider can be chosen." }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Threshold and timeout -->
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 pb-6 border-b" style="border-color: var(--gk-border-default);">
+                <div>
+                    <label for="df-threshold" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("postmaster_decision_filter.threshold")|default:"Confidence threshold" }}
+                    </label>
+                    <input type="number" id="df-threshold" class="gk-input-neon w-full" min="0" max="1" step="0.05" value="{{ Threshold }}" required>
+                    <p class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("postmaster_decision_filter.threshold_help")|default:"Between 0 and 1. Answers below it are ignored." }}</p>
+                </div>
+                <div>
+                    <label for="df-timeout" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">
+                        {{ t("postmaster_decision_filter.timeout")|default:"Timeout (seconds)" }}
+                    </label>
+                    <input type="number" id="df-timeout" class="gk-input-neon w-full" min="1" max="{{ MaxTimeout }}" step="1" value="{{ Settings.TimeoutSeconds }}" required>
+                    <p class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("postmaster_decision_filter.timeout_help")|default:"How long to wait for an answer before routing normally." }} (1-{{ MaxTimeout }})</p>
+                </div>
+            </div>
+
+            {% for section in Sections %}
+            <section class="df-section space-y-4 pb-6 border-b" style="border-color: var(--gk-border-default);" data-field="{{ section.Key }}">
+                <div class="flex items-center justify-between gap-4">
+                    <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">
+                        {% if section.Key == "queue" %}{{ t("postmaster_decision_filter.queue_title")|default:"Queue" }}{% elif section.Key == "priority" %}{{ t("postmaster_decision_filter.priority_title")|default:"Priority" }}{% else %}{{ t("postmaster_decision_filter.type_title")|default:"Type" }}{% endif %}
+                    </h3>
+                    <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+                        <input type="checkbox" class="df-field-enabled h-4 w-4 rounded" style="accent-color: var(--gk-primary);" {% if section.Enabled %}checked{% endif %}>
+                        {{ t("postmaster_decision_filter.field_enabled")|default:"Decide this field" }}
+                    </label>
+                </div>
+
+                <div>
+                    <label for="df-instructions-{{ section.Key }}" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">
+                        {{ t("postmaster_decision_filter.instructions")|default:"Instructions" }}
+                    </label>
+                    <input type="text" id="df-instructions-{{ section.Key }}" class="df-instructions gk-input-neon w-full" maxlength="500" value="{{ section.Instructions }}"
+                        placeholder="{% if section.Key == "queue" %}{{ t('postmaster_decision_filter.queue_placeholder')|default:'Which queue should handle this email?' }}{% elif section.Key == "priority" %}{{ t('postmaster_decision_filter.priority_placeholder')|default:'How urgent is this email?' }}{% else %}{{ t('postmaster_decision_filter.type_placeholder')|default:'What kind of request is this email?' }}{% endif %}">
+                    <p class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("postmaster_decision_filter.instructions_help")|default:"Optional. Replaces the default question put to the model." }}</p>
+                </div>
+
+                <p class="text-sm" style="color: var(--gk-text-muted);">
+                    {{ t("postmaster_decision_filter.options_help")|default:"Tick the options the model may choose from, at least 2. A description tells the model when an option applies." }}
+                    {{ t("postmaster_decision_filter.options_max")|default:"Maximum options" }}: {{ MaxOptions }}
+                </p>
+
+                <div class="overflow-x-auto rounded-lg" style="border: 1px solid var(--gk-border-default);">
+                    <table class="gk-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ t("postmaster_decision_filter.include")|default:"Include" }}</th>
+                                <th scope="col">{{ t("postmaster_decision_filter.name")|default:"Name" }}</th>
+                                <th scope="col">{{ t("postmaster_decision_filter.option_description")|default:"Description" }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in section.Rows %}
+                            <tr class="df-option" data-name="{{ row.Name }}">
+                                <td>
+                                    <input type="checkbox" class="df-include h-4 w-4 rounded" style="accent-color: var(--gk-primary);" aria-label="{{ t('postmaster_decision_filter.include')|default:'Include' }}: {{ row.Name }}" {% if row.Included %}checked{% endif %}>
+                                </td>
+                                <td>
+                                    <span style="color: var(--gk-text-primary);">{{ row.Name }}</span>
+                                    {% if row.Missing %}
+                                    <span class="df-missing text-xs ml-2" style="color: var(--gk-error);">{{ t("postmaster_decision_filter.missing")|default:"no longer exists" }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <input type="text" class="df-description gk-input-neon w-full" maxlength="500" value="{{ row.Description }}"
+                                        aria-label="{{ t('postmaster_decision_filter.option_description')|default:'Description' }}: {{ row.Name }}"
+                                        placeholder="{{ t('postmaster_decision_filter.description_placeholder')|default:'When does this option apply?' }}">
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" style="color: var(--gk-text-muted);">{{ t("postmaster_decision_filter.no_rows")|default:"No valid entries to choose from." }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% endfor %}
+
+            <!-- Form actions -->
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <a href="/admin/postmaster-filters" class="gk-btn-secondary">{{ t("buttons.cancel")|default:"Cancel" }}</a>
+                <button type="submit" name="continue" value="0" class="gk-btn-secondary">
+                    {{ t("buttons.save_and_close")|default:"Save and Close" }}
+                </button>
+                <button type="submit" name="continue" value="1" class="gk-btn-neon">
+                    {{ t("common.save")|default:"Save" }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function () {
+    const form = document.getElementById('decisionFilterForm');
+    const I18N = document.getElementById('decision-filter-i18n').dataset;
+
+    function readField(section) {
+        const options = [];
+        section.querySelectorAll('.df-option').forEach(function (row) {
+            if (row.querySelector('.df-include').checked) {
+                options.push({
+                    name: row.dataset.name,
+                    description: row.querySelector('.df-description').value.trim()
+                });
+            }
+        });
+        return {
+            enabled: section.querySelector('.df-field-enabled').checked,
+            instructions: section.querySelector('.df-instructions').value.trim(),
+            options: options
+        };
+    }
+
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        const closeAfterSave = shouldCloseAfterSave(form);
+        const config = {
+            enabled: document.getElementById('df-enabled').checked,
+            provider_id: parseInt(document.getElementById('df-provider').value, 10) || 0,
+            threshold: parseFloat(document.getElementById('df-threshold').value),
+            timeout_seconds: parseInt(document.getElementById('df-timeout').value, 10)
+        };
+        form.querySelectorAll('.df-section').forEach(function (section) {
+            config[section.dataset.field] = readField(section);
+        });
+
+        fetch('/admin/api/postmaster-decision-filter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        })
+            .then(function (response) {
+                return response.json().catch(function () { return {}; });
+            })
+            .then(function (result) {
+                if (result.success) {
+                    window.showToast(I18N.saved, 'success');
+                    if (closeAfterSave) {
+                        window.location.href = '/admin/postmaster-filters';
+                    }
+                } else {
+                    window.showToast(result.error || I18N.saveFailed, 'error');
+                }
+            })
+            .catch(function () {
+                window.showToast(I18N.saveFailed, 'error');
+            });
+    });
+})();
+</script>
+{% endblock %}

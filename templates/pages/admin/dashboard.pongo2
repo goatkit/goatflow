@@ -319,6 +319,17 @@
                         </div>
                     </div>
                 </a>
+                <a href="/admin/postmaster-decision-filter" class="gk-admin-card group">
+                    <div class="flex items-start">
+                        <div class="gk-admin-card-icon">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xl" aria-hidden="true"></i>
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_dashboard.postmaster_decision_filter")|default:"Mail Decision Filter" }}</h3>
+                            <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin_dashboard.postmaster_decision_filter_desc")|default:"Let goatkit-llm set the queue, priority and type of new mail" }}</p>
+                        </div>
+                    </div>
+                </a>
                 <a href="/admin/auto-responses" class="gk-admin-card group">
                     <div class="flex items-start">
                         <div class="gk-admin-card-icon">

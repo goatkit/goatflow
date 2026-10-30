@@ -13,7 +13,11 @@
                 </h1>
                 <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.modules.postmaster_filter.description") }}</p>
             </div>
-            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
+            <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none flex flex-wrap gap-3">
+                <a href="/admin/postmaster-decision-filter" class="gk-btn-secondary">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-2" aria-hidden="true"></i>
+                    {{ t("admin_dashboard.postmaster_decision_filter")|default:"Mail Decision Filter" }}
+                </a>
                 <a href="/admin/postmaster-filters/new" class="gk-btn-neon">
                     <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

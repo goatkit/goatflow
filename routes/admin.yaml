@@ -985,6 +985,18 @@ spec:
           handler: handleDeletePostmasterFilter
           description: "Delete a postmaster filter"
 
+        # Inbound mail decision filter (goatkit-llm decisions before ticket creation)
+        - path: /postmaster-decision-filter
+          method: GET
+          handler: handleAdminPostmasterDecisionFilter
+          template: pages/admin/postmaster_decision_filter.pongo2
+          description: "Display inbound mail decision filter settings"
+
+        - path: /api/postmaster-decision-filter
+          method: POST
+          handler: handleSaveAdminPostmasterDecisionFilter
+          description: "Save inbound mail decision filter settings"
+
         # Notification Events management
         - path: /notification-events
           method: GET

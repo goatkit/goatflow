@@ -37,8 +37,23 @@ project adheres to [Semantic Versioning](https://semver.org/).
 - **`GenerateThumbnail` rasterises PDFs.** `application/pdf` input renders page 1 through poppler's
   `pdftoppm` (the same path as the platform attachment thumbnail route, with a file-type placeholder
   when the PDF cannot be rendered); image types still go through libvips.
+- **Inbound mail can be classified by a decision model.** A new filter at the end of the inbound
+  chain asks goatkit-llm's `llm_decide` (System One typed decisions) which queue, priority and type
+  a new email belongs to, in one request with the subject, sender and the first 4,000 characters
+  of the body as state. Answers at or above the configured confidence set the same name overrides
+  a postmaster filter rule would; lower answers leave the message on normal routing. It skips
+  follow-ups, ignored messages and anything an explicit rule (postmaster filter, dispatch map,
+  trusted header) already routed. It fails open: a missing or disabled plugin, an upstream error or
+  a timeout is logged and the message is processed as before, and a call never runs into the last
+  15 s of the mail-poll budget. Configured under Admin → Mail Decision Filter
+  (`/admin/postmaster-decision-filter`), stored as `PostMaster::DecisionFilter`; off by default.
+  The configured decide provider receives the email text, so a hosted provider is a third party.
 
 ### Fixed
+- **PostMaster filter rules that set a priority by name, a ticket type or a state now apply.**
+  `X-GoatFlow-Priority` / `X-OTRS-Priority`, `X-GoatFlow-Type` and `X-GoatFlow-State` Set rules
+  were stored and matched but nothing read them, so the new ticket kept the defaults. A name that
+  does not exist is logged and the default kept.
 - **The toolbox image builds without public keyservers.** `Dockerfile.toolbox` fetched Bun's release
   signing key from keys.openpgp.org (falling back to keyserver.ubuntu.com, which does not have it), so
   CI failed whenever that keyserver was down. The key is now kept in `scripts/keys/bun-release.asc`

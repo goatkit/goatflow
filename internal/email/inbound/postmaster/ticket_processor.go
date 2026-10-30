@@ -24,6 +24,7 @@ import (
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
+	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/service"
 	"github.com/goatkit/goatflow/internal/storage"
 )
@@ -274,7 +275,11 @@ func (tp *TicketProcessor) Process(ctx context.Context, msg *connector.FetchedMe
 	}
 	if priority := annotationInt(meta, filters.AnnotationPriorityIDOverride); priority > 0 {
 		input.PriorityID = priority
+	} else {
+		input.PriorityID = tp.lookupAnnotation(ctx, meta, filters.AnnotationPriorityNameOverride, lookups.PriorityTable)
 	}
+	input.TypeID = tp.lookupAnnotation(ctx, meta, filters.AnnotationTypeOverride, lookups.TicketTypeTable)
+	input.StateID = tp.lookupAnnotation(ctx, meta, filters.AnnotationStateOverride, lookups.StateLookup)
 
 	ticket, err := tp.tickets.Create(ctx, input)
 	if err != nil {
@@ -312,6 +317,23 @@ func (tp *TicketProcessor) applyAnnotationOverrides(meta *filters.MessageContext
 	if customer := annotationString(meta, filters.AnnotationCustomerUserOverride); customer != "" {
 		env.CustomerUserID = customer
 	}
+}
+
+// lookupAnnotation resolves a name annotation (set by a postmaster filter
+// rule or the decision filter) to the id of the named row in t. A missing
+// annotation, or a name that does not exist, is 0: the ticket keeps the
+// default rather than failing the message.
+func (tp *TicketProcessor) lookupAnnotation(ctx context.Context, meta *filters.MessageContext, key string, t lookups.Table) int {
+	name := annotationString(meta, key)
+	if name == "" || tp.db == nil {
+		return 0
+	}
+	id, err := lookups.ID(ctx, tp.db, t, name)
+	if err != nil {
+		tp.logf("postmaster: %s %q not applied: %v", key, name, err)
+		return 0
+	}
+	return id
 }
 
 func (tp *TicketProcessor) resolveQueueID(ctx context.Context, msg *connector.FetchedMessage, meta *filters.MessageContext) int {

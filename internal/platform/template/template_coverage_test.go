@@ -85,6 +85,7 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/notification_event_form.pongo2":       true,
 	"pages/admin/postmaster_filters.pongo2":            true,
 	"pages/admin/postmaster_filter_form.pongo2":        true,
+	"pages/admin/postmaster_decision_filter.pongo2":    true,
 	"pages/admin/acl.pongo2":                           true,
 	"pages/admin/generic_agent.pongo2":                 true,
 	"pages/admin/customer_groups.pongo2":               true,
@@ -1107,6 +1108,31 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				ctx["Types"] = []map[string]interface{}{sampleType()}
 				ctx["HeaderFields"] = []string{"From", "To", "Subject", "X-Priority"}
 				ctx["SetFields"] = []string{"Queue", "State", "Priority", "Type"}
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/postmaster_decision_filter",
+			template: "pages/admin/postmaster_decision_filter.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Settings"] = map[string]interface{}{"Enabled": true, "ProviderID": 7, "TimeoutSeconds": 30}
+				ctx["Threshold"] = "0.5"
+				ctx["Sections"] = []map[string]interface{}{
+					{"Key": "queue", "Enabled": true, "Instructions": "", "Rows": []map[string]interface{}{
+						{"Name": "Raw", "Description": "Anything else", "Included": true},
+						{"Name": "Retired", "Included": true, "Missing": true},
+						{"Name": "Junk"},
+					}},
+					{"Key": "priority", "Rows": []map[string]interface{}{}},
+					{"Key": "type", "Rows": []map[string]interface{}{{"Name": "Incident"}}},
+				}
+				ctx["Providers"] = []map[string]interface{}{{"ID": 3, "Name": "System One", "Model": "s1", "Active": true}}
+				ctx["ProvidersAvailable"] = true
+				ctx["ProviderMissing"] = true
+				ctx["ConfigUnreadable"] = true
+				ctx["MaxOptions"] = 26
+				ctx["MaxTimeout"] = 120
 				return ctx
 			}(),
 		},

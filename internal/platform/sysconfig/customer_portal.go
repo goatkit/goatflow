@@ -210,6 +210,29 @@ func DeleteCustomerPortalConfigKeyForCompany(db *sql.DB, customerID, key string)
 }
 
 func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID int) error {
+	return ensureSysconfigDefault(db, sysconfigDefault{
+		name:        targetName,
+		description: def.description,
+		navigation:  "Frontend::Customer::Portal",
+		xmlFilename: "CustomerPortal.xml",
+		xml:         def.xml,
+		value:       def.defaultVal,
+	}, userID)
+}
+
+// sysconfigDefault describes a sysconfig_default row seeded on first save.
+type sysconfigDefault struct {
+	name        string
+	description string
+	navigation  string
+	xmlFilename string
+	xml         string
+	value       string
+}
+
+// ensureSysconfigDefault inserts the sysconfig_default row for def.name when
+// it is missing, so upsertSysconfigValue has a default to attach to.
+func ensureSysconfigDefault(db *sql.DB, def sysconfigDefault, userID int) error {
 	if db == nil {
 		return fmt.Errorf("database connection unavailable")
 	}
@@ -220,7 +243,7 @@ func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID
 	var id int
 	err := db.QueryRow(database.ConvertPlaceholders(`
 		SELECT id FROM sysconfig_default WHERE name = ? LIMIT 1
-	`), targetName).Scan(&id)
+	`), def.name).Scan(&id)
 	if err == nil {
 		return nil
 	}
@@ -238,7 +261,7 @@ func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID
 			) VALUES (
 				?, ?, ?, 0, 0, 0, 1,
 				0, 1, 1, NULL,
-				?, ?, 'CustomerPortal.xml', ?, 0,
+				?, ?, ?, ?, 0,
 				'', NULL, NULL,
 				CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, ?
 			)
@@ -249,7 +272,7 @@ func ensurePortalDefault(db *sql.DB, targetName string, def portalKeyDef, userID
 				effective_value = VALUES(effective_value),
 				change_time = CURRENT_TIMESTAMP,
 				change_by = VALUES(change_by)
-		`, "name"), targetName, def.description, "Frontend::Customer::Portal", def.xml, def.xml, def.defaultVal, userID, userID)
+		`, "name"), def.name, def.description, def.navigation, def.xml, def.xml, def.xmlFilename, def.value, userID, userID)
 	return insertErr
 }
 

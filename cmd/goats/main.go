@@ -65,6 +65,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 	"github.com/goatkit/goatflow/internal/platform/services/k8s"
 	"github.com/goatkit/goatflow/internal/platform/shared"
+	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 	"github.com/goatkit/goatflow/internal/platform/template"
 	"github.com/goatkit/goatflow/internal/platform/webhook"
 	"github.com/goatkit/goatflow/internal/platform/yamlmgmt"
@@ -313,6 +314,19 @@ func main() {
 			trustedHeaders = cfg.Email.Inbound.TrustedHeaders
 		}
 		filterList = append(filterList, filters.NewTrustedHeadersFilter(log.Default(), trustedHeaders...))
+		// The decision filter runs last so explicit rules and follow-ups win.
+		// The plugin manager is created later in startup, so it is read per
+		// message.
+		filterList = append(filterList, filters.NewDecisionFilter(
+			func() filters.PluginCaller {
+				if m := api.GetPluginManager(); m != nil {
+					return m
+				}
+				return nil
+			},
+			func() (sysconfig.DecisionFilterConfig, error) { return sysconfig.LoadDecisionFilterConfig(db) },
+			log.Default(),
+		))
 		chain := filters.NewChain(filterList...)
 		emailHandler = &postmaster.Service{
 			FilterChain: chain,

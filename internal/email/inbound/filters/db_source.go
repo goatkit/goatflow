@@ -300,12 +300,3 @@ func (f *DBSourceFilter) logf(format string, args ...any) {
 		f.logger.Printf(format, args...)
 	}
 }
-
-// AnnotationPriorityNameOverride is the annotation key for priority name override.
-const AnnotationPriorityNameOverride = "postmaster.priority_name_override"
-
-// AnnotationStateOverride is the annotation key for state override.
-const AnnotationStateOverride = "postmaster.state_override"
-
-// AnnotationTypeOverride is the annotation key for ticket type override.
-const AnnotationTypeOverride = "postmaster.type_override"
