@@ -6,7 +6,7 @@ GoatFlow has first-class support for Podman, including rootless containers and S
 
 ## Container Security Principles
 
-1. **Non-root by default**: All containers run as UID 1000 (appuser)
+1. **Non-root by default**: GoatFlow containers run as UID 1000 (appuser); MariaDB, PostgreSQL and Valkey run as their images' service users (999, 70, 999), Caddy and smtp4dev as UID 1000
 2. **Alpine-first**: Minimal attack surface with Alpine Linux
 3. **SELinux labels**: `:Z` labels for Fedora/RHEL compatibility
 4. **Rootless operation**: Full support for rootless Podman

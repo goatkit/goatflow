@@ -76,8 +76,10 @@ ifndef CONTAINER_CMD
 CONTAINER_CMD := $(shell command -v podman 2> /dev/null || command -v docker 2> /dev/null || echo docker)
 endif
 
-# Run containers as current user to avoid root-owned files and permission issues in CI
+# Every container runs as the current user, never root (also avoids root-owned files)
 CONTAINER_USER := --user "$$(id -u):$$(id -g)"
+# For tools that talk to the container engine socket: its group, instead of root
+DOCKER_SOCK_GROUP := --group-add "$$(stat -c %g /var/run/docker.sock)"
 
 # Detect compose command - try multiple variants in order of preference
 # Priority based on detected container runtime
@@ -321,7 +323,7 @@ test-sdk-go:
 # Run all unit tests (templates + core packages, no integration/e2e)
 test-unit: toolbox-build test-stack-up
 	@printf "\n🧪 Running unit tests...\n"
-	@$(CONTAINER_CMD) run --rm -v "$$PWD:/workspace" alpine sh -c "chmod -R 777 /workspace/.go-build /workspace/.gomodcache /workspace/.golangci-lint /workspace/.bun /workspace/.xdg-cache /workspace/tmp" 2>/dev/null || true
+	@chmod -R 777 .go-build .gomodcache .golangci-lint .bun .xdg-cache tmp 2>/dev/null || true
 	@# runner-test shares the unit tests' database: its scheduled tasks (webhook
 	@# dispatch, email queue, escalations) would claim and change rows the tests
 	@# create. Pause it for the run and start it again whatever the result.
@@ -598,7 +600,7 @@ helm-package: helm-deps
 # Build toolbox image
 toolbox-build: build-artifacts
 	@mkdir -p .go-build .gomodcache .golangci-lint .bun .xdg-cache/helm/repository .xdg-cache/helm/cache .xdg-cache/helm/config tmp
-	@$(CONTAINER_CMD) run --rm -v "$$PWD:/workspace" alpine sh -c "chmod -R 777 /workspace/.go-build /workspace/.gomodcache /workspace/.golangci-lint /workspace/.bun /workspace/.xdg-cache /workspace/tmp" 2>/dev/null || chmod -R 777 .go-build .gomodcache .golangci-lint .bun .xdg-cache tmp 2>/dev/null || true
+	@chmod -R 777 .go-build .gomodcache .golangci-lint .bun .xdg-cache tmp 2>/dev/null || true
 	@printf "\n🔧 Building GoatFlow toolbox container...\n"
 	@if echo "$(COMPOSE_CMD)" | grep -q '^MISSING:'; then \
 		echo "⚠️  compose not available; falling back to direct docker build"; \
@@ -1303,7 +1305,7 @@ gosec-host:
 # Run Trivy vulnerability scan locally
 trivy-scan:
 	@printf "🔍 Running Trivy vulnerability scan...\n"
-	@$(CONTAINER_CMD) run --rm \
+	@$(CONTAINER_CMD) run --rm $(CONTAINER_USER) $(DOCKER_SOCK_GROUP) \
 		-v "$$(pwd):/workspace" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-e TRIVY_CACHE_DIR=/workspace/.trivy-cache \
@@ -1313,13 +1315,15 @@ trivy-scan:
 # Run Trivy on built images
 trivy-images:
 	@printf "🔍 Scanning backend image...\n"
-	@$(CONTAINER_CMD) run --rm \
+	@$(CONTAINER_CMD) run --rm $(CONTAINER_USER) $(DOCKER_SOCK_GROUP) \
+		-v "$$(pwd):/workspace" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-e TRIVY_CACHE_DIR=/workspace/.trivy-cache \
 		aquasec/trivy:latest \
 		image goatflow-backend:latest
 	@printf "🔍 Scanning frontend image...\n"
-	@$(CONTAINER_CMD) run --rm \
+	@$(CONTAINER_CMD) run --rm $(CONTAINER_USER) $(DOCKER_SOCK_GROUP) \
+		-v "$$(pwd):/workspace" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-e TRIVY_CACHE_DIR=/workspace/.trivy-cache \
 		aquasec/trivy:latest \
@@ -2366,7 +2370,7 @@ CHECK_I18N_ARGS ?=
 # Scan for secrets in current code
 scan-secrets:
 	@printf "Scanning for secrets and credentials...\n"
-	@$(CONTAINER_CMD) run --rm \
+	@$(CONTAINER_CMD) run --rm $(CONTAINER_USER) \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		zricethezav/gitleaks:latest \
@@ -2375,7 +2379,7 @@ scan-secrets:
 # Scan entire git history for secrets
 scan-secrets-history:
 	@printf "Scanning git history for secrets...\n"
-	@$(CONTAINER_CMD) run --rm \
+	@$(CONTAINER_CMD) run --rm $(CONTAINER_USER) \
 		-v "$$(pwd):/workspace" \
 		-w /workspace \
 		zricethezav/gitleaks:latest \
@@ -2389,7 +2393,7 @@ scan-vulnerabilities: toolbox-build
 	@printf "🔍 Scanning Go dependencies for vulnerabilities...\n"
 	@$(MAKE) toolbox-exec ARGS="govulncheck -show verbose ./..."
 	@printf "🔍 Scanning container/config for vulnerabilities...\n"
-	@$(CONTAINER_CMD) run --rm \
+	@$(CONTAINER_CMD) run --rm $(CONTAINER_USER) \
 		-v "$$(pwd):/workspace" \
 		-e TRIVY_CACHE_DIR=/workspace/.trivy-cache \
 		-w /workspace \
@@ -2473,7 +2477,7 @@ analyze-size:
 	@if command -v dive > /dev/null 2>&1; then \
 		dive goatflow:latest; \
 	else \
-		$(CONTAINER_CMD) run --rm -it \
+		$(CONTAINER_CMD) run --rm -it $(CONTAINER_USER) $(DOCKER_SOCK_GROUP) \
 			-v /var/run/docker.sock:/var/run/docker.sock \
 			wagoodman/dive:latest goatflow:latest; \
 	fi
@@ -2542,8 +2546,8 @@ show-sizes:
 # Check service health (runs in container)
 health:
 	@printf "Checking service health...\n"
-	@$(CONTAINER_CMD) run --rm --network=host alpine/curl:latest -f http://localhost/health || echo "Backend not healthy"
-	@$(CONTAINER_CMD) run --rm --network=host alpine/curl:latest -f http://localhost/ || echo "Frontend not healthy"
+	@$(CONTAINER_CMD) run --rm $(CONTAINER_USER) --network=host alpine/curl:latest -f http://localhost/health || echo "Backend not healthy"
+	@$(CONTAINER_CMD) run --rm $(CONTAINER_USER) --network=host alpine/curl:latest -f http://localhost/ || echo "Frontend not healthy"
 
 # Open services in browser
 open:

@@ -128,6 +128,18 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
+      # Keyless Sigstore signing: the certificate identity is this workflow at
+      # the pushed ref, so no signing key is stored.
+      - name: Install cosign
+        if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
+        uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Sign image
+        if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${DIGEST}"
+
   build-runner:
     name: Build Runner Image
     runs-on: ubuntu-latest
@@ -210,6 +222,16 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-runner
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+
+      - name: Install cosign
+        if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
+        uses: sigstore/cosign-installer@v4.1.2
+
+      - name: Sign image
+        if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-runner@${DIGEST}"
 
   helm-chart:
     name: Package & Publish Helm Chart
@@ -305,14 +327,31 @@ jobs:
              dist/goatflow-helm-chart-${{ steps.chart.outputs.version }}.tgz
 
       - name: Push chart to OCI registry
+        id: chart_push
         if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
         run: |
           # Push chart - version is embedded in the package from Chart.yaml
           # For branches: 0.1.0-main, 0.1.0-dev
           # For releases: 0.5.0, 1.0.0
           helm push dist/goatflow-helm-chart-${{ steps.chart.outputs.version }}.tgz \
-            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts
-          echo "Pushed chart version: ${{ steps.chart.outputs.version }}"
+            oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts 2>&1 | tee push.log
+          DIGEST=$(sed -nE 's/^Digest: (sha256:[0-9a-f]{64})$/\1/p' push.log)
+          [ -n "$DIGEST" ] || { echo "::error::helm push printed no digest"; exit 1; }
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          echo "Pushed chart version: ${{ steps.chart.outputs.version }} ($DIGEST)"
+
+      - name: Generate SLSA attestation for the OCI chart
+        if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/goatflow
+          subject-digest: ${{ steps.chart_push.outputs.digest }}
+
+      - name: Generate SLSA attestation for the chart package
+        if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: dist/goatflow-helm-chart-${{ steps.chart.outputs.version }}.tgz
 
       - name: Create latest symlink for permalink
         run: |
@@ -381,25 +420,33 @@ jobs:
           ```
 
           ### Security
-          - ✅ All security scans passed
-          - ✅ SLSA Level 2 attestations generated
-          - ✅ Container images signed and attested
+          - Main and runner images signed with Sigstore cosign (keyless, by this release workflow)
+          - Signed SLSA v1.0 build provenance attestations (SLSA Build Level 2) for both images, the Helm chart (OCI and `.tgz`) and the air-gapped bundle
+          - SBOM for both images
 
           ### Verification
-          To verify the container images:
+          Verify the image signatures (cosign v3):
           ```bash
-          # Install cosign
-          go install github.com/sigstore/cosign/v2/cmd/cosign@latest
+          go install github.com/sigstore/cosign/v3/cmd/cosign@latest
 
-          # Verify main image
           cosign verify ${{ needs.build.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }} \
             --certificate-identity=https://github.com/${{ github.repository }}/.github/workflows/build.yml@refs/tags/${{ steps.version.outputs.VERSION }} \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com
-
-          # Verify runner image
           cosign verify ${{ needs.build-runner.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }} \
             --certificate-identity=https://github.com/${{ github.repository }}/.github/workflows/build.yml@refs/tags/${{ steps.version.outputs.VERSION }} \
             --certificate-oidc-issuer=https://token.actions.githubusercontent.com
+          ```
+
+          Verify the build provenance (GitHub CLI 2.49 or later):
+          ```bash
+          gh attestation verify oci://${{ needs.build.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }} \
+            --repo ${{ github.repository }}
+          gh attestation verify oci://${{ needs.build-runner.outputs.image }}:${{ steps.version.outputs.VERSION_NUM }} \
+            --repo ${{ github.repository }}
+          gh attestation verify oci://${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/goatflow:${{ needs.helm-chart.outputs.chart_version }} \
+            --repo ${{ github.repository }}
+          # Downloaded files: the chart .tgz or the air-gapped bundle
+          gh attestation verify goatflow-helm-chart-${{ needs.helm-chart.outputs.chart_version }}.tgz --repo ${{ github.repository }}
           ```
 
           ### Air-Gapped Deployment
@@ -434,6 +481,8 @@ jobs:
     permissions:
       contents: write
       packages: read
+      id-token: write
+      attestations: write
     environment: Development
     steps:
       - name: Checkout code
@@ -669,6 +718,11 @@ jobs:
           tar -czvf goatflow-airgap-container-bundle-${VERSION}.tar.gz -C bundle .
           ls -lh goatflow-airgap-container-bundle-${VERSION}.tar.gz
 
+      - name: Generate SLSA attestation for the bundle
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: goatflow-airgap-container-bundle-${{ steps.version.outputs.VERSION_NUM }}.tar.gz
+
       - name: Upload bundle to release
         uses: softprops/action-gh-release@v2
         with:
@@ -758,6 +812,8 @@ jobs:
       - name: Run demo smoke test
         run: |
           docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            -e HOME=/tmp \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             -e PLAYWRIGHT_SKIP_WEBSERVER=1 \

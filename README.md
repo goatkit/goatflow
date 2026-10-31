@@ -420,9 +420,12 @@ Contact: hello@goatflow.io
 
 ## Security
 
-Security is our top priority. Please report security vulnerabilities to security@goatflow.io.
+Please report vulnerabilities privately through
+[GitHub private vulnerability reporting](https://github.com/goatkit/goatflow/security/advisories/new)
+or to security@goatflow.io, not in public issues.
 
-See [SECURITY.md](docs/SECURITY.md) for our security policies and practices.
+See [SECURITY.md](SECURITY.md) for the reporting and disclosure policy, and
+[docs/SECURITY.md](docs/SECURITY.md) for the security controls GoatFlow has today.
 
 
 ## Legal and Compatibility Notice

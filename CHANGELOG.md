@@ -49,6 +49,53 @@ project adheres to [Semantic Versioning](https://semver.org/).
   (`/admin/postmaster-decision-filter`), stored as `PostMaster::DecisionFilter`; off by default.
   The configured decide provider receives the email text, so a hosted provider is a third party.
 
+### Changed
+- **One security policy, with a disclosure process.** `SECURITY.md` is the only policy file
+  (`.github/SECURITY.md`, which GitHub showed instead and which still called 0.9.x the stable
+  release, is gone). Reports go through GitHub private vulnerability reporting, with
+  security@goatflow.io as the fallback; first-response targets are 24 hours for critical, 48 for
+  high and a week for medium and low. Accepted issues follow a written flow: private fix in the
+  advisory fork, CVE requested through GitHub, release, then a published GitHub Security Advisory
+  and a "Security" changelog entry crediting the reporter. Until 1.0.0 only the latest minor
+  release receives security fixes. Claims the old files made without backing (a PGP key, a hall
+  of fame, a security mailing list, encryption at rest) are removed.
+- **Release images are signed with cosign.** Plugin releases (Knowledge Base, Kanban) have been
+  signed with our ed25519 key, checked against the public key in the marketplace index, but the
+  GoatFlow container images were not signed: they had only a signed SLSA build provenance
+  attestation and an SBOM. The release workflow now also signs the main and runner images keylessly
+  with Sigstore cosign (the certificate identity is `build.yml` at the release tag, so no signing
+  key is stored). Earlier release notes said the images were signed and that "all security scans
+  passed", and gave a `cosign verify` command that reported "no signatures found"; that command now
+  works (cosign v3), and the notes also show `gh attestation verify` for the provenance. 0.10.0 and
+  earlier images are not signed.
+- **Every release artifact has SLSA build provenance.** Only the two container images had a signed
+  SLSA v1.0 provenance attestation. The Helm chart (in the OCI registry and as the `.tgz` release
+  asset) and the air-gapped bundle now get one too, so all GoatFlow release artifacts meet SLSA v1.0
+  Build Level 2 (GitHub-generated provenance on GitHub-hosted runners). Check one with
+  `gh attestation verify <file or oci://ref> --repo goatkit/goatflow`. The bundle's attestation
+  covers how it was assembled, not the third-party images inside it.
+- **Every container runs as a non-root user.** The GoatFlow images already did, but the
+  third-party services started as root: MariaDB, PostgreSQL and Valkey in every compose file (their
+  entrypoints only dropped to the service user after starting), Caddy in `deploy/docker-compose.yml`,
+  smtp4dev, the `plugin-init` container that chowned the plugins volume, and the PostgreSQL pod in
+  the Helm chart. They now start as their image's service user (MariaDB 999, PostgreSQL 70, Valkey
+  999); Caddy and smtp4dev are rebuilt from their images with their data directories handed to UID
+  1000 (Caddy keeps 80/443 through its binary's `cap_net_bind_service`); `plugin-init` is removed,
+  as a new plugins volume already belongs to the app user. The Helm PostgreSQL pod runs as UID 70
+  with a read-only root filesystem and all capabilities dropped, like the MariaDB pod. Makefile
+  tooling containers (Trivy, Gitleaks, Dive, curl) run as the calling user, scanners that use the
+  container socket through its group; the root cache-chown step in CI and the root `chmod` container
+  in `make test-unit` / `toolbox-build` are gone, and the release demo smoke test runs as the runner
+  user. The TrueNAS app is unchanged: TrueNAS's own permissions helper still runs as root, without
+  network, to set dataset ownership.
+
+  **Upgrading an existing Docker Compose install:** volumes that were written by root must be
+  handed over once. In `deploy/`, run
+  `docker compose run --rm --no-deps --user 0 --entrypoint chown caddy -R 1000:1000 /data /config`
+  before `docker compose up -d --build` (MariaDB data already belongs to UID 999). For the
+  development stack, a root-owned `goatflow_smtp4dev_data` or empty `goatflow_postgres_data`
+  volume can simply be removed. Helm installs need nothing.
+
 ### Fixed
 - **PostMaster filter rules that set a priority by name, a ticket type or a state now apply.**
   `X-GoatFlow-Priority` / `X-OTRS-Priority`, `X-GoatFlow-Type` and `X-GoatFlow-State` Set rules

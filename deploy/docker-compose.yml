@@ -48,8 +48,17 @@ x-goatflow-env: &goatflow-env
   ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD:-}
 
 services:
+  # Caddy's image runs as root with root-owned /data and /config, so it is
+  # rebuilt to hand those to an unprivileged user; the caddy binary carries
+  # cap_net_bind_service, so it can still listen on 80 and 443. Refresh the
+  # base image with: docker compose build --pull caddy
   caddy:
-    image: docker.io/caddy:2-alpine
+    build:
+      dockerfile_inline: |
+        FROM docker.io/caddy:2-alpine
+        RUN chown -R 1000:1000 /data /config
+        USER 1000:1000
+    user: "1000:1000"
     ports:
       - "80:80"
       - "443:443"
@@ -70,6 +79,7 @@ services:
 
   mariadb:
     image: docker.io/mariadb:11-jammy
+    user: "999:999" # mysql user in the image
     environment:
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
       MARIADB_USER: ${DB_USER:-goatflow}
@@ -87,6 +97,7 @@ services:
 
   valkey:
     image: docker.io/valkey/valkey:8-alpine
+    user: "999:1000" # valkey user in the image
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 5s

@@ -15,12 +15,11 @@ x-email-env: &email-env
   GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
 
 services:
-  # MariaDB Database - Secure non-root container for OTRS compatibility
+  # MariaDB Database - runs as the image's mysql user (999), never root
   mariadb:
     image: docker.io/mariadb:11
     container_name: goatflow-mariadb
-    # Runs entrypoint as root so it can chown /var/lib/mysql on first init,
-    # then drops privileges to the mysql user (999) internally.
+    user: "999:999"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_MYSQL_NAME}
@@ -51,6 +50,7 @@ services:
     image: docker.io/postgres:15-alpine
     container_name: goatflow-postgres
     profiles: ["postgres"]
+    user: "70:70" # postgres user in the alpine image
     environment:
       POSTGRES_DB: ${DB_PGSQL_NAME}
       POSTGRES_USER: ${DB_PGSQL_USER}
@@ -75,8 +75,7 @@ services:
   valkey:
     image: docker.io/valkey/valkey:7-alpine
     container_name: goatflow-valkey
-    # Runs entrypoint as root so it can chown /data on first init,
-    # then drops privileges to the valkey user internally.
+    user: "999:1000" # valkey user in the image
     ports:
       - "${VALKEY_PORT:-6388}:6379"
     volumes:
@@ -88,16 +87,6 @@ services:
       retries: 5
     networks:
       - goatflow-network
-
-  # Init container — fix plugin file ownership so the upload API can overwrite them.
-  # Plugins may end up root-owned from manual docker cp or prior container builds.
-  plugin-init:
-    image: docker.io/alpine:3
-    container_name: goatflow-plugin-init
-    user: "0:0"
-    volumes:
-      - goatflow_plugins:/app/config/plugins
-    command: ["sh", "-c", "chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} /app/config/plugins"]
 
   # GoatFlow Backend - Main application server
   backend:
@@ -167,8 +156,6 @@ services:
       - ./storage:${STORAGE_PATH:-/app/storage}:Z
       - goatflow_plugins:/app/config/plugins
     depends_on:
-      plugin-init:
-        condition: service_completed_successfully
       mariadb:
         condition: service_healthy
       valkey:
@@ -224,8 +211,6 @@ services:
       - ./docker/frontend/healthcheck.sh:/usr/local/bin/healthcheck.sh:ro,Z
       - goatflow_plugins:/app/config/plugins
     depends_on:
-      plugin-init:
-        condition: service_completed_successfully
       mariadb:
         condition: service_healthy
       valkey:
@@ -273,8 +258,6 @@ services:
     volumes:
       - goatflow_plugins:/app/config/plugins
     depends_on:
-      plugin-init:
-        condition: service_completed_successfully
       mariadb:
         condition: service_healthy
       smtp4dev:
@@ -289,10 +272,19 @@ services:
       timeout: 3s
       retries: 3
 
-  # smtp4dev - Full email sandbox (SMTP/IMAP/POP3 + Web UI)
+  # smtp4dev - Full email sandbox (SMTP/IMAP/POP3 + Web UI). The image runs as
+  # root and its /smtp4dev data directory is root-owned, so it is rebuilt to
+  # hand that directory to an unprivileged user.
   smtp4dev:
-    image: docker.io/rnwood/smtp4dev:latest
+    build:
+      dockerfile_inline: |
+        FROM docker.io/rnwood/smtp4dev:latest
+        RUN chown -R 1000:1000 /smtp4dev
+        USER 1000:1000
     container_name: goatflow-smtp4dev
+    user: "1000:1000"
+    sysctls:
+      net.ipv4.ip_unprivileged_port_start: 0 # listens on 25/80/110/143 inside the container
     environment:
       # Persist mail data on restarts
       ServerOptions__HostName: ${SMTP4DEV_HOSTNAME:-goatflow.local}

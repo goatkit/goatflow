@@ -262,7 +262,7 @@ Already done towards 1.0.0:
 
 #### 0.11.0 - Security basics
 
-- Security response policy and CVE process (`SECURITY.md`, private reporting, advisory flow)
+- [x] Security response policy and CVE process (`SECURITY.md`: GitHub private reporting with email fallback, response targets by severity, advisory and CVE flow)
 - General rate limit for JWT/session API calls — *login, second-factor codes, passkey, self-service forms, API tokens (per-token hourly limit), plugin webhooks and public plugin UIs are already rate limited*
 - Dependency vulnerability scanning in CI (`govulncheck`, failing the build on known-exploitable findings) — *Dependabot is already active; all open alerts were cleared in 0.10.0*
 - OWASP Top 10 review, with findings fixed or recorded

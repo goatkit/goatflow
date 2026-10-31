@@ -510,9 +510,10 @@ The chart does not include NetworkPolicies by default. Add them based on your cl
 
 ### Pod Security
 
-The backend and runner run as UID 1000 with a read-only root filesystem, MariaDB as UID 999,
-all with `runAsNonRoot: true`. The PostgreSQL StatefulSet sets only `fsGroup: 999` and runs as the image's
-default user.
+Every pod runs as a non-root user with `runAsNonRoot: true`, a read-only root filesystem, no
+privilege escalation and all capabilities dropped: the backend, runner and their wait-for-database
+init containers as UID 1000, MariaDB as UID 999, PostgreSQL as UID 70 (the alpine image's postgres
+user) and the Valkey subchart as UID 1000.
 
 ## Upgrading
 

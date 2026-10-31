@@ -35,11 +35,21 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       securityContext:
-        fsGroup: 999
+        # postgres user in the alpine image
+        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
       containers:
         - name: postgresql
           image: "{{ .Values.database.postgresql.image.repository }}:{{ .Values.database.postgresql.image.tag }}"
           imagePullPolicy: {{ .Values.database.postgresql.image.pullPolicy }}
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           ports:
             - name: postgresql
               containerPort: 5432
@@ -79,6 +89,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: tmp
+              mountPath: /tmp
+            - name: run
+              mountPath: /var/run/postgresql
       {{- with .Values.database.postgresql.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -91,6 +105,11 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: run
+          emptyDir: {}
   volumeClaimTemplates:
     - metadata:
         name: data

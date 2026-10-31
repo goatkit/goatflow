@@ -21,6 +21,7 @@ services:
   mariadb:
     image: docker.io/mariadb:11
     container_name: goatflow-mariadb
+    user: "999:999" # mysql user in the image
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set in .env}
       MYSQL_DATABASE: ${DB_MYSQL_NAME:?}
@@ -43,6 +44,7 @@ services:
   valkey:
     image: docker.io/valkey/valkey:7-alpine
     container_name: goatflow-valkey
+    user: "999:1000" # valkey user in the image
     ports:
       - "${VALKEY_PORT:-6388}:6379"
     volumes:
@@ -52,16 +54,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks: [goatflow-network]
-
-  # One-time root chown of the plugins volume so the app user (UID 1000)
-  # can overwrite plugin files via the upload API.
-  plugin-init:
-    image: docker.io/alpine:3
-    user: "0:0"
-    volumes:
-      - goatflow_plugins:/app/config/plugins
-    command: ["sh", "-c", "chown -R ${HOST_UID:-1000}:${HOST_GID:-1000} /app/config/plugins"]
     networks: [goatflow-network]
 
   backend:
@@ -112,8 +104,6 @@ services:
       - ./storage:/app/storage
       - goatflow_plugins:/app/config/plugins
     depends_on:
-      plugin-init:
-        condition: service_completed_successfully
       mariadb:
         condition: service_healthy
       valkey:
@@ -150,8 +140,6 @@ services:
     volumes:
       - goatflow_plugins:/app/config/plugins
     depends_on:
-      plugin-init:
-        condition: service_completed_successfully
       mariadb:
         condition: service_healthy
     restart: unless-stopped
