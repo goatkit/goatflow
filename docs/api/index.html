@@ -2252,6 +2252,20 @@
                 
                 <div class="route">
                     <span class="method GET">GET</span>
+                    <code class="path">/admin/postmaster-decision-filter</code>
+                    
+                    <p>Display inbound mail decision filter settings <small>(handleAdminPostmasterDecisionFilter)</small></p>
+                </div>
+                
+                <div class="route">
+                    <span class="method POST">POST</span>
+                    <code class="path">/admin/api/postmaster-decision-filter</code>
+                    
+                    <p>Save inbound mail decision filter settings <small>(handleSaveAdminPostmasterDecisionFilter)</small></p>
+                </div>
+                
+                <div class="route">
+                    <span class="method GET">GET</span>
                     <code class="path">/admin/notification-events</code>
                     
                     <p>Display notification events management page <small>(handleAdminNotificationEvents)</small></p>
@@ -3008,6 +3022,20 @@
                     <code class="path">/agent/api/preferences/reminders-enabled</code>
                     
                     <p>Update ticket reminders enabled preference <small>(HandleSetRemindersEnabled)</small></p>
+                </div>
+                
+                <div class="route">
+                    <span class="method GET">GET</span>
+                    <code class="path">/agent/api/preferences/timezone</code>
+                    
+                    <p>Get the user&#39;s IANA time zone preference and the instance default <small>(HandleGetTimezone)</small></p>
+                </div>
+                
+                <div class="route">
+                    <span class="method POST">POST</span>
+                    <code class="path">/agent/api/preferences/timezone</code>
+                    
+                    <p>Update the user&#39;s IANA time zone preference (empty clears it) <small>(HandleSetTimezone)</small></p>
                 </div>
                 
                 <div class="route">

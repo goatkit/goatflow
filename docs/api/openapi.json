@@ -1105,6 +1105,32 @@
         ]
       }
     },
+    "/admin/api/postmaster-decision-filter": {
+      "post": {
+        "responses": {
+          "default": {
+            "description": "Defined by the handler"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Save inbound mail decision filter settings",
+        "tags": [
+          "admin"
+        ],
+        "x-handler": "handleSaveAdminPostmasterDecisionFilter",
+        "x-middleware": [
+          "auth",
+          "admin"
+        ]
+      }
+    },
     "/admin/api/postmaster-filters": {
       "post": {
         "responses": {
@@ -9717,6 +9743,32 @@
         ]
       }
     },
+    "/admin/postmaster-decision-filter": {
+      "get": {
+        "responses": {
+          "default": {
+            "description": "Defined by the handler"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Display inbound mail decision filter settings",
+        "tags": [
+          "admin"
+        ],
+        "x-handler": "handleAdminPostmasterDecisionFilter",
+        "x-middleware": [
+          "auth",
+          "admin"
+        ]
+      }
+    },
     "/admin/postmaster-filters": {
       "get": {
         "responses": {
@@ -12771,6 +12823,58 @@
           "agent"
         ],
         "x-handler": "HandleSetTheme",
+        "x-middleware": [
+          "auth",
+          "agent",
+          "queue_ro"
+        ]
+      }
+    },
+    "/agent/api/preferences/timezone": {
+      "get": {
+        "responses": {
+          "default": {
+            "description": "Defined by the handler"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Get the user's IANA time zone preference and the instance default",
+        "tags": [
+          "agent"
+        ],
+        "x-handler": "HandleGetTimezone",
+        "x-middleware": [
+          "auth",
+          "agent",
+          "queue_ro"
+        ]
+      },
+      "post": {
+        "responses": {
+          "default": {
+            "description": "Defined by the handler"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Update the user's IANA time zone preference (empty clears it)",
+        "tags": [
+          "agent"
+        ],
+        "x-handler": "HandleSetTimezone",
         "x-middleware": [
           "auth",
           "agent",

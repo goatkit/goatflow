@@ -350,6 +350,8 @@ Administrative routes for system management
 | GET | `/admin/api/postmaster-filters/:name` | `handleAdminPostmasterFilterGet` |  | Get postmaster filter details |
 | PUT | `/admin/api/postmaster-filters/:name` | `handleUpdatePostmasterFilter` |  | Update an existing postmaster filter |
 | DELETE | `/admin/api/postmaster-filters/:name` | `handleDeletePostmasterFilter` |  | Delete a postmaster filter |
+| GET | `/admin/postmaster-decision-filter` | `handleAdminPostmasterDecisionFilter` |  | Display inbound mail decision filter settings |
+| POST | `/admin/api/postmaster-decision-filter` | `handleSaveAdminPostmasterDecisionFilter` |  | Save inbound mail decision filter settings |
 | GET | `/admin/notification-events` | `handleAdminNotificationEvents` |  | Display notification events management page |
 | GET | `/admin/notification-events/new` | `handleAdminNotificationEventNew` |  | Display new notification event form |
 | GET | `/admin/notification-events/:id` | `handleAdminNotificationEventEdit` |  | Display notification event edit form |
@@ -468,6 +470,8 @@ Agent-specific routes for ticket management
 | POST | `/agent/api/preferences/theme` | `HandleSetTheme` |  | Update theme preference (persists to database) |
 | GET | `/agent/api/preferences/reminders-enabled` | `HandleGetRemindersEnabled` |  | Get ticket reminders enabled preference |
 | POST | `/agent/api/preferences/reminders-enabled` | `HandleSetRemindersEnabled` |  | Update ticket reminders enabled preference |
+| GET | `/agent/api/preferences/timezone` | `HandleGetTimezone` |  | Get the user's IANA time zone preference and the instance default |
+| POST | `/agent/api/preferences/timezone` | `HandleSetTimezone` |  | Update the user's IANA time zone preference (empty clears it) |
 | GET | `/agent/api/profile` | `HandleGetProfile` |  | Get current user's profile information |
 | POST | `/agent/api/profile` | `HandleUpdateProfile` |  | Update current user's profile information |
 | GET | `/agent/password` | `HandleAgentPasswordForm` | `demo-guard` | Display password change form |
