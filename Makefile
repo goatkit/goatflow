@@ -78,6 +78,11 @@ endif
 
 # Every container runs as the current user, never root (also avoids root-owned files)
 CONTAINER_USER := --user "$$(id -u):$$(id -g)"
+# Compose services that run as ${HOST_UID}:${HOST_GID} (toolbox, playwright) use the same user,
+# so caches in the workspace (.go-build, .gomodcache) have one owner across every step
+HOST_UID ?= $(shell id -u)
+HOST_GID ?= $(shell id -g)
+export HOST_UID HOST_GID
 # For tools that talk to the container engine socket: its group, instead of root
 DOCKER_SOCK_GROUP := --group-add "$$(stat -c %g /var/run/docker.sock)"
 

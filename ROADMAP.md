@@ -338,7 +338,7 @@ A first-party open source plugin.
 #### 1.0.0-rc - Release candidate
 
 - Every OTRS core module checked one by one and working
-- GoatKit PaaS platform GA (WASM + gRPC runtimes, custom fields, plugin UIs, multi-tenancy) — multi-tenancy as shipped: organisation separation by queue permissions; one organisation per queue comes later (L211)
+- GoatKit PaaS platform GA (WASM + gRPC runtimes, custom fields, plugin UIs, multi-tenancy) — multi-tenancy as shipped: organisation separation by queue permissions; one organisation per queue comes later (see After 1.0.0)
 - Third-party security audit run, and its findings fixed
 - 85% test coverage reached
 - Chaos engineering tests for resilience
@@ -351,6 +351,7 @@ A first-party open source plugin.
 #### After 1.0.0
 
 - Process analytics and bottleneck reports
+- Stronger organisation separation: tickets, queues and customers belong to an organisation and are scoped to it, on top of today's queue and group permissions
 - Resource scheduling in the calendar plugin (meeting rooms, equipment)
 - CDN integration for static assets
 - Video tutorials and screencasts
