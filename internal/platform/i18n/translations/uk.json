@@ -388,6 +388,7 @@
     "marketplace_description": "Перегляд та встановлення плагінів спільноти",
     "marketplace_incompatible": "Несумісно",
     "marketplace_installed": "Встановлено",
+    "marketplace_installs_with": "Разом із {name} буде встановлено потрібні йому плагіни: {plugins}. Продовжити?",
     "marketplace_load_failed": "Не вдалося завантажити маркет",
     "marketplace_requires_host": "Потрібен GoatFlow ≥ {version}",
     "marketplace_select_version": "Версія для встановлення",

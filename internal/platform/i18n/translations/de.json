@@ -374,6 +374,7 @@
     "marketplace_description": "Community-Plugins durchsuchen und installieren",
     "marketplace_incompatible": "Inkompatibel",
     "marketplace_installed": "Installiert",
+    "marketplace_installs_with": "Mit {name} werden auch die benötigten Plugins installiert: {plugins}. Fortfahren?",
     "marketplace_load_failed": "Marktplatz konnte nicht geladen werden",
     "marketplace_requires_host": "Erfordert GoatFlow ≥ {version}",
     "marketplace_select_version": "Zu installierende Version",

@@ -29,6 +29,10 @@ func marketplaceFixture(t *testing.T) *gin.Engine {
 			{Version: "1.0.0", MinHostVersion: "0.9.0"},
 		}},
 		{Name: "future", Repo: "acme/future", LatestVersion: "3.0.0", MinHostVersion: "0.12.0"},
+		{Name: "lib", Repo: "acme/lib", LatestVersion: "1.0.0"},
+		{Name: "uses-lib", Repo: "acme/uses-lib", LatestVersion: "1.0.0", Dependencies: []string{"demo", "lib"}},
+		{Name: "uses-future", Repo: "acme/uses-future", LatestVersion: "1.0.0", Dependencies: []string{"future"}},
+		{Name: "uses-ghost", Repo: "acme/uses-ghost", LatestVersion: "1.0.0", Dependencies: []string{"ghost"}},
 	}}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/marketplace.json" {
@@ -80,13 +84,14 @@ func TestMarketplaceIndexReportsHostCompatibility(t *testing.T) {
 			InstallVersion   string      `json:"install_version"`
 			InstalledVersion string      `json:"installed_version"`
 			UpdateAvailable  bool        `json:"update_available"`
+			InstallsWith     []string    `json:"installs_with"`
 			Versions         []verStatus `json:"versions"`
 		} `json:"plugins"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.HostVersion != "0.10.0" || len(resp.Plugins) != 2 {
+	if resp.HostVersion != "0.10.0" || len(resp.Plugins) != 6 {
 		t.Fatalf("response = %s", w.Body.String())
 	}
 
@@ -104,13 +109,26 @@ func TestMarketplaceIndexReportsHostCompatibility(t *testing.T) {
 	if len(future.Versions) != 1 || future.Versions[0] != (verStatus{"3.0.0", false}) {
 		t.Errorf("future versions = %+v, want the single latest version", future.Versions)
 	}
+	// Installing uses-lib also installs lib; demo is installed already.
+	if got := resp.Plugins[3].InstallsWith; len(got) != 1 || got[0] != "lib" {
+		t.Errorf("uses-lib installs_with = %v, want [lib]", got)
+	}
+	if demo.InstallsWith != nil || resp.Plugins[2].InstallsWith != nil {
+		t.Errorf("plugins without missing dependencies list installs_with: %+v", resp.Plugins[:3])
+	}
 }
 
 func TestMarketplaceInstallRefusesIncompatibleVersion(t *testing.T) {
 	r := marketplaceFixture(t)
-	for _, tc := range []struct{ body, want string }{
-		{`{"name":"future"}`, "future v3.0.0 requires GoatFlow >= 0.12.0, you have 0.10.0"},
-		{`{"name":"demo","version":"2.0.0"}`, "demo v2.0.0 requires GoatFlow >= 0.11.0, you have 0.10.0"},
+	for _, tc := range []struct {
+		body   string
+		status int
+		want   string
+	}{
+		{`{"name":"future"}`, http.StatusConflict, "future v3.0.0 requires GoatFlow >= 0.12.0, you have 0.10.0"},
+		{`{"name":"demo","version":"2.0.0"}`, http.StatusConflict, "demo v2.0.0 requires GoatFlow >= 0.11.0, you have 0.10.0"},
+		{`{"name":"uses-future"}`, http.StatusConflict, "uses-future needs plugin future: future v3.0.0 requires GoatFlow >= 0.12.0, you have 0.10.0"},
+		{`{"name":"uses-ghost"}`, http.StatusBadRequest, `uses-ghost needs plugin "ghost", which is not in the marketplace`},
 	} {
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/marketplace/install", strings.NewReader(tc.body))
@@ -120,9 +138,12 @@ func TestMarketplaceInstallRefusesIncompatibleVersion(t *testing.T) {
 			Error string `json:"error"`
 		}
 		_ = json.Unmarshal(w.Body.Bytes(), &body)
-		if w.Code != http.StatusConflict || body.Error != tc.want {
-			t.Errorf("%s: status %d error %q; want 409 %q", tc.body, w.Code, body.Error, tc.want)
+		if w.Code != tc.status || body.Error != tc.want {
+			t.Errorf("%s: status %d error %q; want %d %q", tc.body, w.Code, body.Error, tc.status, tc.want)
 		}
+	}
+	if entries, _ := os.ReadDir(pluginDir); len(entries) != 1 {
+		t.Errorf("plugins dir has %d entries, want only the installed demo", len(entries))
 	}
 	if _, err := os.Stat(filepath.Join(pluginDir, "demo", "plugin.yaml")); err != nil {
 		t.Errorf("installed demo disturbed: %v", err)

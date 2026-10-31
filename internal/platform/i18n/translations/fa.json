@@ -368,6 +368,7 @@
     "marketplace_description": "مرور و نصب افزونه‌های جامعه",
     "marketplace_incompatible": "ناسازگار",
     "marketplace_installed": "نصب شده",
+    "marketplace_installs_with": "نصب {name} افزونه‌های مورد نیازش را هم نصب می‌کند: {plugins}. ادامه می‌دهید؟",
     "marketplace_load_failed": "بارگذاری بازار ناموفق بود",
     "marketplace_requires_host": "نیازمند GoatFlow ≥ {version}",
     "marketplace_select_version": "نسخه برای نصب",

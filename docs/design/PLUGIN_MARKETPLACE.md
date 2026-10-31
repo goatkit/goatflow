@@ -80,6 +80,10 @@ Keep `latest_version` / `min_host_version` describing the newest release so clie
 - **Update**: the newest compatible version newer than the installed one. Newer releases that need a newer GoatFlow are not offered; if only those exist the update is refused with the same message.
 - **Specific version** (`gk install inventory@1.1.0`, or `version` in the install API): must be listed and compatible, otherwise it is refused before anything is downloaded.
 
+### Dependencies
+
+An entry's `dependencies` lists plugin names. Installing or updating a plugin also installs every plugin it needs that isn't installed yet, directly or through another dependency, each at its newest compatible version, dependencies first. An installed plugin satisfies a dependency at any version; dependencies are not upgraded. The whole plan is checked before anything is downloaded: a dependency missing from the index, one with no version this GoatFlow can run, or a dependency cycle refuses the install. If a dependency fails to download or verify, the install stops there; dependencies already installed stay, since each works on its own.
+
 ### Index Management
 
 - Maintained manually or via GitHub Actions PR automation
@@ -106,14 +110,25 @@ Installed inventory v1.1.0 to plugins/inventory/
 Restart GoatFlow to activate.
 ```
 
+A plugin with dependencies lists them before installing:
+
+```
+  Also installing the plugins it needs:
+    stock-core v2.0.0 (needed by inventory)
+Installed stock-core v2.0.0 to plugins/stock-core/
+
+Installing inventory v1.1.0...
+```
+
 **Flow:**
 1. Fetch `marketplace.json` from GitHub
 2. Find plugin entry by name
 3. Resolve the version (see [Versions](#versions)); `@version` pins a listed one
-4. Download the ZIP for that version from its GitHub Release
-5. Verify the ed25519 signature if a `.sig` file exists (required when `GOATFLOW_REQUIRE_SIGNATURES=1`)
-6. Extract into a staging directory under `plugins/` (`.gk-staging-*`, ignored by the plugin loader) and move it to `plugins/<name>/`
-7. Print activation instructions
+4. Plan the missing dependencies (see [Dependencies](#dependencies))
+5. For each dependency, then the plugin: download the ZIP for that version from its GitHub Release
+6. Verify the ed25519 signature if a `.sig` file exists (required when `GOATFLOW_REQUIRE_SIGNATURES=1`)
+7. Extract into a staging directory under `plugins/` (`.gk-staging-*`, ignored by the plugin loader) and move it to `plugins/<name>/`
+8. Print activation instructions
 
 ### `gk info <plugin>`
 
@@ -139,7 +154,8 @@ Restart GoatFlow to activate.
 1. Read installed plugin manifests from `plugins/*/plugin.yaml`
 2. Fetch marketplace index
 3. Pick the newest compatible version newer than the installed one (semver)
-4. Download and verify it into a staging directory, then swap: the installed directory is moved aside, the new one moved in, and the old one removed. A failed download, signature check or swap leaves the installed plugin in place.
+4. Install any dependencies the plugin now needs that are missing
+5. Download and verify it into a staging directory, then swap: the installed directory is moved aside, the new one moved in, and the old one removed. A failed download, signature check or swap leaves the installed plugin in place.
 
 ### `gk search <query>`
 
@@ -172,6 +188,7 @@ Results:
 - Fetches marketplace index via server-side HTTP (not client browser)
 - Shows installed status by comparing against local plugin manifests
 - Install button triggers `gk install` equivalent server-side; when a plugin lists several versions a version picker is shown (versions this GoatFlow cannot run are disabled)
+- When installing a plugin would also install others, the admin is asked to confirm, with the list; they are loaded first, then the plugin
 - Update badge shown when a newer *compatible* version is available
 - A plugin with no compatible version shows "Requires GoatFlow ≥ X" and its Install/Update button is disabled
 
@@ -185,8 +202,9 @@ Results:
 | `install_version` | Newest compatible version, `""` if none |
 | `installed_version` | Installed version, `""` if not installed |
 | `update_available` | A compatible version newer than the installed one exists |
+| `installs_with` | Plugins that installing or updating this one would also install, dependencies first; absent when none are needed |
 
-`POST /api/v1/plugins/marketplace/install` takes `{"name": "...", "version": "..."}`; `version` is optional (new install → newest compatible, installed plugin → newest compatible update). An incompatible request returns `409` with the message above.
+`POST /api/v1/plugins/marketplace/install` takes `{"name": "...", "version": "..."}`; `version` is optional (new install → newest compatible, installed plugin → newest compatible update). The response lists the dependencies it installed in `dependencies`. An incompatible request, including a dependency with no compatible version, returns `409` with the message above; a dependency that is not in the index or a cycle returns `400`. Each plugin installed is recorded in the audit log (`admin.plugin.install`, with `required_by` for dependencies).
 
 ## Plugin Publishing
 

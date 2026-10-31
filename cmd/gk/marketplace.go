@@ -66,14 +66,7 @@ func marketplaceInstall(ref string) {
 		fmt.Printf("  (v%s is the newest this GoatFlow %s can run; latest is v%s)\n", target.Version, version.Short(), entry.LatestVersion)
 	}
 
-	// Check dependencies.
 	installed, _ := client.ListInstalled()
-	missing, _ := marketplace.ResolveDependencies(name, &marketplace.Index{Plugins: []marketplace.PluginEntry{*entry}}, installed)
-	if len(missing) > 0 {
-		fmt.Printf("\n  Missing dependencies: %v\n", missing)
-		fmt.Println("  Install dependencies first, then retry.")
-		os.Exit(1)
-	}
 
 	// Check if already installed. An explicit name@version replaces any
 	// installed version; a bare name leaves an existing install to 'gk update'.
@@ -92,7 +85,28 @@ func marketplaceInstall(ref string) {
 		}
 	}
 
-	// Install: download, verify, extract.
+	deps, err := client.PlanDependencies(entry)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	if len(deps) > 0 {
+		fmt.Println("\n  Also installing the plugins it needs:")
+		for _, d := range deps {
+			fmt.Printf("    %s v%s (needed by %s)\n", d.Entry.Name, d.Version.Version, d.RequiredBy)
+		}
+	}
+
+	// Install: dependencies first, then the plugin; each is downloaded,
+	// verified and extracted.
+	done, err := client.InstallDependencies(deps)
+	for _, d := range done {
+		fmt.Printf("Installed %s v%s to %s/%s/\n", d.Entry.Name, d.Version.Version, getPluginsDir(), d.Entry.Name)
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Install failed: %v\n", err)
+		os.Exit(1)
+	}
 	fmt.Printf("\nInstalling %s v%s...\n", entry.Name, target.Version)
 	if _, err := client.Install(entry, target.Version); err != nil {
 		fmt.Fprintf(os.Stderr, "Install failed: %v\n", err)
@@ -136,6 +150,19 @@ func marketplaceUpdate(name string) {
 		entry, err := client.FindPlugin(u.Name)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "    Error: %v\n", err)
+			continue
+		}
+		deps, err := client.PlanDependencies(entry)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "    Update failed: %v\n", err)
+			continue
+		}
+		done, err := client.InstallDependencies(deps)
+		for _, d := range done {
+			fmt.Printf("    Installed %s v%s (needed by %s)\n", d.Entry.Name, d.Version.Version, d.RequiredBy)
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "    Update failed: %v\n", err)
 			continue
 		}
 		if _, err := client.Update(entry, u.LatestVersion); err != nil {

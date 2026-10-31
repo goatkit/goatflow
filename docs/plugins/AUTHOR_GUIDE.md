@@ -51,7 +51,7 @@ binary: my-plugin
 description: My plugin description
 author: Acme Corp
 license: Apache-2.0
-dependencies: [goatkit-media]       # Other plugins this depends on
+dependencies: [goatkit-media]       # Other plugins this depends on; list them in your marketplace entry too, which is what installs them
 resources:
   memory_mb: 512
   call_timeout: 30s

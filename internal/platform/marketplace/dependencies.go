@@ -5,86 +5,86 @@ import (
 	"strings"
 )
 
-// ResolveDependencies checks that all dependencies for a plugin are satisfied
-// by installed plugins. Returns missing dependency names.
-func ResolveDependencies(pluginName string, index *Index, installed []InstalledPlugin) ([]string, error) {
-	// Find the plugin entry.
-	var entry *PluginEntry
-	for i := range index.Plugins {
-		if index.Plugins[i].Name == pluginName {
-			entry = &index.Plugins[i]
-			break
-		}
-	}
-	if entry == nil {
-		return nil, fmt.Errorf("plugin %q not found in index", pluginName)
-	}
+// DependencyStep is one plugin a marketplace install puts in place because
+// another plugin needs it.
+type DependencyStep struct {
+	Entry      *PluginEntry
+	Version    VersionEntry
+	RequiredBy string
+}
 
+// PlanDependencies lists the plugins entry needs that are not installed yet,
+// directly or through another dependency, each at the newest version this
+// GoatFlow can run, in install order (a plugin's dependencies before it). It
+// fails before anything is downloaded when a dependency is not in the index,
+// has no version this GoatFlow can run, or the dependencies form a cycle. An
+// installed plugin satisfies a dependency at any version.
+func (c *Client) PlanDependencies(entry *PluginEntry) ([]DependencyStep, error) {
 	if len(entry.Dependencies) == 0 {
 		return nil, nil
 	}
-
-	// Build installed set.
-	installedSet := make(map[string]bool, len(installed))
+	index, err := c.FetchIndex()
+	if err != nil {
+		return nil, err
+	}
+	installed, err := c.ListInstalled()
+	if err != nil {
+		return nil, err
+	}
+	have := make(map[string]bool, len(installed))
 	for _, inst := range installed {
-		installedSet[strings.ToLower(inst.Name)] = true
+		have[inst.Name] = true
+	}
+	byName := make(map[string]*PluginEntry, len(index.Plugins))
+	for i := range index.Plugins {
+		byName[index.Plugins[i].Name] = &index.Plugins[i]
 	}
 
-	var missing []string
-	for _, dep := range entry.Dependencies {
-		if !installedSet[strings.ToLower(dep)] {
-			missing = append(missing, dep)
-		}
-	}
-	return missing, nil
-}
-
-// TopologicalSort orders plugins by dependency graph (dependencies first).
-// Returns an error if a circular dependency is detected.
-func TopologicalSort(plugins []PluginEntry) ([]PluginEntry, error) {
-	// Build adjacency map.
-	byName := make(map[string]*PluginEntry, len(plugins))
-	for i := range plugins {
-		byName[plugins[i].Name] = &plugins[i]
-	}
-
-	visited := make(map[string]bool)
-	inStack := make(map[string]bool)
-	var result []PluginEntry
-
-	var visit func(name string) error
-	visit = func(name string) error {
-		if inStack[name] {
-			return fmt.Errorf("circular dependency detected: %s", name)
-		}
-		if visited[name] {
-			return nil
-		}
-
-		inStack[name] = true
-
-		entry, ok := byName[name]
-		if ok {
-			for _, dep := range entry.Dependencies {
-				if err := visit(dep); err != nil {
-					return err
-				}
+	const visiting, planned = 1, 2
+	state := map[string]int{entry.Name: visiting}
+	var steps []DependencyStep
+	var visit func(p *PluginEntry, chain []string) error
+	visit = func(p *PluginEntry, chain []string) error {
+		for _, dep := range p.Dependencies {
+			if have[dep] || state[dep] == planned {
+				continue
 			}
-		}
-
-		inStack[name] = false
-		visited[name] = true
-		if ok {
-			result = append(result, *entry)
+			if state[dep] == visiting {
+				return fmt.Errorf("circular plugin dependency: %s -> %s", strings.Join(chain, " -> "), dep)
+			}
+			d := byName[dep]
+			if d == nil {
+				return fmt.Errorf("%s needs plugin %q, which is not in the marketplace", p.Name, dep)
+			}
+			v, err := d.ResolveInstall()
+			if err != nil {
+				return fmt.Errorf("%s needs plugin %s: %w", p.Name, dep, err)
+			}
+			state[dep] = visiting
+			if err := visit(d, append(chain, dep)); err != nil {
+				return err
+			}
+			state[dep] = planned
+			steps = append(steps, DependencyStep{Entry: d, Version: v, RequiredBy: p.Name})
 		}
 		return nil
 	}
-
-	for _, p := range plugins {
-		if err := visit(p.Name); err != nil {
-			return nil, err
-		}
+	if err := visit(entry, []string{entry.Name}); err != nil {
+		return nil, err
 	}
+	return steps, nil
+}
 
-	return result, nil
+// InstallDependencies installs steps in order and returns the ones installed.
+// It stops at the first failure; dependencies installed before it stay, as
+// each one works on its own.
+func (c *Client) InstallDependencies(steps []DependencyStep) ([]DependencyStep, error) {
+	done := make([]DependencyStep, 0, len(steps))
+	for _, s := range steps {
+		if err := c.installVersion(s.Entry, s.Version.Version); err != nil {
+			return done, fmt.Errorf("install dependency %s v%s (needed by %s): %w", s.Entry.Name, s.Version.Version, s.RequiredBy, err)
+		}
+		done = append(done, s)
+	}
+	return done, nil
 }

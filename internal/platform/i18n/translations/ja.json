@@ -368,6 +368,7 @@
     "marketplace_description": "コミュニティプラグインの閲覧とインストール",
     "marketplace_incompatible": "非対応",
     "marketplace_installed": "インストール済み",
+    "marketplace_installs_with": "{name} をインストールすると、必要なプラグインもインストールされます: {plugins}。続行しますか?",
     "marketplace_load_failed": "マーケットプレイスの読み込みに失敗",
     "marketplace_requires_host": "GoatFlow {version} 以上が必要です",
     "marketplace_select_version": "インストールするバージョン",

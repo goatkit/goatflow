@@ -368,6 +368,7 @@
     "marketplace_description": "浏览并安装社区插件",
     "marketplace_incompatible": "不兼容",
     "marketplace_installed": "已安装",
+    "marketplace_installs_with": "安装 {name} 时也会安装它需要的插件:{plugins}。是否继续?",
     "marketplace_load_failed": "加载市场失败",
     "marketplace_requires_host": "需要 GoatFlow ≥ {version}",
     "marketplace_select_version": "要安装的版本",

@@ -368,6 +368,7 @@
     "marketplace_description": "تصفح وتثبيت إضافات المجتمع",
     "marketplace_incompatible": "غير متوافق",
     "marketplace_installed": "مثبت",
+    "marketplace_installs_with": "تثبيت {name} يثبّت أيضًا الإضافات التي يحتاجها: {plugins}. هل تريد المتابعة؟",
     "marketplace_load_failed": "فشل تحميل السوق",
     "marketplace_requires_host": "يتطلب GoatFlow ≥ {version}",
     "marketplace_select_version": "الإصدار المراد تثبيته",

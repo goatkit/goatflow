@@ -41,7 +41,8 @@ type marketplacePluginStatus struct {
 	Compatible       bool                       `json:"compatible"`       // some listed version runs on this GoatFlow
 	InstallVersion   string                     `json:"install_version"`  // newest compatible version, "" if none
 	InstalledVersion string                     `json:"installed_version"`
-	UpdateAvailable  bool                       `json:"update_available"` // a compatible version newer than installed exists
+	UpdateAvailable  bool                       `json:"update_available"`        // a compatible version newer than installed exists
+	InstallsWith     []string                   `json:"installs_with,omitempty"` // plugins installing this one also installs, dependencies first
 }
 
 func newMarketplacePluginStatus(p marketplace.PluginEntry, installed string) marketplacePluginStatus {
@@ -88,8 +89,17 @@ func HandleMarketplaceIndex(c *gin.Context) {
 	}
 
 	plugins := make([]marketplacePluginStatus, 0, len(index.Plugins))
-	for _, p := range index.Plugins {
-		plugins = append(plugins, newMarketplacePluginStatus(p, installedMap[p.Name]))
+	for i := range index.Plugins {
+		p := &index.Plugins[i]
+		status := newMarketplacePluginStatus(*p, installedMap[p.Name])
+		if status.InstalledVersion == "" || status.UpdateAvailable {
+			// A plan that fails is reported when the install is attempted.
+			deps, _ := client.PlanDependencies(p)
+			for _, d := range deps {
+				status.InstallsWith = append(status.InstallsWith, d.Entry.Name)
+			}
+		}
+		plugins = append(plugins, status)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -194,36 +204,56 @@ func HandleMarketplaceInstall(c *gin.Context) {
 		return
 	}
 
+	deps, err := client.PlanDependencies(entry)
+	if err != nil {
+		status := http.StatusBadRequest
+		var incompat *version.IncompatibleError
+		if errors.As(err, &incompat) {
+			status = http.StatusConflict
+		}
+		c.JSON(status, gin.H{"error": err.Error()})
+		return
+	}
+	done, err := client.InstallDependencies(deps)
+	reload := make([]string, 0, len(done)+1)
+	depNames := make([]string, 0, len(done))
+	for _, d := range done {
+		reload = append(reload, d.Entry.Name)
+		depNames = append(depNames, d.Entry.Name)
+		log.Printf("📦 Plugin %s v%s installed from marketplace (needed by %s)", d.Entry.Name, d.Version.Version, d.RequiredBy)
+		plugin.GetLogBuffer().Log(d.Entry.Name, "info", fmt.Sprintf("Installed from marketplace: v%s (needed by %s)", d.Version.Version, d.RequiredBy), nil)
+		recordPluginAudit(c, "admin.plugin.install", d.Entry.Name, map[string]any{
+			"source":      "marketplace",
+			"required_by": d.RequiredBy,
+			"fields":      audit.Snapshot(map[string]any{"version": d.Version.Version}),
+		})
+	}
+	if err != nil {
+		plugin.GetLogBuffer().Log(req.Name, "error", fmt.Sprintf("Marketplace install failed: %s", err.Error()), nil)
+		reloadMarketplacePlugins(reload)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Install failed: %v", err), "dependencies": depNames})
+		return
+	}
+
 	if isUpdate {
 		if _, err := client.Update(entry, target.Version); err != nil {
 			plugin.GetLogBuffer().Log(req.Name, "error", fmt.Sprintf("Marketplace update failed: %s", err.Error()), nil)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Update failed: %v", err)}) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
+			reloadMarketplacePlugins(reload)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Update failed: %v", err), "dependencies": depNames}) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 			return
 		}
 	} else {
 		if _, err := client.Install(entry, target.Version); err != nil {
 			plugin.GetLogBuffer().Log(req.Name, "error", fmt.Sprintf("Marketplace install failed: %s", err.Error()), nil)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Install failed: %v", err)})
+			reloadMarketplacePlugins(reload)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Install failed: %v", err), "dependencies": depNames})
 			return
 		}
 	}
 
 	log.Printf("📦 Plugin %s v%s installed from marketplace", req.Name, target.Version)
 	plugin.GetLogBuffer().Log(req.Name, "info", fmt.Sprintf("Installed from marketplace: v%s", target.Version), nil)
-
-	// Trigger hot-reload
-	if pluginReloader != nil {
-		go func() {
-			if err := pluginReloader(context.Background(), req.Name); err != nil {
-				log.Printf("⚠️  Plugin reload failed for %s: %v", req.Name, err)
-				plugin.GetLogBuffer().Log(req.Name, "error", fmt.Sprintf("Reload failed: %v", err), nil)
-			} else {
-				log.Printf("✅ Plugin %s loaded/reloaded after marketplace install", req.Name)
-				plugin.GetLogBuffer().Log(req.Name, "info", "Plugin loaded/reloaded after marketplace install", nil)
-				RebuildDynamicEngine()
-			}
-		}()
-	}
+	reloadMarketplacePlugins(append(reload, req.Name))
 
 	action := "installed"
 	if isUpdate {
@@ -240,9 +270,30 @@ func HandleMarketplaceInstall(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("Plugin %s v%s %s successfully", req.Name, target.Version, action),
-		"name":    req.Name,
-		"version": target.Version,
-		"action":  action,
+		"message":      fmt.Sprintf("Plugin %s v%s %s successfully", req.Name, target.Version, action),
+		"name":         req.Name,
+		"version":      target.Version,
+		"action":       action,
+		"dependencies": depNames,
 	})
+}
+
+// reloadMarketplacePlugins hot-loads freshly installed plugins in order, so
+// dependencies are running before the plugins that need them.
+func reloadMarketplacePlugins(names []string) {
+	if pluginReloader == nil || len(names) == 0 {
+		return
+	}
+	go func() {
+		for _, name := range names {
+			if err := pluginReloader(context.Background(), name); err != nil {
+				log.Printf("⚠️  Plugin reload failed for %s: %v", name, err)
+				plugin.GetLogBuffer().Log(name, "error", fmt.Sprintf("Reload failed: %v", err), nil)
+				continue
+			}
+			log.Printf("✅ Plugin %s loaded/reloaded after marketplace install", name)
+			plugin.GetLogBuffer().Log(name, "info", "Plugin loaded/reloaded after marketplace install", nil)
+		}
+		RebuildDynamicEngine()
+	}()
 }

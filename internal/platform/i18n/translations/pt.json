@@ -368,6 +368,7 @@
     "marketplace_description": "Procurar e instalar plugins da comunidade",
     "marketplace_incompatible": "Incompatível",
     "marketplace_installed": "Instalado",
+    "marketplace_installs_with": "Instalar {name} também instala os plugins de que precisa: {plugins}. Continuar?",
     "marketplace_load_failed": "Falha ao carregar a loja",
     "marketplace_requires_host": "Requer GoatFlow ≥ {version}",
     "marketplace_select_version": "Versão a instalar",

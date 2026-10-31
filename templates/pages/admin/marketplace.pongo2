@@ -107,6 +107,7 @@ const i18n = {
     incompatible: '{{ t("admin.marketplace_incompatible")|default:"Incompatible" }}',
     selectVersion: '{{ t("admin.marketplace_select_version")|default:"Version to install" }}',
     versionIncompatible: '{{ t("admin.marketplace_version_incompatible")|default:"needs newer GoatFlow" }}',
+    installsWith: '{{ t("admin.marketplace_installs_with")|default:"Installing {name} also installs the plugins it needs: {plugins}. Continue?" }}',
 };
 
 function escapeHtml(text) {
@@ -246,6 +247,11 @@ function versionSelect(p) {
 }
 
 async function installPlugin(name) {
+    const p = allPlugins.find(x => x.name === name);
+    if (p && p.installs_with && p.installs_with.length
+        && !confirm(i18n.installsWith.replace('{name}', name).replace('{plugins}', p.installs_with.join(', ')))) {
+        return;
+    }
     const buttons = document.querySelectorAll(`button[onclick="installPlugin('${name}')"]`);
     const select = document.getElementById(`ver-${name}`);
     const version = select ? select.value : '';
@@ -261,6 +267,10 @@ async function installPlugin(name) {
 
         if (!resp.ok) {
             alert(`${i18n.installFailed}: ${data.error || resp.statusText}`);
+            if (data.dependencies && data.dependencies.length) {
+                await loadMarketplace();
+                return;
+            }
             buttons.forEach(b => { b.disabled = false; b.textContent = i18n.install; });
             return;
         }

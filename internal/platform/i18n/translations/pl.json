@@ -368,6 +368,7 @@
     "marketplace_description": "Przeglądaj i instaluj wtyczki społeczności",
     "marketplace_incompatible": "Niezgodna",
     "marketplace_installed": "Zainstalowane",
+    "marketplace_installs_with": "Instalacja {name} zainstaluje też wymagane wtyczki: {plugins}. Kontynuować?",
     "marketplace_load_failed": "Nie udało się załadować marketu",
     "marketplace_requires_host": "Wymaga GoatFlow ≥ {version}",
     "marketplace_select_version": "Wersja do zainstalowania",

@@ -388,6 +388,7 @@
     "marketplace_description": "کمیونٹی پلگ انز دیکھیں اور انسٹال کریں",
     "marketplace_incompatible": "غیر مطابقت پذیر",
     "marketplace_installed": "انسٹال شدہ",
+    "marketplace_installs_with": "{name} انسٹال کرنے سے اس کے درکار پلگ اِن بھی انسٹال ہوں گے: {plugins}۔ جاری رکھیں؟",
     "marketplace_load_failed": "مارکیٹ لوڈ ناکام",
     "marketplace_requires_host": "GoatFlow ≥ {version} درکار ہے",
     "marketplace_select_version": "انسٹال کرنے کے لیے ورژن",

@@ -8,6 +8,15 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Marketplace installs pull in the plugins a plugin needs.** Installing or updating a plugin
+  (`gk install`, `gk update` or Admin -> Marketplace) also installs every plugin listed in its
+  marketplace `dependencies` that isn't installed yet, directly or through another dependency, at
+  its newest compatible version and before the plugin itself. Before, `gk install` stopped and
+  asked you to install them by hand, and Admin -> Marketplace installed the plugin without them.
+  The whole plan is checked before anything is downloaded: a dependency missing from the index,
+  with no version this GoatFlow can run, or a cycle refuses the install. The admin page asks
+  before installing extra plugins and loads them first; each one is recorded in the audit log.
+  Installed plugins satisfy a dependency at any version and are not upgraded.
 - **Audit log.** Security-relevant events are recorded in one table, `gk_audit_event`, and listed
   at Admin -> Audit Log (`/admin/audit-log`) with filters and CSV export. Before, only admin 2FA
   overrides were stored; 2FA events went to the application log and sign-ins, password changes,

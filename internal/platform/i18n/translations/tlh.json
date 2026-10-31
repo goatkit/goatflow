@@ -388,6 +388,7 @@
     "marketplace_description": "Browse and install community plugins",
     "marketplace_incompatible": "Incompatible",
     "marketplace_installed": "Installed",
+    "marketplace_installs_with": "{name} jom 'ej plugins poQbogh jom: {plugins}. ghoS'a'?",
     "marketplace_load_failed": "Failed to load marketplace",
     "marketplace_requires_host": "GoatFlow ≥ {version} poQlu'",
     "marketplace_select_version": "Version wIv",
