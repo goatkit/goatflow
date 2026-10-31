@@ -12,6 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -303,6 +304,21 @@ func HandleUpdateQueueAPI(c *gin.Context) {
 			return
 		}
 	}
+
+	recordAdminAccessEvent(c, "admin.queue.update", "queue", audit.ID(int64(queueID)), name,
+		map[string]any{"changes": audit.Changes(map[string]any{
+			"name": current.Name, "group_id": current.GroupID,
+			"system_address_id": nullIntArg(current.SystemAddressID), "salutation_id": nullIntArg(current.SalutationID),
+			"signature_id": nullIntArg(current.SignatureID), "unlock_timeout": nullIntArg(current.UnlockTimeout),
+			"follow_up_id": nullIntArg(current.FollowUpID), "follow_up_lock": nullIntArg(current.FollowUpLock),
+			"comments": nullStringArg(current.Comments), "valid_id": current.ValidID,
+		}, map[string]any{
+			"name": name, "group_id": groupID,
+			"system_address_id": nullIntArg(systemAddress), "salutation_id": nullIntArg(salutation),
+			"signature_id": nullIntArg(signature), "unlock_timeout": unlockTimeout,
+			"follow_up_id": followUpID, "follow_up_lock": followUpLock,
+			"comments": nullStringArg(comment), "valid_id": validID,
+		})})
 
 	resp := gin.H{
 		"id":             queueID,

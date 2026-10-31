@@ -5,6 +5,7 @@ package api
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/lookups"
 	"github.com/goatkit/goatflow/internal/platform/routing"
@@ -486,44 +488,68 @@ func setupCompleted(db *sql.DB) (bool, error) {
 	return done, err
 }
 
-// getRecentAdminActivity fetches the most recent admin audit log entries.
+// getRecentAdminActivity fetches the most recent admin audit events.
 func getRecentAdminActivity(db *sql.DB) ([]map[string]string, error) {
-	query := database.ConvertQuery(`
-		SELECT aat.name AS action, al.target_type, al.target_identifier,
-			al.reason, al.create_time, u.login AS admin_login
-		FROM admin_action_log al
-		LEFT JOIN admin_action_type aat ON aat.id = al.action_type_id
-		LEFT JOIN users u ON u.id = al.create_by
-		ORDER BY al.create_time DESC
+	query := database.ConvertPlaceholders(`
+		SELECT action, outcome, target_type, target_id, target_label, actor_login, details, create_time
+		FROM gk_audit_event
+		WHERE category = ?
+		ORDER BY create_time DESC, id DESC
 		LIMIT 10
 	`)
 
-	rows, err := db.Query(query)
+	rows, err := db.Query(query, audit.CategoryAdmin)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var results []map[string]string
+	results := make([]map[string]string, 0, 10)
 	for rows.Next() {
-		var action, targetType, targetID, reason, adminLogin sql.NullString
+		var action, outcome string
+		var targetType, targetID, targetLabel, actorLogin, details sql.NullString
 		var createTime time.Time
-		if err := rows.Scan(&action, &targetType, &targetID, &reason, &createTime, &adminLogin); err != nil {
+		if err := rows.Scan(&action, &outcome, &targetType, &targetID, &targetLabel, &actorLogin, &details, &createTime); err != nil {
 			return nil, err
 		}
-
+		target := targetLabel.String
+		if target == "" {
+			target = targetID.String
+		}
 		entry := map[string]string{
-			"action":     action.String,
+			"action":     activityLabel(action, details.String),
+			"code":       action,
+			"outcome":    outcome,
 			"target":     targetType.String,
-			"target_id":  targetID.String,
-			"reason":     reason.String,
-			"admin":      adminLogin.String,
-			"time":       createTime.Format("2006-01-02 15:04"),
+			"target_id":  target,
+			"admin":      actorLogin.String,
+			"time":       createTime.Local().Format("2006-01-02 15:04"),
 			"time_human": timeAgo(createTime),
 		}
 		results = append(results, entry)
 	}
 	return results, rows.Err()
+}
+
+// activityLabel turns an audit action code into a short readable label for
+// the dashboard: a generic admin request shows its method and route, other
+// codes drop the "admin." prefix and read as words
+// ("admin.role.permissions.update" -> "Role permissions update").
+func activityLabel(action, details string) string {
+	if action == "admin.request" {
+		var d struct {
+			Method string `json:"method"`
+			Route  string `json:"route"`
+		}
+		if json.Unmarshal([]byte(details), &d) == nil && d.Method != "" && d.Route != "" {
+			return d.Method + " " + d.Route
+		}
+	}
+	label := strings.NewReplacer(".", " ", "_", " ").Replace(strings.TrimPrefix(action, "admin."))
+	if label == "" {
+		return action
+	}
+	return strings.ToUpper(label[:1]) + label[1:]
 }
 
 // timeAgo returns a human-readable relative time string.

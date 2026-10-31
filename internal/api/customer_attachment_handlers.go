@@ -247,7 +247,8 @@ func loadCustomerAttachment(c *gin.Context, db *sql.DB) (ticketID int, a storage
 // handleCustomerDownloadAttachment serves the attachment file for customers.
 func handleCustomerDownloadAttachment(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if _, a, content, ok := loadCustomerAttachment(c, db); ok {
+		if ticketID, a, content, ok := loadCustomerAttachment(c, db); ok {
+			recordAttachmentDownload(c, int64(ticketID), a.ArticleID, a.FileID, a.Filename)
 			serveAttachment(c, a, content, c.Query("download") == "1")
 		}
 	}
@@ -271,6 +272,7 @@ func handleCustomerViewAttachment(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 		if c.Query("raw") == "1" {
+			recordAttachmentDownload(c, int64(ticketID), a.ArticleID, a.FileID, a.Filename)
 			serveAttachmentRaw(c, a, content)
 			return
 		}

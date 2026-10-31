@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
@@ -110,6 +111,7 @@ func handleTOTPSetup(c *gin.Context) {
 		return
 	}
 	if !countPasswordRecheck(c, recheckKey, auth.NewPasswordHasher().VerifyPassword(req.Password, user.Password)) {
+		recordAccountEvent(c, agentMFAAccount(userID), "auth.2fa.enable", audit.OutcomeFailure, map[string]any{"method": methodTOTP, "reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -200,6 +202,7 @@ func handleTOTPConfirm(c *gin.Context) {
 		return
 	}
 	if !countPasswordRecheck(c, recheckKey, auth.NewPasswordHasher().VerifyPassword(req.Password, user.Password)) {
+		recordAccountEvent(c, agentMFAAccount(userID), "auth.2fa.enable", audit.OutcomeFailure, map[string]any{"method": methodTOTP, "reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -207,9 +210,11 @@ func handleTOTPConfirm(c *gin.Context) {
 	totpService := service.NewTOTPService(db, "GoatFlow")
 
 	if err := totpService.ConfirmSetup(userID, req.Code); err != nil {
+		recordAccountEvent(c, agentMFAAccount(userID), "auth.2fa.enable", audit.OutcomeFailure, map[string]any{"method": methodTOTP, "reason": "invalid_code"})
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
 	}
+	recordAccountEvent(c, agentMFAAccount(userID), "auth.2fa.enable", audit.OutcomeSuccess, map[string]any{"method": methodTOTP})
 
 	// Send security notification email
 	go send2FAEnabledNotification(db, uint(userID), c.ClientIP())
@@ -258,6 +263,7 @@ func handleTOTPDisable(c *gin.Context) {
 		return
 	}
 	if !countPasswordRecheck(c, recheckKey, auth.NewPasswordHasher().VerifyPassword(req.Password, user.Password)) {
+		recordAccountEvent(c, agentMFAAccount(userID), "auth.2fa.disable", audit.OutcomeFailure, map[string]any{"reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -369,6 +375,7 @@ This is an automated security notification from GoatFlow.
 // the error response and returns false on failure.
 func turnOffSecondFactors(c *gin.Context, db *sql.DB, account mfaAccount, code string) bool {
 	if err := account.totp(db).Disable(account.userID, code); err != nil {
+		recordAccountEvent(c, account, "auth.2fa.disable", audit.OutcomeFailure, map[string]any{"reason": "invalid_code"})
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return false
 	}
@@ -377,7 +384,7 @@ func turnOffSecondFactors(c *gin.Context, db *sql.DB, account mfaAccount, code s
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to remove passkeys"})
 		return false
 	}
-	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "MFA_TURNED_OFF", UserID: account.userID, UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "authenticator app, recovery codes and passkeys removed"})
+	recordAccountEvent(c, account, "auth.2fa.disable", audit.OutcomeSuccess, map[string]any{"removed": "authenticator app, recovery codes and passkeys"})
 	return true
 }
 
@@ -426,6 +433,7 @@ func regenerateRecoveryCodes(c *gin.Context, account mfaAccount, passwordOK func
 		return
 	}
 	if !countPasswordRecheck(c, recheckKey, passwordOK(db, req.Password)) {
+		recordAccountEvent(c, account, "auth.2fa.recovery_codes", audit.OutcomeFailure, map[string]any{"reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -438,7 +446,7 @@ func regenerateRecoveryCodes(c *gin.Context, account mfaAccount, passwordOK func
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to create recovery codes"})
 		return
 	}
-	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "RECOVERY_CODES_REGENERATED", UserID: account.userID, UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "recovery codes replaced"})
+	recordAccountEvent(c, account, "auth.2fa.recovery_codes", audit.OutcomeSuccess, map[string]any{"count": len(codes)})
 	c.JSON(http.StatusOK, gin.H{"success": true, "recovery_codes": codes})
 }
 
@@ -545,6 +553,7 @@ func handleCustomerTOTPSetup(c *gin.Context) {
 		return
 	}
 	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
+		recordAccountEvent(c, customerMFAAccount(customerLogin), "auth.2fa.enable", audit.OutcomeFailure, map[string]any{"method": methodTOTP, "reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -636,6 +645,7 @@ func handleCustomerTOTPConfirm(c *gin.Context) {
 		return
 	}
 	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
+		recordAccountEvent(c, customerMFAAccount(customerLogin), "auth.2fa.enable", audit.OutcomeFailure, map[string]any{"method": methodTOTP, "reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -643,9 +653,11 @@ func handleCustomerTOTPConfirm(c *gin.Context) {
 	totpService := service.NewTOTPService(db, "GoatFlow")
 
 	if err := totpService.ConfirmSetupForCustomer(customerLogin, req.Code); err != nil {
+		recordAccountEvent(c, customerMFAAccount(customerLogin), "auth.2fa.enable", audit.OutcomeFailure, map[string]any{"method": methodTOTP, "reason": "invalid_code"})
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
 	}
+	recordAccountEvent(c, customerMFAAccount(customerLogin), "auth.2fa.enable", audit.OutcomeSuccess, map[string]any{"method": methodTOTP})
 
 	// Send security notification email
 	go sendCustomer2FAEnabledNotification(db, customerLogin, c.ClientIP())
@@ -686,6 +698,7 @@ func handleCustomerTOTPDisable(c *gin.Context) {
 		return
 	}
 	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
+		recordAccountEvent(c, customerMFAAccount(customerLogin), "auth.2fa.disable", audit.OutcomeFailure, map[string]any{"reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -819,7 +832,7 @@ func handleCustomer2FAVerify(c *gin.Context) {
 		return
 	}
 	limiterKey := twoFactorLimiterKey(true, session.UserLogin)
-	if rejectIfLoginBlocked(c, limiterKey) {
+	if rejectSecondFactorIfBlocked(c, session, limiterKey) {
 		return
 	}
 
@@ -849,11 +862,12 @@ func handleCustomer2FAVerify(c *gin.Context) {
 
 	// Validate the 2FA code using customer login from server-side session
 	totpService := service.NewTOTPService(db, "GoatFlow")
+	codesBefore := totpService.GetRemainingRecoveryCodesForCustomer(session.UserLogin)
 	valid, err := totpService.ValidateCodeForCustomer(session.UserLogin, code)
 
 	if err != nil || !valid {
 		auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
-		remaining := sessionMgr.RecordFailedAttempt(token)
+		remaining := secondFactorFailed(c, session, token, methodTOTP)
 		if remaining <= 0 {
 			httpcookie.SetAuth(c, "customer_2fa_pending", "", -1)
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -871,6 +885,7 @@ func handleCustomer2FAVerify(c *gin.Context) {
 	}
 
 	auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), limiterKey)
+	method := codeMethod(c, session, codesBefore, totpService.GetRemainingRecoveryCodesForCustomer(session.UserLogin))
 	// Success! Invalidate the pending session
 	sessionMgr.InvalidateSession(token)
 	httpcookie.SetAuth(c, "customer_2fa_pending", "", -1)
@@ -916,6 +931,7 @@ func handleCustomer2FAVerify(c *gin.Context) {
 	httpcookie.SetAuth(c, "customer_auth_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "1", sessionTimeout)
 	httpcookie.SetAuth(c, "customer_session_id", sessionID, sessionTimeout)
+	recordSecondFactorLogin(c, session, method, int64(userID))
 
 	redirectTarget := customerLandingRedirect(session.UserLogin)
 	c.Header("HX-Redirect", redirectTarget)
@@ -931,11 +947,9 @@ func handleCustomer2FAVerify(c *gin.Context) {
 // =============================================================================
 
 // handleAdmin2FAOverride allows admins to disable 2FA for an agent/admin user.
-// This action is logged to the admin_action_log table.
+// It is recorded as admin.2fa.disable with the admin's reason.
 func handleAdmin2FAOverride(c *gin.Context) {
-	// Get admin user from context
-	adminID := getAdminUserID(c)
-	if adminID == 0 {
+	if getAdminUserID(c) == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "admin access required"})
 		return
 	}
@@ -987,11 +1001,7 @@ func handleAdmin2FAOverride(c *gin.Context) {
 		return
 	}
 
-	// Log the action
-	if err := logAdminAction(db, "2FADisable", "user", targetUserID, targetUser.Login, adminID, req.Reason, nil); err != nil {
-		log.Printf("Failed to log admin action: %v", err)
-		// Don't fail the request, just log the error
-	}
+	recordAdmin2FADisable(c, "user", int64(targetUserID), targetUser.Login, req.Reason)
 
 	// Send notification to affected user
 	go send2FADisabledByAdminNotification(targetUser.Login, targetUser.Email)
@@ -1001,8 +1011,7 @@ func handleAdmin2FAOverride(c *gin.Context) {
 
 // handleAdminCustomer2FAOverride allows admins to disable 2FA for a customer.
 func handleAdminCustomer2FAOverride(c *gin.Context) {
-	adminID := getAdminUserID(c)
-	if adminID == 0 {
+	if getAdminUserID(c) == 0 {
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "admin access required"})
 		return
 	}
@@ -1028,9 +1037,10 @@ func handleAdminCustomer2FAOverride(c *gin.Context) {
 	}
 
 	// Get customer info
+	var customerID int64
 	var customerEmail string
-	query := database.ConvertPlaceholders("SELECT email FROM customer_user WHERE login = ?")
-	if err := db.QueryRow(query, customerLogin).Scan(&customerEmail); err != nil {
+	query := database.ConvertPlaceholders("SELECT id, email FROM customer_user WHERE login = ?")
+	if err := db.QueryRow(query, customerLogin).Scan(&customerID, &customerEmail); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "customer not found"})
 		return
 	}
@@ -1053,10 +1063,7 @@ func handleAdminCustomer2FAOverride(c *gin.Context) {
 		return
 	}
 
-	// Log the action
-	if err := logAdminAction(db, "2FADisable", "customer", 0, customerLogin, adminID, req.Reason, nil); err != nil {
-		log.Printf("Failed to log admin action: %v", err)
-	}
+	recordAdmin2FADisable(c, "customer", customerID, customerLogin, req.Reason)
 
 	// Send notification
 	go send2FADisabledByAdminNotification(customerLogin, customerEmail)
@@ -1083,28 +1090,16 @@ func getAdminUserID(c *gin.Context) int {
 	return id
 }
 
-// logAdminAction records an admin action to the audit log.
-func logAdminAction(db *sql.DB, actionName, targetType string, targetID int, targetIdentifier string, adminID int, reason string, details map[string]interface{}) error {
-	// Get action type ID
-	var actionTypeID int
-	query := database.ConvertPlaceholders("SELECT id FROM admin_action_type WHERE name = ?")
-	if err := db.QueryRow(query, actionName).Scan(&actionTypeID); err != nil {
-		return fmt.Errorf("unknown action type: %s", actionName)
-	}
-
-	// Insert log entry
-	var detailsJSON interface{}
-	if details != nil {
-		// Convert to JSON string if needed
-		detailsJSON = details
-	}
-
-	insertQuery := database.ConvertPlaceholders(`
-		INSERT INTO admin_action_log 
-		(action_type_id, target_type, target_id, target_identifier, reason, details, create_time, create_by)
-		VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
-	`)
-
-	_, err := db.Exec(insertQuery, actionTypeID, targetType, targetID, targetIdentifier, reason, detailsJSON, adminID)
-	return err
+// recordAdmin2FADisable records an admin turning off another account's
+// second factors.
+func recordAdmin2FADisable(c *gin.Context, targetType string, targetID int64, targetLogin, reason string) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.2fa.disable",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  targetType,
+		TargetID:    audit.ID(targetID),
+		TargetLabel: targetLogin,
+		Details:     map[string]any{"reason": reason},
+	})
 }

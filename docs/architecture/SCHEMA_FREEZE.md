@@ -65,12 +65,12 @@ The OTRS baseline tables (116 tables) must remain structurally compatible with O
 GoatFlow extends beyond OTRS using **separate tables** alongside the frozen baseline. The rules:
 
 1. **Never modify** existing OTRS table structures
-2. **New tables** for GoatFlow-specific features (e.g., `user_api_tokens`, `canned_response`, `admin_action_log`)
+2. **New tables** for GoatFlow-specific features (e.g., `user_api_tokens`, `canned_response`, `gk_audit_event`)
 3. **Existing OTRS tables** can be reused for new features where appropriate (e.g., TOTP secrets in `user_preferences`)
 4. **Column additions** only where Znuny-compatible (e.g., `color` on `ticket_priority` / `ticket_state`)
 5. Document all extensions in `docs/development/DATABASE.md`
 
-Current extension tables: `dynamic_field_screen_config`, `canned_response`, `canned_response_category`, `user_api_tokens`, `admin_action_type`, `admin_action_log`.
+Current extension tables: `dynamic_field_screen_config`, `canned_response`, `canned_response_category`, `user_api_tokens`, and the `gk_*` tables listed in `docs/development/DATABASE.md`.
 
 ### Verification Command
 ```bash

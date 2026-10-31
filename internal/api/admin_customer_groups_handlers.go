@@ -14,6 +14,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 )
@@ -248,11 +249,29 @@ func handleAdminCustomerGroupUpdate(c *gin.Context) {
 		}
 	}
 
+	beforePerms, _ := loadCustomerGroupPermissions(db, customerID)
+
 	// Update permissions in database
 	if err := updateCustomerGroupPermissions(db, customerID, newPermissions, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update permissions"})
 		return
 	}
+
+	groupNames := customerAuditGroupNames(db)
+	label := ""
+	if company, err := loadCustomerCompany(db, customerID); err == nil && company != nil {
+		label = company.Name
+	}
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.customer_group.update",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "customer_company",
+		TargetID:    customerID,
+		TargetLabel: label,
+		Details: map[string]any{"changes": customerPermChanges(
+			customerPermKeysByGroup(beforePerms, groupNames), customerPermKeysByGroup(newPermissions, groupNames))},
+	})
 
 	if wantsJSONResponse(c) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Permissions updated successfully"})
@@ -380,11 +399,28 @@ func handleAdminCustomerGroupByGroupUpdate(c *gin.Context) {
 		}
 	}
 
+	beforePerms, _ := loadGroupCustomerPermissions(db, groupID)
+
 	// Update permissions in database
 	if err := updateGroupCustomerPermissions(db, groupID, newPermissions, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update permissions"})
 		return
 	}
+
+	label := ""
+	if g, err := loadGroup(db, groupID); err == nil && g != nil {
+		label = g.Name
+	}
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.customer_group.update",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "group",
+		TargetID:    groupIDStr,
+		TargetLabel: label,
+		Details: map[string]any{"changes": customerPermChanges(
+			customerPermKeysByID("customer", beforePerms), customerPermKeysByID("customer", newPermissions))},
+	})
 
 	if wantsJSONResponse(c) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Permissions updated successfully"})
@@ -651,4 +687,60 @@ func updateGroupCustomerPermissions(db *sql.DB, groupID int, permissions map[str
 	}
 
 	return tx.Commit()
+}
+
+// customerAuditGroupNames maps valid group ids to names for audit keys.
+func customerAuditGroupNames(db *sql.DB) map[int]string {
+	groups, _ := loadGroups(db)
+	names := make(map[int]string, len(groups))
+	for _, g := range groups {
+		names[g.ID] = g.Name
+	}
+	return names
+}
+
+// customerPermKeysByGroup flattens group_id -> permission -> enabled into
+// "group:<name>.<permission>" keys of the granted permissions.
+func customerPermKeysByGroup(perms map[int]map[string]bool, names map[int]string) map[string]bool {
+	out := make(map[string]bool, len(perms)*len(customerGroupPermissionTypes))
+	for groupID, p := range perms {
+		name, ok := names[groupID]
+		if !ok {
+			name = strconv.Itoa(groupID)
+		}
+		for key, enabled := range p {
+			if enabled {
+				out["group:"+name+"."+key] = true
+			}
+		}
+	}
+	return out
+}
+
+// customerPermKeysByID flattens id -> permission -> enabled into
+// "<kind>:<id>.<permission>" keys of the granted permissions.
+func customerPermKeysByID(kind string, perms map[string]map[string]bool) map[string]bool {
+	out := make(map[string]bool, len(perms)*len(customerGroupPermissionTypes))
+	for id, p := range perms {
+		for key, enabled := range p {
+			if enabled {
+				out[kind+":"+id+"."+key] = true
+			}
+		}
+	}
+	return out
+}
+
+// customerPermChanges reports granted (false -> true) and revoked
+// (true -> false) permissions between two flattened permission sets.
+func customerPermChanges(before, after map[string]bool) map[string]any {
+	b := make(map[string]any, len(before)+len(after))
+	a := make(map[string]any, len(before)+len(after))
+	for k := range before {
+		b[k], a[k] = true, after[k]
+	}
+	for k := range after {
+		b[k], a[k] = before[k], true
+	}
+	return audit.Changes(b, a)
 }

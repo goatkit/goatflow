@@ -12,6 +12,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -73,6 +74,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 	// Fail2ban-style throttle shared with /api/v1/auth/login and customer login.
 	clientIP := c.ClientIP()
 	if blocked, remaining := auth.DefaultLoginRateLimiter.IsBlocked(clientIP, username); blocked {
+		recordLoginFailure(c, username, audit.OutcomeDenied, map[string]any{"method": methodPassword, "reason": "rate_limited"})
 		switch {
 		case strings.Contains(contentType, "application/json"):
 			tooManyAttemptsJSON(c, remaining)
@@ -112,9 +114,10 @@ var HandleAuthLogin = func(c *gin.Context) {
 	// Use the real auth service for production-grade authentication
 	// NOTE: provider ordering currently controlled via config Auth::Providers.
 	// Explicit provider field is advisory; future: route to single-provider auth path.
-	user, err := authService.Login(ctx, username, password)
+	user, authProvider, err := authService.Login(ctx, username, password)
 	if err != nil {
 		auth.DefaultLoginRateLimiter.RecordFailure(clientIP, username)
+		recordLoginFailure(c, username, audit.OutcomeFailure, map[string]any{"method": methodPassword, "reason": auth.FailureReason(err)})
 		if strings.Contains(contentType, "application/json") {
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "invalid credentials"})
 			return
@@ -218,6 +221,7 @@ var HandleAuthLogin = func(c *gin.Context) {
 	httpcookie.SetAuth(c, "refresh_token", refreshToken, constants.RefreshTokenTimeout)
 	// Session ID cookie for logout cleanup
 	httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
+	recordLogin(c, user, passwordLoginDetails(authProvider))
 
 	// Store user in session (use "user_id" to match middleware)
 	c.Set("user", user)

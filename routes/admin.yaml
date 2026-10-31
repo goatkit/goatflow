@@ -592,7 +592,27 @@ spec:
           template: pages/admin/reports.pongo2
           description: "Display ticket reports (queue-scoped statistics, trends, CSV export)"
 
-        # /logs is now handled by admin_audit_log.yaml module
+        # Audit log viewer, CSV export and settings (gk_audit_event)
+        - path: /audit-log
+          method: GET
+          handler: handleAdminAuditLog
+          template: pages/admin/audit_log.pongo2
+          description: "Display the audit log"
+
+        - path: /api/audit-log
+          method: GET
+          handler: handleAdminAuditLogList
+          description: "List audit events (filtered, paginated)"
+
+        - path: /api/audit-log/export.csv
+          method: GET
+          handler: handleAdminAuditLogExport
+          description: "Export filtered audit events as CSV"
+
+        - path: /api/audit-log/settings
+          method: POST
+          handler: handleSaveAdminAuditSettings
+          description: "Save audit log retention and read-access settings"
 
         # Dynamic Fields management
         - path: /dynamic-fields

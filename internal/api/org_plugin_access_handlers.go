@@ -1,12 +1,14 @@
 package api
 
 import (
+	"database/sql"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/organisation"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -98,11 +100,17 @@ func handleAPISetOrgPluginAccess(c *gin.Context) {
 	}
 
 	repo := repository.NewPluginAccessRepository(db)
+	beforeGroups := orgPluginGroupIDs(repo, orgID, req.PluginName)
 	if err := repo.ReplaceForOrgPlugin(orgID, req.PluginName, req.GroupID, createdBy); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	afterGroups := []int{}
+	if req.GroupID > 0 {
+		afterGroups = []int{req.GroupID}
+	}
+	recordOrgPluginAccessAudit(c, db, "admin.organisation.plugin_access.set", orgID, req.PluginName, beforeGroups, afterGroups)
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "plugin_name": req.PluginName, "group_id": req.GroupID})
 }
 
@@ -163,6 +171,7 @@ func handleAPISetCaptivePlugin(c *gin.Context) {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "database unavailable"})
 		return
 	}
+	before, _ := orgR.GetOrg(orgID)
 	userID, ok := auditUserID(c)
 	if !ok {
 		return
@@ -175,6 +184,25 @@ func handleAPISetCaptivePlugin(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	auditEvent := audit.Event{
+		Category:   audit.CategoryAdmin,
+		Action:     "admin.organisation.captive_plugin.set",
+		Outcome:    audit.OutcomeSuccess,
+		TargetType: "organisation",
+		TargetID:   audit.ID(orgID),
+	}
+	var beforeCaptive any
+	if before != nil {
+		auditEvent.TargetLabel = before.Name
+		beforeCaptive = ""
+		if before.CaptivePlugin != nil {
+			beforeCaptive = *before.CaptivePlugin
+		}
+	}
+	auditEvent.Details = map[string]any{
+		"changes": audit.Changes(map[string]any{"captive_plugin": beforeCaptive}, map[string]any{"captive_plugin": req.CaptivePlugin}),
+	}
+	audit.RecordRequest(c, auditEvent)
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "captive_plugin": req.CaptivePlugin})
 }
 
@@ -210,11 +238,54 @@ func handleAPIDeleteOrgPluginAccess(c *gin.Context) {
 		}
 	}
 	repo := repository.NewPluginAccessRepository(db)
+	beforeGroups := orgPluginGroupIDs(repo, orgID, pluginName)
 	if err := repo.ReplaceForOrgPlugin(orgID, pluginName, 0, createdBy); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	recordOrgPluginAccessAudit(c, db, "admin.organisation.plugin_access.delete", orgID, pluginName, beforeGroups, []int{})
 	c.JSON(http.StatusOK, gin.H{"status": "disabled", "plugin_name": pluginName})
+}
+
+// orgPluginGroupIDs returns the ids of the groups that gate pluginName for
+// the org, nil when they can't be read.
+func orgPluginGroupIDs(repo *repository.PluginAccessRepository, orgID int64, pluginName string) []int {
+	rows, err := repo.ListForOrg(orgID)
+	if err != nil {
+		return nil
+	}
+	ids := []int{}
+	for _, r := range rows {
+		if r.PluginName == pluginName {
+			ids = append(ids, r.GroupID)
+		}
+	}
+	return ids
+}
+
+// recordOrgPluginAccessAudit records a change to the groups that gate a
+// plugin for an organisation.
+func recordOrgPluginAccessAudit(c *gin.Context, db *sql.DB, action string, orgID int64, pluginName string, before, after []int) {
+	label := ""
+	if org, err := organisation.NewRepositoryWithDB(db).GetOrg(orgID); err == nil && org != nil {
+		label = org.Name
+	}
+	var beforeGroups any
+	if before != nil {
+		beforeGroups = before
+	}
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "organisation",
+		TargetID:    audit.ID(orgID),
+		TargetLabel: label,
+		Details: map[string]any{
+			"plugin_name": pluginName,
+			"changes":     audit.Changes(map[string]any{"group_ids": beforeGroups}, map[string]any{"group_ids": after}),
+		},
+	})
 }
 
 // parseOrgIDParam extracts and validates the :id path parameter shared by

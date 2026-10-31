@@ -418,10 +418,11 @@ func handleGetAttachments(c *gin.Context) {
 
 // handleDownloadAttachment serves an attachment's bytes.
 func handleDownloadAttachment(c *gin.Context) {
-	_, _, att, content, ok := attachmentRef(c)
+	_, ticketID, att, content, ok := attachmentRef(c)
 	if !ok {
 		return
 	}
+	recordAttachmentDownload(c, int64(ticketID), att.ArticleID, att.FileID, att.Filename)
 	serveAttachment(c, att, content, false)
 }
 
@@ -516,6 +517,7 @@ func handleViewAttachment(c *gin.Context) {
 		return
 	}
 	if c.Query("raw") == "1" {
+		recordAttachmentDownload(c, int64(ticketID), att.ArticleID, att.FileID, att.Filename)
 		serveAttachmentRaw(c, att, content)
 		return
 	}

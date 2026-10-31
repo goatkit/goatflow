@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -57,6 +58,7 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		// Server-side rate limiting (fail2ban style)
 		clientIP := c.ClientIP()
 		if blocked, remaining := auth.DefaultLoginRateLimiter.IsBlocked(clientIP, login); blocked {
+			recordLoginFailure(c, login, audit.OutcomeDenied, map[string]any{"method": methodPassword, "reason": "rate_limited"})
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"success":         false,
 				"error":           fmt.Sprintf("too many failed attempts, try again in %d seconds", int(remaining.Seconds())),
@@ -83,9 +85,13 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		authenticator := auth.NewAuthenticator(provider)
-		user, err := authenticator.Authenticate(c.Request.Context(), login, password)
-		if err != nil || user == nil || strings.ToLower(user.Role) != "customer" {
+		user, providerName, err := authenticator.Authenticate(c.Request.Context(), login, password)
+		if err == nil && (user == nil || strings.ToLower(user.Role) != "customer") {
+			err = auth.ErrUserNotFound
+		}
+		if err != nil {
 			auth.DefaultLoginRateLimiter.RecordFailure(clientIP, login)
+			recordLoginFailure(c, login, audit.OutcomeFailure, map[string]any{"method": methodPassword, "reason": auth.FailureReason(err)})
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "invalid credentials"})
 			return
 		}
@@ -176,6 +182,7 @@ func handleCustomerLogin(jwtManager *auth.JWTManager) gin.HandlerFunc {
 
 		// Customer-specific session cookie for logout cleanup
 		httpcookie.SetAuth(c, "customer_session_id", sessionID, sessionTimeout)
+		recordLogin(c, user, passwordLoginDetails(providerName))
 
 		redirectTarget := customerLandingRedirect(user.Login)
 

@@ -133,8 +133,8 @@ name in OTRS's YAML format (escalation calendars, ...).
 | `package_repository` | OTRS Perl add-on packages, not installable in GoatFlow |
 | `cloud_service_config`, `system_data` | OTRS Group cloud services, registration and system state |
 
-Tables only GoatFlow has (`gk_*`, `admin_action_log`, `admin_action_type`, `canned_response`,
-`canned_response_category`, `user_api_tokens`, `sysconfig_org`, `dynamic_field_screen_config`)
+Tables only GoatFlow has (`gk_*`, `canned_response`, `canned_response_category`,
+`user_api_tokens`, `sysconfig_org`, `dynamic_field_screen_config`)
 are left alone. Source tables GoatFlow has no table for (add-ons such as ITSM) are listed with
 their row counts and not imported.
 

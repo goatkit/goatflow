@@ -22,8 +22,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/marketplace"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/organisation"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
@@ -215,6 +217,7 @@ func HandlePluginResetCrashLoop(c *gin.Context) {
 		return
 	}
 	plugin.GetLogBuffer().Log(name, "info", "Crash-loop guard reset by admin", nil)
+	recordPluginAudit(c, "admin.plugin.crashloop.reset", name, nil)
 	c.JSON(http.StatusOK, gin.H{"status": "reset"})
 }
 
@@ -227,6 +230,7 @@ func HandlePluginEnable(c *gin.Context) {
 	}
 
 	name := c.Param("name")
+	wasEnabled := pluginManager.IsEnabled(name)
 	if err := pluginManager.Enable(name); err != nil {
 		plugin.GetLogBuffer().Log(name, "error", fmt.Sprintf("Failed to enable plugin: %s", err.Error()), nil)
 		// Return 404 for plugin not found errors
@@ -240,6 +244,9 @@ func HandlePluginEnable(c *gin.Context) {
 
 	plugin.GetLogBuffer().Log(name, "info", fmt.Sprintf("Plugin enabled: %s", name), nil)
 	RefreshPluginMCPTools()
+	recordPluginAudit(c, "admin.plugin.enable", name, map[string]any{
+		"changes": audit.Changes(map[string]any{"enabled": wasEnabled}, map[string]any{"enabled": true}),
+	})
 	c.JSON(http.StatusOK, gin.H{"status": "enabled"})
 }
 
@@ -252,6 +259,7 @@ func HandlePluginDisable(c *gin.Context) {
 	}
 
 	name := c.Param("name")
+	wasEnabled := pluginManager.IsEnabled(name)
 	if err := pluginManager.Disable(name); err != nil {
 		plugin.GetLogBuffer().Log(name, "error", fmt.Sprintf("Failed to disable plugin: %s", err.Error()), nil)
 		// Return 404 for plugin not found errors
@@ -265,7 +273,45 @@ func HandlePluginDisable(c *gin.Context) {
 
 	plugin.GetLogBuffer().Log(name, "info", fmt.Sprintf("Plugin disabled: %s", name), nil)
 	RefreshPluginMCPTools()
+	recordPluginAudit(c, "admin.plugin.disable", name, map[string]any{
+		"changes": audit.Changes(map[string]any{"enabled": wasEnabled}, map[string]any{"enabled": false}),
+	})
 	c.JSON(http.StatusOK, gin.H{"status": "disabled"})
+}
+
+// recordPluginAudit records a successful admin action on the named plugin.
+func recordPluginAudit(c *gin.Context, action, name string, details map[string]any) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "plugin",
+		TargetID:    name,
+		TargetLabel: name,
+		Details:     details,
+	})
+}
+
+// installedPluginVersion reports whether a plugin is installed, and its
+// version: registered with the manager or present in the plugin directory.
+func installedPluginVersion(name string) (string, bool) {
+	if pluginManager != nil {
+		for _, m := range pluginManager.List() {
+			if m.Name == name {
+				return m.Version, true
+			}
+		}
+	}
+	if pluginDir == "" {
+		return "", false
+	}
+	installed, _ := marketplace.NewClient(pluginDir).ListInstalled()
+	for _, inst := range installed {
+		if inst.Name == name {
+			return inst.Version, true
+		}
+	}
+	return "", false
 }
 
 // HandlePluginWidgetList returns available widgets for a location (triggers lazy load).
@@ -799,6 +845,7 @@ func HandlePluginUninstall(c *gin.Context) {
 		return
 	}
 
+	version, _ := installedPluginVersion(name)
 	// 1. Unregister — proper shutdown, cascade teardown, in-memory cleanup.
 	if err := pluginManager.Unregister(c.Request.Context(), name); err != nil {
 		log.Printf("WARN Unregister for %s: %v — trying Unload fallback", name, err)
@@ -828,6 +875,7 @@ func HandlePluginUninstall(c *gin.Context) {
 		log.Printf("INFO plugin dir not configured — skipping disk cleanup for %s", name)
 	}
 
+	recordPluginAudit(c, "admin.plugin.uninstall", name, map[string]any{"fields": audit.Snapshot(map[string]any{"version": version})})
 	c.JSON(http.StatusOK, gin.H{"message": "plugin uninstalled", "name": name})
 }
 
@@ -877,18 +925,20 @@ func RegisterPluginAPIRoutes(r *gin.RouterGroup) {
 
 // RequireAdmin middleware checks if the user is an admin.
 // Supports both session-based auth (user_role) and JWT auth (isInAdminGroup).
+// Refusals and admin writes are recorded in the audit log.
 func RequireAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Check session-based auth (user_role set by YAML route middleware)
 		if role, exists := c.Get("user_role"); exists && role == "Admin" {
-			c.Next()
+			middleware.AuditAdminWrite(c)
 			return
 		}
 		// Check JWT-based auth (isInAdminGroup set by JWT/API token middleware)
 		if isAdmin, exists := c.Get("isInAdminGroup"); exists && isAdmin == true {
-			c.Next()
+			middleware.AuditAdminWrite(c)
 			return
 		}
+		middleware.AuditAdminDenied(c)
 		c.JSON(http.StatusForbidden, gin.H{"error": "admin access required"})
 		c.Abort()
 	}
@@ -1498,6 +1548,7 @@ func HandlePluginUpload(c *gin.Context) {
 			return
 		}
 		pluginName = manifest.Name
+		previousVersion, existed := installedPluginVersion(pluginName)
 
 		// For gRPC plugins, the binary may be running. Unload it first to
 		// release the file handle so extraction can overwrite it.
@@ -1524,6 +1575,7 @@ func HandlePluginUpload(c *gin.Context) {
 		runtimeType := pkg.RuntimeType
 		log.Printf("🔌 Plugin package extracted: %s v%s (runtime: %s)", pluginName, pkg.Manifest.Version, runtimeType)
 		plugin.GetLogBuffer().Log(pluginName, "info", fmt.Sprintf("Plugin uploaded: %s (runtime: %s, size: %d bytes)", pluginName, runtimeType, header.Size), nil)
+		recordPluginUpload(c, pluginName, existed, previousVersion, pkg.Manifest.Version, runtimeType)
 
 		// Trigger load/reload of the uploaded plugin
 		if pluginReloader != nil {
@@ -1551,14 +1603,19 @@ func HandlePluginUpload(c *gin.Context) {
 	} else {
 		// Direct WASM upload
 		destPath = filepath.Join(pluginDir, filename)
+		pluginName = strings.TrimSuffix(filename, ".wasm")
+		previousVersion, existed := installedPluginVersion(pluginName)
+		if _, statErr := os.Stat(destPath); statErr == nil {
+			existed = true
+		}
 		if err := os.Rename(tempPath, destPath); err != nil {
 			_ = os.Remove(tempPath)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save plugin file"})
 			return
 		}
-		pluginName = strings.TrimSuffix(filename, ".wasm")
 		log.Printf("🔌 Plugin uploaded: %s", pluginName)
 		plugin.GetLogBuffer().Log(pluginName, "info", fmt.Sprintf("Plugin uploaded: %s (runtime: wasm, size: %d bytes)", pluginName, header.Size), nil)
+		recordPluginUpload(c, pluginName, existed, previousVersion, "", "wasm")
 	}
 
 	RefreshPluginMCPTools()
@@ -1566,6 +1623,23 @@ func HandlePluginUpload(c *gin.Context) {
 		"message": "Plugin uploaded successfully",
 		"name":    pluginName,
 		"path":    destPath,
+	})
+}
+
+// recordPluginUpload records an uploaded plugin as an install, or as an
+// update when a plugin of that name was already installed.
+func recordPluginUpload(c *gin.Context, name string, existed bool, from, to, runtime string) {
+	if existed {
+		recordPluginAudit(c, "admin.plugin.update", name, map[string]any{
+			"source":  "upload",
+			"runtime": runtime,
+			"changes": audit.Changes(map[string]any{"version": from}, map[string]any{"version": to}),
+		})
+		return
+	}
+	recordPluginAudit(c, "admin.plugin.install", name, map[string]any{
+		"source": "upload",
+		"fields": audit.Snapshot(map[string]any{"version": to, "runtime": runtime}),
 	})
 }
 
@@ -1618,7 +1692,16 @@ func HandlePluginLogs(c *gin.Context) {
 // HandleClearPluginLogs clears the plugin log buffer.
 // DELETE /api/v1/plugins/logs
 func HandleClearPluginLogs(c *gin.Context) {
-	plugin.GetLogBuffer().Clear()
+	logs := plugin.GetLogBuffer()
+	cleared := logs.Count()
+	logs.Clear()
+	audit.RecordRequest(c, audit.Event{
+		Category:   audit.CategoryAdmin,
+		Action:     "admin.plugin.logs.clear",
+		Outcome:    audit.OutcomeSuccess,
+		TargetType: "plugin",
+		Details:    map[string]any{"entries": cleared},
+	})
 	c.JSON(http.StatusOK, gin.H{"message": "Plugin logs cleared"})
 }
 

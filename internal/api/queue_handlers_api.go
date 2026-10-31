@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -284,6 +285,18 @@ func handleCreateQueue(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "failed to create queue"})
 		return
 	}
+
+	var comments any
+	if input.Comments != nil {
+		comments = *input.Comments
+	}
+	recordAdminAccessEvent(c, "admin.queue.create", "queue", audit.ID(id), input.Name,
+		map[string]any{"fields": audit.Snapshot(map[string]any{
+			"name": input.Name, "group_id": input.GroupID, "system_address_id": *input.SystemAddressID,
+			"salutation_id": *input.SalutationID, "signature_id": *input.SignatureID,
+			"unlock_timeout": input.UnlockTimeout, "follow_up_id": input.FollowUpID,
+			"follow_up_lock": input.FollowUpLock, "comments": comments, "valid_id": 1,
+		})})
 
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,

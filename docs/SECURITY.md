@@ -172,8 +172,24 @@ GoatFlow does not set `Strict-Transport-Security`. Set it at your proxy.
 
 ## Audit
 
-- 2FA events are logged (`internal/platform/auth/totp_audit.go`).
-- Admin changes to agents, groups and roles record who made them.
+Security-relevant events are written to the `gk_audit_event` table (`internal/platform/audit`), and
+each one is also written to the application log as an `audit` line for log shippers. Secrets
+(passwords, tokens, keys, client secrets, TOTP seeds, recovery codes) are never recorded: changed
+secret fields show as `[redacted]`.
+
+| Category | Recorded |
+|----------|----------|
+| `auth` | Sign-in success and failure for every method (password, LDAP, OIDC, SAML, passkey) with the reason for a failure; rate-limited attempts; the 2FA step (success, failure, lock, recovery code use, IP mismatch); sign-out; 2FA and passkey changes; password changes, reset requests and resets; API tokens created and revoked |
+| `admin` | Every write through an admin page or admin API, and every refused admin request from a signed-in user. Users, groups, roles, permissions, queues, customer users and companies, organisations, identity providers, webhooks, plugins, PostMaster filters, the decision filter and every dynamic module (System Configuration, mail accounts and more) record the fields that changed. Admin password resets, admin 2FA overrides and ended sessions are recorded with their target |
+| `access` | Off by default. When "Record read access" is on: ticket views (agent and customer), attachment downloads and statistics exports. Audit log CSV exports are always recorded |
+| `system` | Retention purges |
+
+Admin -> Audit Log (`/admin/audit-log`) lists events with filters and exports them as CSV
+(at most 100,000 rows; cells that a spreadsheet would run as a formula are prefixed with `'`).
+Events are kept for 365 days by default and purged daily by the runner; set the period, or 0 to
+keep them forever, on the same page. Ticket changes are also kept in each ticket's history, and
+deletions in the deletion log. The log is an ordinary database table: an administrator with
+database access can change it. Tamper evidence is for the goatkit-audit plugin.
 
 ## Containers
 

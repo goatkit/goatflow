@@ -15,6 +15,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 )
@@ -229,11 +230,25 @@ func handleAdminCustomerUserGroupUpdate(c *gin.Context) {
 		}
 	}
 
+	beforePerms, _ := loadCustomerUserGroupPermissions(db, userLogin)
+
 	// Update permissions in database
 	if err := updateCustomerUserGroupPermissions(db, userLogin, newPermissions, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update permissions: " + err.Error()})
 		return
 	}
+
+	groupNames := customerAuditGroupNames(db)
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.customer_user_group.update",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "customer_user",
+		TargetID:    userLogin,
+		TargetLabel: userLogin,
+		Details: map[string]any{"changes": customerPermChanges(
+			customerPermKeysByGroup(beforePerms, groupNames), customerPermKeysByGroup(newPermissions, groupNames))},
+	})
 
 	if wantsJSONResponse(c) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Permissions updated successfully"})
@@ -367,11 +382,28 @@ func handleAdminCustomerUserGroupByGroupUpdate(c *gin.Context) {
 		}
 	}
 
+	beforePerms, _ := loadGroupCustomerUserPermissions(db, groupID)
+
 	// Update permissions in database
 	if err := updateGroupCustomerUserPermissions(db, groupID, newPermissions, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update permissions: " + err.Error()})
 		return
 	}
+
+	label := ""
+	if g, err := loadGroup(db, groupID); err == nil && g != nil {
+		label = g.Name
+	}
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.customer_user_group.update",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "group",
+		TargetID:    groupIDStr,
+		TargetLabel: label,
+		Details: map[string]any{"changes": customerPermChanges(
+			customerPermKeysByID("customer_user", beforePerms), customerPermKeysByID("customer_user", newPermissions))},
+	})
 
 	if wantsJSONResponse(c) {
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Permissions updated successfully"})

@@ -682,6 +682,7 @@ func handleTicketDetail(c *gin.Context) {
 		closeArticleDynamicFields = closeArticleFields
 	}
 
+	recordTicketView(c, int64(ticket.ID), ticket.TicketNumber)
 	getPongo2Renderer().HTML(c, http.StatusOK, "pages/ticket_detail.pongo2", pongo2.Context{
 		"Ticket":                    ticketData,
 		"User":                      getUserMapForTemplate(c),
@@ -732,6 +733,7 @@ func handleGetTicket(c *gin.Context) {
 		return
 	}
 
+	recordTicketView(c, int64(ticket.ID), ticket.TicketNumber)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"ticket":  ticket,

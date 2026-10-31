@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/webhook"
@@ -156,6 +158,39 @@ func pathID(c *gin.Context, name string) (int64, bool) {
 	return id, true
 }
 
+// webhookAuditFields lists a stored webhook's settings for the audit log.
+// secret is the stored secret's masked hint or a new raw value; its key is
+// one audit redacts. Header values are never included, only header names.
+func webhookAuditFields(w *webhook.Webhook, secret string) map[string]any {
+	names := make([]string, 0, len(w.HeaderHints))
+	for name := range w.HeaderHints {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return map[string]any{
+		"name":            w.Name,
+		"url":             w.URL,
+		"events":          slices.Clone(w.Events),
+		"header_names":    names,
+		"secret":          secret,
+		"retry_count":     w.RetryCount,
+		"timeout_seconds": w.TimeoutSeconds,
+		"is_active":       w.IsActive,
+	}
+}
+
+func recordWebhookEvent(c *gin.Context, action string, id int64, label string, details map[string]any) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.webhook." + action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "webhook",
+		TargetID:    audit.ID(id),
+		TargetLabel: label,
+		Details:     details,
+	})
+}
+
 // handleWebhookList handles GET /api/v1/webhooks[?active=true|false].
 //
 //	@Summary		List webhooks
@@ -262,6 +297,8 @@ func handleWebhookCreate(c *gin.Context) {
 		webhookError(c, "create webhook", err)
 		return
 	}
+	recordWebhookEvent(c, "create", created.ID, created.Name,
+		map[string]any{"fields": audit.Snapshot(webhookAuditFields(created, secret))})
 	webhookOK(c, http.StatusCreated, created)
 }
 
@@ -330,6 +367,7 @@ func handleWebhookUpdate(c *gin.Context) {
 		webhookError(c, "load webhook", err)
 		return
 	}
+	before := webhookAuditFields(w, w.SecretHint)
 	req.apply(w)
 	if req.Headers != nil {
 		var stored map[string]string
@@ -361,6 +399,22 @@ func handleWebhookUpdate(c *gin.Context) {
 		webhookError(c, "update webhook", err)
 		return
 	}
+	newSecret := updated.SecretHint
+	if req.Secret != nil {
+		newSecret = *req.Secret
+	}
+	details := map[string]any{"changes": audit.Changes(before, webhookAuditFields(updated, newSecret))}
+	if req.Headers != nil {
+		set := make([]string, 0, len(*req.Headers))
+		for name, v := range *req.Headers {
+			if v != nil {
+				set = append(set, name)
+			}
+		}
+		slices.Sort(set)
+		details["headers_set"] = set
+	}
+	recordWebhookEvent(c, "update", updated.ID, updated.Name, details)
 	webhookOK(c, http.StatusOK, updated)
 }
 
@@ -384,9 +438,16 @@ func handleWebhookDelete(c *gin.Context) {
 	if !ok {
 		return
 	}
+	old, getErr := repo.Get(c.Request.Context(), id)
 	if err := repo.Delete(c.Request.Context(), id); err != nil {
 		webhookError(c, "delete webhook", err)
 		return
+	}
+	if getErr == nil && old != nil {
+		recordWebhookEvent(c, "delete", id, old.Name,
+			map[string]any{"fields": audit.Snapshot(webhookAuditFields(old, old.SecretHint))})
+	} else {
+		recordWebhookEvent(c, "delete", id, "", nil)
 	}
 	webhookOK(c, http.StatusOK, gin.H{"id": id})
 }
@@ -417,6 +478,7 @@ func handleWebhookTest(c *gin.Context) {
 		webhookError(c, "send test delivery", err)
 		return
 	}
+	recordWebhookEvent(c, "test", id, "", map[string]any{"delivery_id": d.ID, "delivery_status": d.Status})
 	webhookOK(c, http.StatusOK, d)
 }
 
@@ -517,5 +579,13 @@ func handleWebhookRedeliver(c *gin.Context) {
 		webhookError(c, "redeliver", err)
 		return
 	}
+	audit.RecordRequest(c, audit.Event{
+		Category:   audit.CategoryAdmin,
+		Action:     "admin.webhook.redeliver",
+		Outcome:    audit.OutcomeSuccess,
+		TargetType: "webhook_delivery",
+		TargetID:   strconv.FormatInt(id, 10),
+		Details:    map[string]any{"webhook_id": d.WebhookID, "delivery_id": d.ID, "delivery_status": d.Status},
+	})
 	webhookOK(c, http.StatusOK, d)
 }

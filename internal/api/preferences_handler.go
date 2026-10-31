@@ -11,6 +11,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -1162,12 +1163,15 @@ func HandleAgentChangePassword(c *gin.Context) {
 	}
 
 	// Verify current password
-	recheckKey := passwordRecheckKey(agentMFAAccount(int(userID)))
+	account := agentMFAAccount(int(userID))
+	recheckKey := passwordRecheckKey(account)
 	if rejectIfLoginBlocked(c, recheckKey) {
+		recordAccountEvent(c, account, "auth.password.change", audit.OutcomeDenied, map[string]any{"reason": "rate_limited"})
 		return
 	}
 	hasher := auth.NewPasswordHasher()
 	if !countPasswordRecheck(c, recheckKey, hasher.VerifyPassword(request.CurrentPassword, currentHash)) {
+		recordAccountEvent(c, account, "auth.password.change", audit.OutcomeFailure, map[string]any{"reason": "wrong_current_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"success": false,
 			"error":   "Current password is incorrect",
@@ -1177,6 +1181,7 @@ func HandleAgentChangePassword(c *gin.Context) {
 
 	// Check that new password is different from current
 	if request.NewPassword == request.CurrentPassword {
+		recordAccountEvent(c, account, "auth.password.change", audit.OutcomeFailure, map[string]any{"reason": "same_password"})
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   "New password must be different from current password",
@@ -1192,6 +1197,7 @@ func HandleAgentChangePassword(c *gin.Context) {
 	}
 
 	if validationErr := policy.ValidatePassword(request.NewPassword); validationErr != nil {
+		recordAccountEvent(c, account, "auth.password.change", audit.OutcomeFailure, map[string]any{"reason": "policy", "policy": validationErr.Code})
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"error":   validationErr.Message,
@@ -1225,6 +1231,7 @@ func HandleAgentChangePassword(c *gin.Context) {
 		return
 	}
 
+	recordAccountEvent(c, account, "auth.password.change", audit.OutcomeSuccess, nil)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Password changed successfully",

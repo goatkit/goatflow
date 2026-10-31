@@ -818,24 +818,35 @@ func TestDatabaseSourceReadsRowsByteForByte(t *testing.T) {
 }
 
 // Every OTRS table of the GoatFlow schema has a decision in the import plan.
+// Tables a later migration drops are not part of the schema.
 func TestImportPlanCoversSchema(t *testing.T) {
-	re := regexp.MustCompile("(?i)CREATE TABLE (?:IF NOT EXISTS )?[`\"]?([a-z_0-9]+)")
+	re := regexp.MustCompile("(?i)(CREATE|DROP) TABLE (?:IF (?:NOT )?EXISTS )?[`\"]?([a-z_0-9]+)")
 	for _, driver := range []string{"mysql", "postgres"} {
 		files, err := filepath.Glob(filepath.Join("..", "..", "migrations", driver, "*.up.sql"))
 		if err != nil || len(files) == 0 {
 			t.Fatalf("migrations/%s: %v", driver, err)
 		}
+		created := map[string]string{}
 		for _, f := range files {
 			b, err := os.ReadFile(f)
 			if err != nil {
 				t.Fatal(err)
 			}
 			for _, m := range re.FindAllStringSubmatch(string(b), -1) {
-				if name := strings.ToLower(m[1]); !strings.HasPrefix(name, "gk_") {
-					if _, ok := planFor(name); !ok {
-						t.Errorf("%s creates table %s, which the import plan does not cover", filepath.Base(f), name)
-					}
+				name := strings.ToLower(m[2])
+				if strings.EqualFold(m[1], "DROP") {
+					delete(created, name)
+				} else {
+					created[name] = filepath.Base(f)
 				}
+			}
+		}
+		for name, file := range created {
+			if strings.HasPrefix(name, "gk_") {
+				continue
+			}
+			if _, ok := planFor(name); !ok {
+				t.Errorf("%s creates table %s, which the import plan does not cover", file, name)
 			}
 		}
 	}

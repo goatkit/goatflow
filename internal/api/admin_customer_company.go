@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/platform/sysconfig"
@@ -217,6 +219,11 @@ func handleAdminCreateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			rejectCustomerCompanyCreate(c, http.StatusInternalServerError, "Failed to create customer company")
 			return
 		}
+
+		recordCustomerCompanyEvent(c, "create", customerID, name, map[string]any{"fields": audit.Snapshot(map[string]any{
+			"customer_id": customerID, "name": name, "street": street, "zip": zip, "city": city,
+			"country": country, "url": url, "comments": comments, "valid_id": validID,
+		})})
 
 		redirectURL := fmt.Sprintf("/admin/customer/companies/%s/edit", customerID)
 		shared.SendToastResponse(c, true, "Customer company created successfully", redirectURL)
@@ -428,6 +435,7 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		if !ok {
 			return
 		}
+		before, _ := loadCustomerCompanyAuditFields(db, customerID)
 
 		// Update company. Existence was checked above; RowsAffected is not consulted because
 		// MySQL reports changed rows (0 for a same-second no-op) while PostgreSQL reports matched rows.
@@ -448,6 +456,11 @@ func handleAdminUpdateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			}
 			return
 		}
+
+		recordCustomerCompanyEvent(c, "update", customerID, name, map[string]any{"changes": audit.Changes(before, map[string]any{
+			"name": name, "street": street, "zip": zip, "city": city, "country": country,
+			"url": url, "comments": comments, "valid_id": validID,
+		})})
 
 		redirectURL := fmt.Sprintf("/admin/customer/companies/%s/edit", customerID)
 		shared.SendToastResponse(c, true, "Customer company updated successfully", redirectURL)
@@ -472,6 +485,7 @@ func handleAdminDeleteCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		if !ok {
 			return
 		}
+		before, _ := loadCustomerCompanyAuditFields(db, customerID)
 
 		// Soft delete by setting valid_id to 2 (invalid)
 		result, err := db.Exec(database.ConvertPlaceholders(`
@@ -502,6 +516,9 @@ func handleAdminDeleteCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		label, _ := before["name"].(string)
+		recordCustomerCompanyEvent(c, "delete", customerID, label, map[string]any{"changes": audit.Changes(
+			map[string]any{"valid_id": before["valid_id"]}, map[string]any{"valid_id": 2})})
 		shared.SendToastResponse(c, true, "Customer company deleted successfully", "/admin/customer/companies")
 	}
 }
@@ -524,6 +541,7 @@ func handleAdminActivateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 		if !ok {
 			return
 		}
+		before, _ := loadCustomerCompanyAuditFields(db, customerID)
 
 		// Activate by setting valid_id to 1 (valid)
 		result, err := db.Exec(database.ConvertPlaceholders(`
@@ -554,6 +572,10 @@ func handleAdminActivateCustomerCompany(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		label, _ := before["name"].(string)
+		recordCustomerCompanyEvent(c, "activate", customerID, label, map[string]any{"changes": audit.Changes(
+			map[string]any{"valid_id": before["valid_id"]}, map[string]any{"valid_id": 1})})
+
 		redirectURL := fmt.Sprintf("/admin/customer/companies/%s/edit", customerID)
 		shared.SendToastResponse(c, true, "Customer company activated successfully", redirectURL)
 	}
@@ -567,6 +589,52 @@ func customerCompanyExists(db *sql.DB, customerID string) bool {
 	err := db.QueryRow(database.ConvertPlaceholders(
 		"SELECT EXISTS(SELECT 1 FROM customer_company WHERE customer_id = ?)"), customerID).Scan(&exists)
 	return err == nil && exists
+}
+
+func recordCustomerCompanyEvent(c *gin.Context, action, customerID, name string, details map[string]any) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.customer_company." + action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "customer_company",
+		TargetID:    customerID,
+		TargetLabel: name,
+		Details:     details,
+	})
+}
+
+// loadCustomerCompanyAuditFields reads a company's stored fields for the
+// audit log. It returns an empty map when the read fails.
+func loadCustomerCompanyAuditFields(db *sql.DB, customerID string) (map[string]any, error) {
+	fields := map[string]any{}
+	var name, street, zip, city, country, companyURL, comments sql.NullString
+	var validID int
+	err := db.QueryRow(database.ConvertPlaceholders(`
+		SELECT name, street, zip, city, country, url, comments, valid_id
+		FROM customer_company WHERE customer_id = ?`), customerID).Scan(
+		&name, &street, &zip, &city, &country, &companyURL, &comments, &validID)
+	if err != nil {
+		return fields, err
+	}
+	fields["name"] = name.String
+	fields["street"] = street.String
+	fields["zip"] = zip.String
+	fields["city"] = city.String
+	fields["country"] = country.String
+	fields["url"] = companyURL.String
+	fields["comments"] = comments.String
+	fields["valid_id"] = validID
+	return fields, nil
+}
+
+func customerPortalAuditFields(cfg customerPortalConfig) map[string]any {
+	return map[string]any{
+		"enabled":        cfg.Enabled,
+		"login_required": cfg.LoginRequired,
+		"title":          cfg.Title,
+		"footer_text":    cfg.FooterText,
+		"landing_page":   cfg.LandingPage,
+	}
 }
 
 // handleAdminCustomerPortalSettings shows portal customization settings.
@@ -609,6 +677,7 @@ func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 
 		customerID := strings.TrimSpace(c.Param("id"))
 		if customerID == "" {
+			before := loadCustomerPortalConfig(db)
 			cfg := customerPortalConfig{
 				Enabled:       parseCheckbox(c, "enabled"),
 				LoginRequired: parseCheckbox(c, "login_required"),
@@ -621,6 +690,15 @@ func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
+			audit.RecordRequest(c, audit.Event{
+				Category:    audit.CategoryAdmin,
+				Action:      "admin.customer_portal.settings.update",
+				Outcome:     audit.OutcomeSuccess,
+				TargetType:  "customer_portal",
+				TargetLabel: "Customer Portal",
+				Details: map[string]any{"changes": audit.Changes(
+					customerPortalAuditFields(before), customerPortalAuditFields(cfg))},
+			})
 
 			if c.GetHeader("HX-Request") == "true" {
 				c.Header("HX-Redirect", "/admin/customer/portal/settings")
@@ -635,6 +713,7 @@ func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 		// sysconfig row deleted so reads fall back to the global
 		// defaults.
 		userID := c.GetInt("user_id")
+		before := loadCustomerPortalConfigForCustomer(db, customerID)
 		baseline := loadCustomerPortalConfig(db)
 		cfg := baseline
 		// The company form posts every override_* flag (hidden "0" followed by
@@ -700,6 +779,18 @@ func handleAdminUpdateCustomerPortalSettings(db *sql.DB) gin.HandlerFunc {
 				return
 			}
 		}
+
+		overridden := make([]string, 0, len(overrides))
+		for key, isOverride := range overrides {
+			if isOverride {
+				overridden = append(overridden, key)
+			}
+		}
+		sort.Strings(overridden)
+		recordCustomerCompanyEvent(c, "portal_settings.update", customerID, "", map[string]any{
+			"changes":   audit.Changes(customerPortalAuditFields(before), customerPortalAuditFields(cfg)),
+			"overrides": overridden,
+		})
 
 		// The company edit form is a plain HTML form: send the browser back to
 		// the Portal Settings tab instead of a raw JSON document.

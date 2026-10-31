@@ -47,7 +47,7 @@ sections.
 | Plugins | `/admin/plugins` | Installed plugins |
 | Marketplace | `/admin/marketplace` | Install plugins from the marketplace |
 | Plugin UIs | `/admin/plugin-uis` | Plugin app pages |
-| Audit Logs | `/admin/modules/admin_audit_log` | Change and access history |
+| Audit Log | `/admin/audit-log` | Sign-ins, admin changes and (optional) read access; CSV export and retention |
 
 ### GoatFlow (Helpdesk)
 

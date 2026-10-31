@@ -14,6 +14,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/sysconfig"
 )
@@ -129,6 +130,9 @@ func HandleSaveAdminPostmasterDecisionFilter(c *gin.Context) {
 		return
 	}
 
+	// Normalize here so the audit record shows the values that are stored.
+	cfg.Normalize()
+	before, _ := sysconfig.LoadDecisionFilterConfig(db)
 	if err := sysconfig.SaveDecisionFilterConfig(db, cfg, userID); err != nil {
 		var invalid *sysconfig.DecisionFilterValidationError
 		if errors.As(err, &invalid) {
@@ -139,7 +143,29 @@ func HandleSaveAdminPostmasterDecisionFilter(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to save decision filter settings"})
 		return
 	}
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.postmaster_decision_filter.update",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "postmaster_decision_filter",
+		TargetID:    sysconfig.DecisionFilterKey,
+		TargetLabel: "Mail Decision Filter",
+		Details: map[string]any{"changes": audit.Changes(
+			decisionFilterAuditFields(before), decisionFilterAuditFields(cfg))},
+	})
 	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+func decisionFilterAuditFields(cfg sysconfig.DecisionFilterConfig) map[string]any {
+	return map[string]any{
+		"enabled":         cfg.Enabled,
+		"provider_id":     cfg.ProviderID,
+		"threshold":       cfg.Threshold,
+		"timeout_seconds": cfg.TimeoutSeconds,
+		"queue":           cfg.Queue,
+		"priority":        cfg.Priority,
+		"type":            cfg.Type,
+	}
 }
 
 // loadDecisionFilterSections pairs each classified field with every valid

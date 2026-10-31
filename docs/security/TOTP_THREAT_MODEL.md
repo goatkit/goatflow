@@ -68,7 +68,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 **Mitigations:**
 - [x] Rate limit 2FA verification attempts (max 5 per session)
 - [x] Lock pending 2FA session after 5 failures (session invalidated)
-- [x] Log failed attempts for monitoring (via totp_audit.go)
+- [x] Failed attempts recorded in the audit log (`auth.2fa.verify`, outcome failure; `auth.2fa.locked`)
 - [x] 30-second TOTP window limits valid codes
 - [x] Response includes `attempts_remaining` for user feedback
 
@@ -146,9 +146,9 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Audit logging excludes secret values (only logs events, not secrets)
 - [x] QR code generated server-side
 
-**Implementation:** `internal/platform/auth/totp_audit.go` - structured logging without sensitive data
+**Implementation:** audit events (`internal/platform/audit`) never carry secrets; secret field names are redacted
 
-**Test:** `TestTOTP_StatusResponseDoesNotExposeSecret`, `TestVuln_V8_AuditLogFormat`
+**Test:** `TestTOTP_StatusResponseDoesNotExposeSecret`
 
 ---
 
@@ -199,9 +199,9 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Email notification when 2FA disabled
 - [x] Require re-authentication before disable (future enhancement)
 
-**Implementation:** `internal/platform/auth/totp_audit.go` - `LogTOTPDisabled()`
+**Implementation:** `internal/api/totp_handlers.go` records `auth.2fa.disable` in the audit log
 
-**Test:** `TestTOTP_DisableRequiresCodeInRequest`, `TestVuln_V8_AuditEventsExist`
+**Test:** `TestTOTP_DisableRequiresCodeInRequest`
 
 ---
 
@@ -231,9 +231,7 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 - [x] Email notification when 2FA enabled
 - [x] Require password re-entry before 2FA setup (future enhancement)
 
-**Implementation:** `internal/platform/auth/totp_audit.go` - `LogTOTPSetupCompleted()`
-
-**Test:** `TestVuln_V8_AuditEventsExist`
+**Implementation:** `internal/api/totp_handlers.go` records `auth.2fa.enable` in the audit log
 
 ---
 
@@ -319,32 +317,28 @@ This document describes the threat model for GoatFlow Two-Factor Authentication 
 | T2 Recovery Enum | `TestVuln_V6_*` | ✓ | 128-bit entropy |
 | T3 Session Hijack | `TestVuln_V2_*`, `TestVuln_V5_*` | ✓ | 256-bit tokens |
 | T4 2FA Bypass | `TestVuln_V1_*` | ✓ | Server-side user ID |
-| T5 Secret Exposure | `TestVuln_V8_*` | ✓ | Audit without secrets |
+| T5 Secret Exposure | `TestTOTP_StatusResponseDoesNotExposeSecret` | ✓ | Audit events redact secrets |
 | T6 Race Condition | - | - | Low priority |
 | T7 Cross-User (IDOR) | `TestVuln_V1_*`, `TestVuln_V4_*` | ✓ | Server-side session |
-| T8 Unauth Disable | `TestVuln_V8_*` | ✓ | Audit logging |
+| T8 Unauth Disable | `TestTOTP_DisableRequiresCodeInRequest` | ✓ | `auth.2fa.disable` audit event |
 | T9 Timing Attack | `TestTOTP_CodeValidationConstantTime` | ✓ | Library handles |
-| T10 Setup Lockout | `TestVuln_V8_*` | ✓ | Audit logging |
+| T10 Setup Lockout | — | — | Recovery codes; `auth.2fa.enable` audit event |
 
 ## Audit Events
 
-The following events are logged via `internal/platform/auth/totp_audit.go`:
+2FA events are recorded in the audit log (`gk_audit_event`, Admin -> Audit Log), category `auth`.
+See [docs/SECURITY.md](../SECURITY.md#audit) for the full list.
 
-| Event | Description |
-|-------|-------------|
-| `2FA_SETUP_STARTED` | User initiated 2FA setup |
-| `2FA_SETUP_COMPLETED` | User confirmed 2FA with valid code |
-| `2FA_SETUP_FAILED` | Setup confirmation failed |
-| `2FA_DISABLED` | User disabled 2FA |
-| `2FA_VERIFY_SUCCESS` | Successful 2FA verification during login |
-| `2FA_VERIFY_FAILED` | Failed 2FA verification attempt |
-| `2FA_SESSION_CREATED` | New pending 2FA session created |
-| `2FA_SESSION_EXPIRED` | Pending session timed out |
-| `2FA_SESSION_LOCKED` | Session locked after max attempts |
-| `2FA_RECOVERY_CODE_USED` | Recovery code consumed |
-| `MFA_TURNED_OFF` | User turned 2FA off: authenticator app, recovery codes and passkeys removed |
-| `RECOVERY_CODES_ISSUED` | First recovery codes issued with a passkey |
-| `RECOVERY_CODES_REGENERATED` | User replaced their recovery codes |
+| Action | Outcome | When |
+|--------|---------|------|
+| `auth.2fa.enable` | success / failure | User confirmed (or failed to confirm) 2FA setup |
+| `auth.2fa.disable` | success / failure | User turned 2FA off: authenticator app, recovery codes and passkeys removed |
+| `auth.2fa.recovery_codes` | success | Recovery codes issued or replaced |
+| `auth.2fa.verify` | success / failure / denied | 2FA step during sign-in; denied for an expired session or IP mismatch |
+| `auth.2fa.locked` | denied | Pending session locked after 5 wrong codes |
+| `auth.2fa.recovery_code_used` | success | A recovery code was used to sign in |
+| `auth.passkey.add` / `auth.passkey.remove` | success / failure | Passkey registered or removed |
+| `admin.2fa.disable` | success | An administrator turned 2FA off for a user, with the reason |
 
 ## References
 

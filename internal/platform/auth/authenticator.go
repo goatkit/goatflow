@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	platformmodels "github.com/goatkit/goatflow/internal/platform/models"
 )
@@ -72,34 +73,54 @@ func NewAuthenticator(providers ...AuthProvider) *Authenticator {
 	return auth
 }
 
-// Authenticate attempts to authenticate using all configured providers.
-func (a *Authenticator) Authenticate(ctx context.Context, username, password string) (*platformmodels.User, error) {
+// Authenticate tries each provider in priority order and returns the user
+// and the name of the provider that accepted the login. When no provider
+// knows the login it returns ErrUserNotFound; callers must answer it exactly
+// like ErrInvalidCredentials, so a sign-in never reveals whether an account
+// exists (the distinction is for the audit log).
+func (a *Authenticator) Authenticate(ctx context.Context, username, password string) (*platformmodels.User, string, error) {
 	if len(a.providers) == 0 {
-		return nil, ErrAuthBackendFailed
+		return nil, "", ErrAuthBackendFailed
 	}
 
 	var lastErr error
-
-	// Try each provider in priority order
 	for _, provider := range a.providers {
 		user, err := provider.Authenticate(ctx, username, password)
 		if err == nil && user != nil {
-			// Authentication successful
-			return user, nil
+			return user, provider.Name(), nil
 		}
-
-		// Keep track of the last error
 		if err != nil && err != ErrUserNotFound {
 			lastErr = err
 		}
 	}
 
-	// No provider could authenticate the user
 	if lastErr != nil {
-		return nil, lastErr
+		return nil, "", lastErr
 	}
+	return nil, "", ErrUserNotFound
+}
 
-	return nil, ErrInvalidCredentials
+// FailureReason names why a password sign-in failed, for the audit log.
+func FailureReason(err error) string {
+	switch {
+	case errors.Is(err, ErrUserNotFound):
+		return "unknown_user"
+	case errors.Is(err, ErrInvalidCredentials):
+		return "bad_password"
+	case errors.Is(err, ErrUserDisabled):
+		return "account_disabled"
+	default:
+		return "backend_error"
+	}
+}
+
+// LoginMethod is the audit "method" of a password sign-in accepted by the
+// named provider: "ldap" for the directory, "password" otherwise.
+func LoginMethod(provider string) string {
+	if strings.EqualFold(provider, "ldap") {
+		return "ldap"
+	}
+	return "password"
 }
 
 // GetUser retrieves user information from the primary provider.

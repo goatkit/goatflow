@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
@@ -220,6 +221,19 @@ func HandleCreateUserAPI(c *gin.Context) {
 		})
 		return
 	}
+
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.user.create",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "user",
+		TargetID:    audit.ID(newUserID64),
+		TargetLabel: req.Login,
+		Details: map[string]any{"fields": audit.Snapshot(map[string]any{
+			"login": req.Login, "email": req.Email, "first_name": req.FirstName, "last_name": req.LastName,
+			"valid_id": req.ValidID, "groups": groupIDs, "password": "(set)",
+		})},
+	})
 
 	// Return created user (without password)
 	response := gin.H{

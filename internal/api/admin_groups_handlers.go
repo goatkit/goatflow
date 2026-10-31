@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -183,11 +185,24 @@ func handleCreateGroup(c *gin.Context) {
 			strings.Contains(errLower, "exists") ||
 			strings.Contains(errLower, "unique") {
 			c.JSON(http.StatusOK, gin.H{"success": false, "error": "Group with this name already exists"})
+			audit.RecordRequest(c, audit.Event{
+				Category:    audit.CategoryAdmin,
+				Action:      "admin.group.create",
+				Outcome:     audit.OutcomeFailure,
+				TargetType:  "group",
+				TargetLabel: groupForm.Name,
+				Details:     map[string]any{"reason": "duplicate name"},
+			})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create group: " + err.Error()})
 		return
 	}
+
+	recordAdminAccessEvent(c, "admin.group.create", "group", fmt.Sprint(group.ID), group.Name,
+		map[string]any{"fields": audit.Snapshot(map[string]any{
+			"name": group.Name, "comments": group.Comments, "valid_id": group.ValidID,
+		})})
 
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
@@ -277,6 +292,7 @@ func handleUpdateGroup(c *gin.Context) {
 			userID = int(userData.ID)
 		}
 	}
+	before := map[string]any{"name": group.Name, "comments": group.Comments, "valid_id": group.ValidID}
 
 	// Update group fields
 	if groupForm.Name != "" {
@@ -294,6 +310,11 @@ func handleUpdateGroup(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update group"})
 		return
 	}
+
+	recordAdminAccessEvent(c, "admin.group.update", "group", audit.ID(int64(groupID)), group.Name,
+		map[string]any{"changes": audit.Changes(before, map[string]any{
+			"name": group.Name, "comments": group.Comments, "valid_id": group.ValidID,
+		})})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -335,6 +356,7 @@ func handleDeleteGroup(c *gin.Context) {
 			userID = int(userData.ID)
 		}
 	}
+	prevValid := group.ValidID
 
 	// In OTRS style, we mark groups as invalid rather than deleting them
 	group.ValidID = 2 // Mark as invalid
@@ -344,6 +366,10 @@ func handleDeleteGroup(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete group"})
 		return
 	}
+
+	recordAdminAccessEvent(c, "admin.group.delete", "group", audit.ID(int64(groupID)), group.Name,
+		map[string]any{"changes": audit.Changes(
+			map[string]any{"valid_id": prevValid}, map[string]any{"valid_id": group.ValidID})})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -529,17 +555,71 @@ func handleUpdateUserPermissions(c *gin.Context) {
 		return
 	}
 
+	before := agentGroupPermissionState(db, uint(userID))
 	permService := service.NewPermissionService(db)
 	if err := permService.UpdateUserPermissions(uint(userID), permissions); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to update permissions"})
 		return
 	}
+	recordAdminAccessEvent(c, "admin.user.permissions.update", "user", audit.ID(int64(userID)),
+		agentLoginForAudit(db, uint(userID)),
+		map[string]any{"changes": audit.Changes(before, agentGroupPermissionState(db, uint(userID)))})
 
 	// Always return JSON for this endpoint since it's called via AJAX
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Permissions updated successfully",
 	})
+}
+
+// agentGroupPermissionState returns an agent's group permissions as
+// "group:<name>.<permission>" keys, for audit changes.
+func agentGroupPermissionState(db *sql.DB, userID uint) map[string]any {
+	return permissionStateForAudit(db, `
+		SELECT g.name, gu.permission_key FROM group_user gu
+		JOIN groups g ON g.id = gu.group_id
+		WHERE gu.user_id = ?`, "group:", userID)
+}
+
+// groupMemberPermissionState returns a group's agent permissions as
+// "user:<login>.<permission>" keys, for audit changes.
+func groupMemberPermissionState(db *sql.DB, groupID uint) map[string]any {
+	return permissionStateForAudit(db, `
+		SELECT u.login, gu.permission_key FROM group_user gu
+		JOIN users u ON u.id = gu.user_id
+		WHERE gu.group_id = ?`, "user:", groupID)
+}
+
+// permissionStateForAudit runs a (name, permission_key) query and returns
+// prefix+name+"."+permission_key keys set to true; it is empty when the query fails.
+func permissionStateForAudit(db *sql.DB, query, prefix string, id uint) map[string]any {
+	state := map[string]any{}
+	rows, err := db.Query(database.ConvertPlaceholders(query), id)
+	if err != nil {
+		return state
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name, key string
+		if rows.Scan(&name, &key) == nil {
+			state[prefix+name+"."+key] = true
+		}
+	}
+	return state
+}
+
+// agentLoginForAudit returns an agent's login for an audit label, or "".
+func agentLoginForAudit(db *sql.DB, id uint) string {
+	var login string
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT login FROM users WHERE id = ?"), id).Scan(&login)
+	return login
+}
+
+// groupNameForAudit returns a group's name for an audit label, or "".
+func groupNameForAudit(db *sql.DB, id uint) string {
+	var name string
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM groups WHERE id = ?"), id).Scan(&name)
+	return name
 }
 
 // handleClonePermissions replaces the target agent's group permissions with a
@@ -563,9 +643,16 @@ func handleClonePermissions(c *gin.Context) {
 	}
 
 	actorID := GetUserIDFromCtxUint(c, 1)
+	before := agentGroupPermissionState(db, targetID)
 	err = service.NewPermissionService(db).CloneUserPermissions(sourceID, targetID, actorID)
 	switch {
 	case err == nil:
+		recordAdminAccessEvent(c, "admin.user.permissions.clone", "user", audit.ID(int64(targetID)), // #nosec G115 -- user ids are positive auto-increment keys
+			agentLoginForAudit(db, targetID), map[string]any{
+				"source_user_id": sourceID,
+				"source_login":   agentLoginForAudit(db, sourceID),
+				"changes":        audit.Changes(before, agentGroupPermissionState(db, targetID)),
+			})
 		c.JSON(http.StatusOK, gin.H{"success": true, "message": "Permissions cloned successfully"})
 	case errors.Is(err, service.ErrCloneSameUser):
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "Source and target users must be different"})
@@ -611,6 +698,10 @@ func handleAddUserToGroup(c *gin.Context) {
 		return
 	}
 
+	recordAdminAccessEvent(c, "admin.group.members.add", "group", audit.ID(int64(groupID)),
+		groupNameForAudit(db, uint(groupID)),
+		map[string]any{"user_id": req.UserID, "login": agentLoginForAudit(db, req.UserID)})
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "User assigned to group successfully",
@@ -648,6 +739,10 @@ func handleRemoveUserFromGroup(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to remove user from group"})
 		return
 	}
+
+	recordAdminAccessEvent(c, "admin.group.members.remove", "group", audit.ID(int64(groupID)),
+		groupNameForAudit(db, uint(groupID)),
+		map[string]any{"user_id": userID, "login": agentLoginForAudit(db, uint(userID))})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -719,6 +814,7 @@ func handleSaveGroupPermissions(c *gin.Context) {
 		return
 	}
 
+	before := groupMemberPermissionState(db, groupID)
 	permService := service.NewPermissionService(db)
 	for _, assignment := range payload.Assignments {
 		if assignment.UserID == 0 {
@@ -732,6 +828,9 @@ func handleSaveGroupPermissions(c *gin.Context) {
 			return
 		}
 	}
+	recordAdminAccessEvent(c, "admin.group.permissions.update", "group", audit.ID(int64(groupID)),
+		groupNameForAudit(db, groupID),
+		map[string]any{"changes": audit.Changes(before, groupMemberPermissionState(db, groupID))})
 
 	data, err := fetchGroupPermissionsData(db, groupID)
 	if err != nil {

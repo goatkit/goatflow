@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/constants"
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -65,6 +66,7 @@ func handleWebAuthnRegisterBegin(c *gin.Context) {
 	}
 	displayName, err := verifyAgentPasswordAndDisplayName(db, userID, req.Password)
 	if !countPasswordRecheck(c, recheckKey, err == nil) {
+		recordAccountEvent(c, agentMFAAccount(userID), "auth.passkey.add", audit.OutcomeFailure, map[string]any{"reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": err.Error()})
 		return
 	}
@@ -101,10 +103,10 @@ func handleWebAuthnRegisterFinish(c *gin.Context) {
 	rec, err := wa.FinishRegistration(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(userID), displayName, keyName, c.Request)
 	if err != nil {
 		log.Printf("[SECURITY] WebAuthn registration failed user_type=agent user_id=%d ip=%s err=%v", userID, c.ClientIP(), err)
+		recordAccountEvent(c, agentMFAAccount(userID), "auth.passkey.add", audit.OutcomeFailure, map[string]any{"reason": "registration_failed"})
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
 	}
-	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "WEBAUTHN_REGISTERED", UserID: userID, UserLogin: displayName, ClientIP: c.ClientIP(), Success: true, Details: "security key registered"})
 	respondPasskeyRegistered(c, db, agentMFAAccount(userID), rec)
 }
 
@@ -148,6 +150,7 @@ func handleWebAuthnCredentialDelete(c *gin.Context) {
 		return
 	}
 	if _, err := verifyAgentPasswordAndDisplayName(db, userID, req.Password); !countPasswordRecheck(c, recheckKey, err == nil) {
+		recordAccountEvent(c, agentMFAAccount(userID), "auth.passkey.remove", audit.OutcomeFailure, map[string]any{"reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": err.Error()})
 		return
 	}
@@ -196,13 +199,13 @@ func handleWebAuthnLoginFinish(c *gin.Context) {
 		return
 	}
 	if err := wa.FinishLogin(service.WebAuthnUserTypeAgent, service.AgentWebAuthnUserKey(session.UserID), session.Username, c.Request); err != nil {
-		remaining := auth.GetTOTPSessionManager().RecordFailedAttempt(token)
+		remaining := secondFactorFailed(c, session, token, methodPasskey)
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "security key verification failed", "attempts_remaining": remaining})
 		return
 	}
 	auth.GetTOTPSessionManager().InvalidateSession(token)
 	httpcookie.SetAuth(c, "2fa_pending", "", -1)
-	completeAgentSecondFactorLogin(c, db, session)
+	completeAgentSecondFactorLogin(c, db, session, true)
 }
 
 func handlePasskeyLoginBegin(c *gin.Context) {
@@ -235,6 +238,7 @@ func handleCustomerWebAuthnRegisterBegin(c *gin.Context) {
 		return
 	}
 	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
+		recordAccountEvent(c, customerMFAAccount(customerLogin), "auth.passkey.add", audit.OutcomeFailure, map[string]any{"reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -269,10 +273,10 @@ func handleCustomerWebAuthnRegisterFinish(c *gin.Context) {
 	rec, err := wa.FinishRegistration(service.WebAuthnUserTypeCustomer, customerLogin, customerLogin, c.Query("name"), c.Request)
 	if err != nil {
 		log.Printf("[SECURITY] WebAuthn registration failed user_type=customer user=%s ip=%s err=%v", customerLogin, c.ClientIP(), err)
+		recordAccountEvent(c, customerMFAAccount(customerLogin), "auth.passkey.add", audit.OutcomeFailure, map[string]any{"reason": "registration_failed"})
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": err.Error()})
 		return
 	}
-	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "WEBAUTHN_REGISTERED", UserLogin: customerLogin, IsCustomer: true, ClientIP: c.ClientIP(), Success: true, Details: "customer security key registered"})
 	respondPasskeyRegistered(c, db, customerMFAAccount(customerLogin), rec)
 }
 
@@ -316,6 +320,7 @@ func handleCustomerWebAuthnCredentialDelete(c *gin.Context) {
 		return
 	}
 	if !countPasswordRecheck(c, recheckKey, verifyCustomerPassword(db, customerLogin, req.Password)) {
+		recordAccountEvent(c, customerMFAAccount(customerLogin), "auth.passkey.remove", audit.OutcomeFailure, map[string]any{"reason": "wrong_password"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "incorrect password"})
 		return
 	}
@@ -364,13 +369,13 @@ func handleCustomerWebAuthnLoginFinish(c *gin.Context) {
 		return
 	}
 	if err := wa.FinishLogin(service.WebAuthnUserTypeCustomer, session.UserLogin, session.UserLogin, c.Request); err != nil {
-		remaining := auth.GetTOTPSessionManager().RecordFailedAttempt(token)
+		remaining := secondFactorFailed(c, session, token, methodPasskey)
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "security key verification failed", "attempts_remaining": remaining})
 		return
 	}
 	auth.GetTOTPSessionManager().InvalidateSession(token)
 	httpcookie.SetAuth(c, "customer_2fa_pending", "", -1)
-	completeCustomerSecondFactorLogin(c, db, session)
+	completeCustomerSecondFactorLogin(c, db, session, true)
 }
 
 func handleCustomerPasskeyLoginBegin(c *gin.Context) {
@@ -422,6 +427,7 @@ func beginPasskeyLogin(c *gin.Context, userType, cookieName string) {
 func finishPasskeyLogin(c *gin.Context, userType, cookieName string) {
 	limiterKey := passkeyLimiterKey(userType)
 	if blocked, remaining := auth.DefaultLoginRateLimiter.IsBlocked(c.ClientIP(), limiterKey); blocked {
+		recordLoginFailure(c, "", audit.OutcomeDenied, map[string]any{"method": methodPasskey, "reason": "rate_limited"})
 		c.JSON(http.StatusTooManyRequests, gin.H{
 			"success":         false,
 			"error":           fmt.Sprintf("too many failed attempts, try again in %d seconds", int(remaining.Seconds())),
@@ -432,6 +438,7 @@ func finishPasskeyLogin(c *gin.Context, userType, cookieName string) {
 	token, err := c.Cookie(cookieName)
 	if err != nil || token == "" {
 		auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
+		recordLoginFailure(c, "", audit.OutcomeFailure, map[string]any{"method": methodPasskey, "reason": "challenge_expired"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "passkey login challenge expired"})
 		return
 	}
@@ -450,7 +457,7 @@ func finishPasskeyLogin(c *gin.Context, userType, cookieName string) {
 	if err != nil {
 		auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
 		log.Printf("[SECURITY] passkey login failed user_type=%s ip=%s err=%v", userType, c.ClientIP(), err)
-		auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_FAILED", IsCustomer: userType == service.WebAuthnUserTypeCustomer, ClientIP: c.ClientIP(), Success: false, Details: "passkey assertion failed"})
+		recordLoginFailure(c, "", audit.OutcomeFailure, map[string]any{"method": methodPasskey, "reason": "assertion_failed"})
 		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "passkey login failed"})
 		return
 	}
@@ -460,24 +467,25 @@ func finishPasskeyLogin(c *gin.Context, userType, cookieName string) {
 		session, err := activeAgentPasskeySession(db, result.UserKey, c)
 		if err != nil {
 			auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
-			auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_FAILED", UserLogin: result.UserKey, ClientIP: c.ClientIP(), Success: false, Details: "agent account inactive or unavailable"})
+			agentID, _ := strconv.ParseInt(result.UserKey, 10, 64)
+			recordAuth(c, "auth.login", audit.OutcomeFailure, audit.ActorAgent, agentID, "",
+				map[string]any{"method": methodPasskey, "reason": "account_disabled"})
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "passkey login failed"})
 			return
 		}
 		auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), limiterKey)
-		auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_SUCCESS", UserID: session.UserID, UserLogin: session.Username, ClientIP: c.ClientIP(), Success: true, Details: "agent passkey login"})
-		completeAgentSecondFactorLogin(c, db, session)
+		completeAgentSecondFactorLogin(c, db, session, false)
 	case service.WebAuthnUserTypeCustomer:
 		session, err := activeCustomerPasskeySession(db, result.UserKey, c)
 		if err != nil {
 			auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
-			auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_FAILED", UserLogin: result.UserKey, IsCustomer: true, ClientIP: c.ClientIP(), Success: false, Details: "customer account inactive or unavailable"})
+			recordAuth(c, "auth.login", audit.OutcomeFailure, audit.ActorCustomer, 0, result.UserKey,
+				map[string]any{"method": methodPasskey, "reason": "account_disabled"})
 			c.JSON(http.StatusUnauthorized, gin.H{"success": false, "error": "passkey login failed"})
 			return
 		}
 		auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), limiterKey)
-		auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "PASSKEY_LOGIN_SUCCESS", UserLogin: session.UserLogin, IsCustomer: true, ClientIP: c.ClientIP(), Success: true, Details: "customer passkey login"})
-		completeCustomerSecondFactorLogin(c, db, session)
+		completeCustomerSecondFactorLogin(c, db, session, false)
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "passkey login failed"})
 	}
@@ -611,7 +619,7 @@ func deleteWebAuthnCredential(c *gin.Context, db *sql.DB, account mfaAccount) {
 		c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "failed to remove security key"})
 		return
 	}
-	auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "WEBAUTHN_REMOVED", UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "security key removed"})
+	recordAccountEvent(c, account, "auth.passkey.remove", audit.OutcomeSuccess, map[string]any{"passkey_id": id})
 	if err := account.clearRecoveryCodesIfNoSecondFactor(db); err != nil {
 		log.Printf("[SECURITY] failed to clear recovery codes after last passkey removed user_type=%s user=%s: %v", account.userType, account.webAuthnKey(), err)
 	}
@@ -622,13 +630,14 @@ func deleteWebAuthnCredential(c *gin.Context, db *sql.DB, account mfaAccount) {
 // account without recovery codes gets its first set here, returned once as
 // recovery_codes so the user can save them.
 func respondPasskeyRegistered(c *gin.Context, db *sql.DB, account mfaAccount, rec *service.WebAuthnCredentialRecord) {
+	recordAccountEvent(c, account, "auth.passkey.add", audit.OutcomeSuccess, map[string]any{"passkey_id": rec.ID, "name": rec.Name})
 	resp := gin.H{"success": true, "credential": publicWebAuthnCredential(rec)}
 	codes, err := account.totp(db).EnsureRecoveryCodes(account.userID)
 	if err != nil {
 		log.Printf("[SECURITY] failed to issue recovery codes after passkey registration user_type=%s user=%s: %v", account.userType, account.webAuthnKey(), err)
 	}
 	if len(codes) > 0 {
-		auth.LogTOTPAuditEvent(auth.TOTPAuditEvent{EventType: "RECOVERY_CODES_ISSUED", UserID: account.userID, UserLogin: account.webAuthnKey(), IsCustomer: account.isCustomer(), ClientIP: c.ClientIP(), Success: true, Details: "recovery codes issued with first passkey"})
+		recordAccountEvent(c, account, "auth.2fa.recovery_codes", audit.OutcomeSuccess, map[string]any{"count": len(codes), "issued_with": "first passkey"})
 		resp["recovery_codes"] = codes
 	}
 	c.JSON(http.StatusOK, resp)
@@ -679,7 +688,9 @@ func pendingCustomer2FASession(c *gin.Context) (*auth.PendingTOTPSession, bool) 
 	return session, true
 }
 
-func completeAgentSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.PendingTOTPSession) {
+// completeAgentSecondFactorLogin signs the agent of session in after a
+// passkey: as the second factor of a password or SSO sign-in, or on its own.
+func completeAgentSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.PendingTOTPSession, secondFactor bool) {
 	jwtManager := shared.GetJWTManager()
 	if jwtManager == nil {
 		log.Printf("passkey login: JWT manager unavailable for user %d", session.UserID)
@@ -723,10 +734,13 @@ func completeAgentSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.Pe
 		c.SetCookie("goatflow_mode", userThemeMode, sessionTimeout, "/", "", false, false)
 	}
 	httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
+	recordPasskeyLogin(c, session, secondFactor, 0)
 	c.JSON(http.StatusOK, gin.H{"success": true, "redirect": agentLandingRedirect(uint(session.UserID))})
 }
 
-func completeCustomerSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.PendingTOTPSession) {
+// completeCustomerSecondFactorLogin is completeAgentSecondFactorLogin for a
+// customer.
+func completeCustomerSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth.PendingTOTPSession, secondFactor bool) {
 	jwtManager := shared.GetJWTManager()
 	if jwtManager == nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "authentication not configured"})
@@ -761,5 +775,6 @@ func completeCustomerSecondFactorLogin(c *gin.Context, db *sql.DB, session *auth
 	httpcookie.SetAuth(c, "customer_auth_token", jwtToken, sessionTimeout)
 	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "1", sessionTimeout)
 	httpcookie.SetAuth(c, "customer_session_id", sessionID, sessionTimeout)
+	recordPasskeyLogin(c, session, secondFactor, int64(userID))
 	c.JSON(http.StatusOK, gin.H{"success": true, "access_token": jwtToken, "redirect": customerLandingRedirect(session.UserLogin)})
 }

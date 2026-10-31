@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/services/adapter"
 )
@@ -257,6 +258,10 @@ func HandleAdminGroupsAddUser(c *gin.Context) {
 		}
 	}
 
+	recordAdminAccessEvent(c, "admin.group.members.add", "group", audit.ID(int64(id)),
+		groupNameForAudit(db, uint(id)),
+		map[string]any{"user_id": req.UserID, "login": agentLoginForAudit(db, uint(req.UserID)), "already_member": existing > 0})
+
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User added to group"})
 }
 
@@ -290,6 +295,10 @@ func HandleAdminGroupsRemoveUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to remove user from group"})
 		return
 	}
+
+	recordAdminAccessEvent(c, "admin.group.members.remove", "group", audit.ID(int64(gid)),
+		groupNameForAudit(db, uint(gid)),
+		map[string]any{"user_id": uid, "login": agentLoginForAudit(db, uint(uid))})
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "User removed from group"})
 }

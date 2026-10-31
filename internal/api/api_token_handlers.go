@@ -11,6 +11,7 @@ import (
 
 	"github.com/goatkit/goatflow/internal/models"
 	"github.com/goatkit/goatflow/internal/platform/apierrors"
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/service"
@@ -150,6 +151,8 @@ func HandleCreateToken(c *gin.Context) {
 	}
 
 	if msg := tokenScopeAboveCaller(c, userType, req.Scopes); msg != "" {
+		recordTokenEvent(c, "auth.api_token.create", audit.OutcomeDenied, 0, req.Name,
+			map[string]any{"scopes": req.Scopes, "reason": "scope_above_caller"})
 		apierrors.ErrorWithMessage(c, apierrors.CodeForbidden, msg)
 		return
 	}
@@ -167,6 +170,7 @@ func HandleCreateToken(c *gin.Context) {
 		return
 	}
 
+	recordTokenCreated(c, resp, nil)
 	c.JSON(http.StatusCreated, resp)
 }
 
@@ -202,11 +206,13 @@ func HandleRevokeToken(c *gin.Context) {
 		return
 	}
 
+	token, _ := apiTokenService.GetToken(c.Request.Context(), tokenID)
 	err = apiTokenService.RevokeToken(c.Request.Context(), tokenID, userID, userType, userID)
 	if err != nil {
 		apierrors.Error(c, apierrors.CodeTokenNotFound)
 		return
 	}
+	recordTokenRevoked(c, tokenID, token, false)
 
 	c.JSON(http.StatusOK, gin.H{"status": "revoked"})
 }
@@ -373,11 +379,13 @@ func HandleAdminRevokeToken(c *gin.Context) {
 		return
 	}
 
+	token, _ := apiTokenService.GetToken(c.Request.Context(), tokenID)
 	err = apiTokenService.RevokeTokenAdmin(c.Request.Context(), tokenID, adminID)
 	if err != nil {
 		apierrors.ErrorWithMessage(c, apierrors.CodeTokenNotFound, "Token not found or already revoked")
 		return
 	}
+	recordTokenRevoked(c, tokenID, token, true)
 
 	c.JSON(http.StatusOK, gin.H{"status": "revoked"})
 }
@@ -475,6 +483,7 @@ func HandleAdminCreateTargetToken(c *gin.Context) {
 		return
 	}
 
+	recordTokenCreated(c, resp, map[string]any{"user_type": string(userType), "user_id": targetID})
 	c.JSON(http.StatusCreated, resp)
 }
 
@@ -516,6 +525,7 @@ func HandleAdminRevokeTargetToken(c *gin.Context) {
 		apierrors.ErrorWithMessage(c, apierrors.CodeTokenNotFound, "Token not found or already revoked")
 		return
 	}
+	recordTokenRevoked(c, tokenID, token, true)
 
 	c.JSON(http.StatusOK, gin.H{"status": "revoked"})
 }
@@ -533,6 +543,48 @@ func isValidWildcardScope(scope string) bool {
 		}
 	}
 	return false
+}
+
+// recordTokenEvent records an API token event. The token value and hash are
+// never part of it.
+func recordTokenEvent(c *gin.Context, action, outcome string, tokenID int64, name string, details map[string]any) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAuth,
+		Action:      action,
+		Outcome:     outcome,
+		TargetType:  "api_token",
+		TargetID:    audit.ID(tokenID),
+		TargetLabel: name,
+		Details:     details,
+	})
+}
+
+// recordTokenCreated records a new token; owner names its account when an
+// admin created it for someone else.
+func recordTokenCreated(c *gin.Context, resp *models.APITokenCreateResponse, owner map[string]any) {
+	expires := "never"
+	if resp.ExpiresAt != nil {
+		expires = *resp.ExpiresAt
+	}
+	details := map[string]any{"scopes": resp.Scopes, "expires_at": expires}
+	if owner != nil {
+		details["owner"] = owner
+	}
+	recordTokenEvent(c, "auth.api_token.create", audit.OutcomeSuccess, resp.ID, resp.Name, details)
+}
+
+// recordTokenRevoked records a revoked token. token is nil when it could not
+// be loaded; byAdmin adds its owner.
+func recordTokenRevoked(c *gin.Context, tokenID int64, token *models.APIToken, byAdmin bool) {
+	var name string
+	var details map[string]any
+	if token != nil {
+		name = token.Name
+		if byAdmin {
+			details = map[string]any{"owner": map[string]any{"user_type": string(token.UserType), "user_id": token.UserID}}
+		}
+	}
+	recordTokenEvent(c, "auth.api_token.revoke", audit.OutcomeSuccess, tokenID, name, details)
 }
 
 // Admin handler aliases - unified handlers work for both agents and customers

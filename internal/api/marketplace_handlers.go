@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/marketplace"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/routing"
@@ -227,6 +228,15 @@ func HandleMarketplaceInstall(c *gin.Context) {
 	action := "installed"
 	if isUpdate {
 		action = "updated"
+		recordPluginAudit(c, "admin.plugin.update", req.Name, map[string]any{
+			"source":  "marketplace",
+			"changes": audit.Changes(map[string]any{"version": current}, map[string]any{"version": target.Version}),
+		})
+	} else {
+		recordPluginAudit(c, "admin.plugin.install", req.Name, map[string]any{
+			"source": "marketplace",
+			"fields": audit.Snapshot(map[string]any{"version": target.Version}),
+		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{

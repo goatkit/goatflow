@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -86,6 +87,10 @@ func HandlePluginAppModeToggle(c *gin.Context) {
 		return
 	}
 	name := c.Param("name")
+	wasEnabled := false
+	if st := pluginManager.AppModeStatus(name); st != nil {
+		wasEnabled = st.Enabled
+	}
 	if err := pluginManager.SetAppModeEnabled(name, *req.Enabled); err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
@@ -99,5 +104,8 @@ func HandlePluginAppModeToggle(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save app mode"})
 		return
 	}
+	recordPluginAudit(c, "admin.plugin.app_mode.update", name, map[string]any{
+		"changes": audit.Changes(map[string]any{"app_mode_enabled": wasEnabled}, map[string]any{"app_mode_enabled": *req.Enabled}),
+	})
 	c.JSON(http.StatusOK, gin.H{"app_mode": pluginManager.AppModeStatus(name)})
 }

@@ -261,7 +261,6 @@ func TestAdminView(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			checkAlternatives: []checkAlternatives{
 				{"Recent Admin Activity", "admin_dashboard.recent_activity"},
-				{"No recent admin activity", "admin_dashboard.no_recent_activity"},
 			},
 		},
 		{

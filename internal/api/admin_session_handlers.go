@@ -8,6 +8,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -119,12 +120,18 @@ func handleKillSession(c *gin.Context) {
 		return
 	}
 
+	session, _ := sessionSvc.GetSession(sessionID)
 	if err := sessionSvc.KillSession(sessionID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
 			"error":   "Session not found",
 		})
 		return
+	}
+	if session != nil {
+		recordSessionTerminate(c, "session", sessionTargetType(session.UserType), int64(session.UserID), session.UserLogin, 1)
+	} else {
+		recordSessionTerminate(c, "session", "session", 0, "", 1)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -154,6 +161,7 @@ func handleKillUserSessions(c *gin.Context) {
 		return
 	}
 
+	sessions, _ := sessionSvc.GetUserSessions(userID)
 	count, err := sessionSvc.KillUserSessions(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -162,6 +170,11 @@ func handleKillUserSessions(c *gin.Context) {
 		})
 		return
 	}
+	targetType, login := "user", ""
+	if len(sessions) > 0 {
+		targetType, login = sessionTargetType(sessions[0].UserType), sessions[0].UserLogin
+	}
+	recordSessionTerminate(c, "user", targetType, int64(userID), login, int64(count))
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -204,10 +217,34 @@ func handleKillAllSessions(c *gin.Context) {
 	}
 
 	count, _ := result.RowsAffected()
+	recordSessionTerminate(c, "all", "session", 0, "all sessions", count)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "All sessions terminated successfully",
 		"count":   count,
+	})
+}
+
+// sessionTargetType maps a sessions row user type to an audit target type.
+func sessionTargetType(userType string) string {
+	if userType == "Customer" {
+		return "customer"
+	}
+	return "user"
+}
+
+// recordSessionTerminate records an admin ending sessions: one session, all
+// of one account's ("user") or every session ("all"). Session ids are bearer
+// secrets and are not recorded.
+func recordSessionTerminate(c *gin.Context, scope, targetType string, targetID int64, targetLogin string, count int64) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.session.terminate",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  targetType,
+		TargetID:    audit.ID(targetID),
+		TargetLabel: targetLogin,
+		Details:     map[string]any{"scope": scope, "count": count},
 	})
 }

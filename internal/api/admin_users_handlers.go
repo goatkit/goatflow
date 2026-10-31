@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
@@ -492,6 +494,29 @@ func HandleAdminUserCreate(c *gin.Context) {
 		return
 	}
 
+	sortedGroups := append([]int(nil), groupIDs...)
+	sort.Ints(sortedGroups)
+	fields := map[string]any{
+		"login":      req.Login,
+		"title":      req.Title,
+		"first_name": req.FirstName,
+		"last_name":  req.LastName,
+		"valid_id":   req.ValidID,
+		"groups":     sortedGroups,
+	}
+	if req.Password != "" {
+		fields["password"] = "(set)"
+	}
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.user.create",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "user",
+		TargetID:    audit.ID(userID64),
+		TargetLabel: req.Login,
+		Details:     map[string]any{"fields": audit.Snapshot(fields)},
+	})
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "User created successfully",
@@ -524,8 +549,7 @@ func HandleAdminUserUpdate(c *gin.Context) {
 		return
 	}
 
-	var exists int
-	err = db.QueryRow(database.ConvertPlaceholders("SELECT 1 FROM users WHERE id = ?"), id).Scan(&exists)
+	before, err := loadAgentAuditFields(db, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -631,9 +655,107 @@ func HandleAdminUserUpdate(c *gin.Context) {
 		return
 	}
 
+	after := map[string]any{
+		"login":      req.Login,
+		"title":      req.Title,
+		"first_name": req.FirstName,
+		"last_name":  req.LastName,
+		"valid_id":   req.ValidID,
+		"groups":     before["groups"],
+	}
+	if updateGroups {
+		sortedGroups := append([]int(nil), groupIDs...)
+		sort.Ints(sortedGroups)
+		after["groups"] = sortedGroups
+	}
+	if hash != "" {
+		before["password"] = ""
+		after["password"] = "(new)"
+	}
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.user.update",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "user",
+		TargetID:    audit.ID(int64(id)),
+		TargetLabel: req.Login,
+		Details:     map[string]any{"changes": audit.Changes(before, after)},
+	})
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "User updated successfully",
+	})
+}
+
+// loadAgentAuditFields returns the agent fields the admin user endpoints
+// write, with the sorted ids of the agent's rw groups, for audit changes.
+func loadAgentAuditFields(db *sql.DB, id int) (map[string]any, error) {
+	var login, firstName, lastName string
+	var title sql.NullString
+	var validID int
+	if err := db.QueryRow(database.ConvertPlaceholders(
+		"SELECT login, title, first_name, last_name, valid_id FROM users WHERE id = ?"), id).
+		Scan(&login, &title, &firstName, &lastName, &validID); err != nil {
+		return nil, err
+	}
+	fields := map[string]any{
+		"login":      login,
+		"title":      title.String,
+		"first_name": firstName,
+		"last_name":  lastName,
+		"valid_id":   validID,
+	}
+	rows, err := db.Query(database.ConvertPlaceholders(
+		"SELECT group_id FROM group_user WHERE user_id = ? AND permission_key = 'rw' ORDER BY group_id"), id)
+	if err != nil {
+		return fields, nil
+	}
+	defer rows.Close()
+	groups := make([]int, 0)
+	for rows.Next() {
+		var gid int
+		if rows.Scan(&gid) == nil {
+			groups = append(groups, gid)
+		}
+	}
+	if rows.Err() == nil {
+		fields["groups"] = groups
+	}
+	return fields, nil
+}
+
+// agentLoginAndValid returns an agent's login and valid_id.
+func agentLoginAndValid(db *sql.DB, id int) (string, int, error) {
+	var login string
+	var validID int
+	err := db.QueryRow(database.ConvertPlaceholders("SELECT login, valid_id FROM users WHERE id = ?"), id).
+		Scan(&login, &validID)
+	return login, validID, err
+}
+
+// recordAgentValidChange records an agent valid_id change made by the admin
+// delete and status endpoints; before is 0 when it could not be read.
+func recordAgentValidChange(c *gin.Context, action string, id int, login string, before, after int) {
+	var from any
+	if before != 0 {
+		from = before
+	}
+	recordAdminAccessEvent(c, action, "user", audit.ID(int64(id)), login, map[string]any{"changes": audit.Changes(
+		map[string]any{"valid_id": from}, map[string]any{"valid_id": after})})
+}
+
+// recordAdminAccessEvent records a successful admin change to agents,
+// groups, roles, queues or their permissions.
+func recordAdminAccessEvent(c *gin.Context, action, targetType, targetID, label string, details map[string]any) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  targetType,
+		TargetID:    targetID,
+		TargetLabel: label,
+		Details:     details,
 	})
 }
 
@@ -680,10 +802,13 @@ func HandleAdminUserDelete(c *gin.Context) {
 		return
 	}
 
+	login, prevValid, _ := agentLoginAndValid(db, id)
+
 	// Soft delete - set valid_id = 2
 	if !setAgentValidID(c, db, id, 2) {
 		return
 	}
+	recordAgentValidChange(c, "admin.user.delete", id, login, prevValid, 2)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -770,10 +895,10 @@ func HandleAdminUsersStatus(c *gin.Context) {
 		return
 	}
 
+	login, currentValid, err := agentLoginAndValid(db, id)
+
 	// Toggle between valid (1) and invalid (2)
 	if req.ValidID == 0 {
-		var currentValid int
-		err = db.QueryRow(database.ConvertPlaceholders("SELECT valid_id FROM users WHERE id = ?"), id).Scan(&currentValid)
 		if errors.Is(err, sql.ErrNoRows) {
 			c.JSON(http.StatusNotFound, gin.H{
 				"success": false,
@@ -795,6 +920,7 @@ func HandleAdminUsersStatus(c *gin.Context) {
 	if !setAgentValidID(c, db, id, req.ValidID) {
 		return
 	}
+	recordAgentValidChange(c, "admin.user.status", id, login, currentValid, req.ValidID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":  true,

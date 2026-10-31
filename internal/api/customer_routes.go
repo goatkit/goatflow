@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/models"
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/constants"
@@ -880,6 +881,7 @@ func handleCustomerTicketView(db *sql.DB) gin.HandlerFunc {
 			replyArticleDynamicFields = replyDFs
 		}
 
+		recordTicketView(c, int64(ticket.ID), ticket.TN)
 		getPongo2Renderer().HTML(c, http.StatusOK, "pages/customer/ticket_view.pongo2", withPortalContextAndCustomer(pongo2.Context{
 			"Title":      fmt.Sprintf("%s - Ticket #%s", cfg.Title, ticket.TN),
 			"ActivePage": "customer",
@@ -1483,13 +1485,16 @@ func handleCustomerChangePassword(db *sql.DB) gin.HandlerFunc {
 		}
 
 		// Verify current password using auth package
-		recheckKey := passwordRecheckKey(customerMFAAccount(username))
+		account := customerMFAAccount(username)
+		recheckKey := passwordRecheckKey(account)
 		if rejectIfLoginBlocked(c, recheckKey) {
+			recordAccountEvent(c, account, "auth.password.change", audit.OutcomeDenied, map[string]any{"reason": "rate_limited"})
 			return
 		}
 		hasher := auth.NewPasswordHasher()
 		currentOK := currentHash.String != "" && hasher.VerifyPassword(request.CurrentPassword, currentHash.String)
 		if !countPasswordRecheck(c, recheckKey, currentOK) {
+			recordAccountEvent(c, account, "auth.password.change", audit.OutcomeFailure, map[string]any{"reason": "wrong_current_password"})
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "Current password is incorrect",
@@ -1499,6 +1504,7 @@ func handleCustomerChangePassword(db *sql.DB) gin.HandlerFunc {
 
 		// Check that new password is different from current
 		if request.NewPassword == request.CurrentPassword {
+			recordAccountEvent(c, account, "auth.password.change", audit.OutcomeFailure, map[string]any{"reason": "same_password"})
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
 				"error":   "New password must be different from current password",
@@ -1515,6 +1521,7 @@ func handleCustomerChangePassword(db *sql.DB) gin.HandlerFunc {
 		}
 
 		if validationErr := policy.ValidatePassword(request.NewPassword); validationErr != nil {
+			recordAccountEvent(c, account, "auth.password.change", audit.OutcomeFailure, map[string]any{"reason": "policy", "policy": validationErr.Code})
 			c.JSON(http.StatusBadRequest, gin.H{
 				"success": false,
 				"error":   getPasswordPolicyErrorMessage(validationErr.Code),
@@ -1549,6 +1556,7 @@ func handleCustomerChangePassword(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		recordAccountEvent(c, account, "auth.password.change", audit.OutcomeSuccess, nil)
 		c.JSON(http.StatusOK, gin.H{
 			"success": true,
 			"message": "Password changed successfully",

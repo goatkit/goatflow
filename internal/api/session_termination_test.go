@@ -218,7 +218,7 @@ func TestSessionTerminationRevokesTokens(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 		c.Request = httptest.NewRequest(http.MethodGet, "/auth/oidc/callback", nil)
-		createSession(c, &models.User{ID: uint(agentID), Login: agentLogin, Email: agentLogin, Role: "Agent"}) // #nosec G115 -- test id
+		createSession(c, &models.User{ID: uint(agentID), Login: agentLogin, Email: agentLogin, Role: "Agent"}, map[string]any{"method": methodOIDC}) // #nosec G115 -- test id
 
 		assert.Equal(t, http.StatusFound, w.Code)
 		assert.Equal(t, "/dashboard", w.Header().Get("Location"))

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/pluginui"
 )
@@ -80,6 +81,7 @@ func HandlePluginUIAdminUpdate(c *gin.Context) {
 		return
 	}
 
+	before, _ := repo.GetByID(id)
 	updated, err := repo.UpdateAdminOverrides(id, req.CustomDomain, req.Branding, GetUserIDFromCtx(c, 1))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update plugin UI"})
@@ -91,6 +93,9 @@ func HandlePluginUIAdminUpdate(c *gin.Context) {
 	}
 
 	RebuildDynamicEngine()
+	recordPluginUIAudit(c, "admin.plugin_ui.update", updated, map[string]any{
+		"changes": audit.Changes(pluginUIAuditState(before), pluginUIAuditState(updated)),
+	})
 	c.JSON(http.StatusOK, gin.H{"ui": buildPluginUIAdminResponse(updated)})
 }
 
@@ -111,6 +116,7 @@ func HandlePluginUIAdminToggle(c *gin.Context) {
 		return
 	}
 
+	before, _ := repo.GetByID(id)
 	if err := repo.SetEnabled(id, req.Enabled, GetUserIDFromCtx(c, 1)); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update plugin UI status"})
 		return
@@ -126,7 +132,49 @@ func HandlePluginUIAdminToggle(c *gin.Context) {
 	}
 
 	RebuildDynamicEngine()
+	action := "admin.plugin_ui.disable"
+	if req.Enabled {
+		action = "admin.plugin_ui.enable"
+	}
+	var wasEnabled any
+	if before != nil {
+		wasEnabled = before.Enabled
+	}
+	recordPluginUIAudit(c, action, updated, map[string]any{
+		"changes": audit.Changes(map[string]any{"enabled": wasEnabled}, map[string]any{"enabled": updated.Enabled}),
+	})
 	c.JSON(http.StatusOK, gin.H{"ui": buildPluginUIAdminResponse(updated)})
+}
+
+func recordPluginUIAudit(c *gin.Context, action string, ui *pluginui.PluginUI, details map[string]any) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "plugin_ui",
+		TargetID:    audit.ID(ui.ID),
+		TargetLabel: ui.FullID,
+		Details:     details,
+	})
+}
+
+// pluginUIAuditState returns the admin-managed settings of ui, nil when ui
+// is nil.
+func pluginUIAuditState(ui *pluginui.PluginUI) map[string]any {
+	if ui == nil {
+		return nil
+	}
+	state := map[string]any{"custom_domain": nil}
+	if ui.CustomDomain != nil {
+		state["custom_domain"] = *ui.CustomDomain
+	}
+	if cfg, _ := ui.ParsedConfig(); cfg != nil && cfg.Branding != nil {
+		state["branding_app_name"] = cfg.Branding.AppName
+		state["branding_logo"] = cfg.Branding.Logo
+		state["branding_favicon"] = cfg.Branding.Favicon
+		state["branding_color"] = cfg.Branding.Color
+	}
+	return state
 }
 
 func pluginUIAdminRepo(c *gin.Context) (*pluginui.Repository, bool) {

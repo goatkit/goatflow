@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/goatkit/goatflow/internal/platform/audit"
 )
 
 // HandleSwitchOrg handles POST /api/v1/session/org to switch the active organisation.
@@ -171,6 +173,9 @@ func HandleAdminCreateOrg(repo *Repository) gin.HandlerFunc {
 			return
 		}
 
+		recordOrgAudit(c, repo, "admin.organisation.create", id, req.Name, map[string]any{
+			"fields": audit.Snapshot(orgAuditFields(org)),
+		})
 		c.JSON(http.StatusCreated, gin.H{"id": id, "slug": req.Slug})
 	}
 }
@@ -199,6 +204,7 @@ func HandleAdminUpdateOrg(repo *Repository) gin.HandlerFunc {
 			return
 		}
 
+		before := map[string]any{"name": org.Name, "status": org.Status}
 		if req.Name != "" {
 			org.Name = req.Name
 		}
@@ -216,6 +222,9 @@ func HandleAdminUpdateOrg(repo *Repository) gin.HandlerFunc {
 			return
 		}
 
+		recordOrgAudit(c, repo, "admin.organisation.update", id, org.Name, map[string]any{
+			"changes": audit.Changes(before, map[string]any{"name": org.Name, "status": org.Status}),
+		})
 		c.JSON(http.StatusOK, gin.H{"status": "updated"})
 	}
 }
@@ -240,6 +249,9 @@ func HandleAdminDeleteOrg(repo *Repository) gin.HandlerFunc {
 			return
 		}
 
+		recordOrgAudit(c, repo, "admin.organisation.delete", id, org.Name, map[string]any{
+			"fields": audit.Snapshot(orgAuditFields(org)),
+		})
 		c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 	}
 }
@@ -316,6 +328,10 @@ func HandleAdminAddMember(repo *Repository) gin.HandlerFunc {
 			return
 		}
 
+		member.ID = id
+		recordOrgAudit(c, repo, "admin.organisation.members.add", orgID, "", map[string]any{
+			"added": []map[string]any{memberAuditFields(member)},
+		})
 		c.JSON(http.StatusCreated, gin.H{"id": id})
 	}
 }
@@ -329,11 +345,27 @@ func HandleAdminRemoveMember(repo *Repository) gin.HandlerFunc {
 			return
 		}
 
+		orgID, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+		removed := map[string]any{"id": memberID}
+		if orgID > 0 {
+			if members, listErr := repo.ListMembers(orgID); listErr == nil {
+				for i := range members {
+					if members[i].ID == memberID {
+						removed = memberAuditFields(&members[i])
+						break
+					}
+				}
+			}
+		}
+
 		if err := repo.RemoveMember(memberID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
+		recordOrgAudit(c, repo, "admin.organisation.members.remove", orgID, "", map[string]any{
+			"removed": []map[string]any{removed},
+		})
 		c.JSON(http.StatusOK, gin.H{"status": "removed"})
 	}
 }
@@ -384,11 +416,19 @@ func HandleAdminSetOrgConfig(repo *Repository) gin.HandlerFunc {
 		}
 
 		userID := getAdminUserID(c)
+		var before any
+		if prev, prevErr := repo.GetOrgConfig(orgID, req.Name); prevErr == nil && prev != nil {
+			before = string(prev)
+		}
 		if err := repo.SetOrgConfig(orgID, req.Name, []byte(req.Value), userID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
+		recordOrgAudit(c, repo, "admin.organisation.config.set", orgID, "", map[string]any{
+			"name":    req.Name,
+			"changes": audit.Changes(map[string]any{req.Name: before}, map[string]any{req.Name: req.Value}),
+		})
 		c.JSON(http.StatusOK, gin.H{"status": "saved"})
 	}
 }
@@ -408,16 +448,65 @@ func HandleAdminDeleteOrgConfig(repo *Repository) gin.HandlerFunc {
 			return
 		}
 
+		var before any
+		if prev, prevErr := repo.GetOrgConfig(orgID, name); prevErr == nil && prev != nil {
+			before = string(prev)
+		}
 		if err := repo.DeleteOrgConfig(orgID, name); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
+		recordOrgAudit(c, repo, "admin.organisation.config.delete", orgID, "", map[string]any{
+			"name":    name,
+			"changes": audit.Changes(map[string]any{name: before}, map[string]any{name: nil}),
+		})
 		c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 	}
 }
 
 // --- Helpers ---
+
+// recordOrgAudit records a successful admin change to an organisation. An
+// empty label is looked up from the organisation.
+func recordOrgAudit(c *gin.Context, repo *Repository, action string, orgID int64, label string, details map[string]any) {
+	if label == "" && orgID > 0 {
+		if org, err := repo.GetOrg(orgID); err == nil && org != nil {
+			label = org.Name
+		}
+	}
+	e := audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "organisation",
+		TargetLabel: label,
+		Details:     details,
+	}
+	if orgID > 0 {
+		e.TargetID = audit.ID(orgID)
+	}
+	audit.RecordRequest(c, e)
+}
+
+func orgAuditFields(o *Organisation) map[string]any {
+	fields := map[string]any{"name": o.Name, "slug": o.Slug, "status": o.Status, "customer_company_id": nil}
+	if o.CustomerCompanyID != nil {
+		fields["customer_company_id"] = *o.CustomerCompanyID
+	}
+	return fields
+}
+
+func memberAuditFields(m *UserOrganisation) map[string]any {
+	fields := map[string]any{"id": m.ID, "role": m.Role, "is_default": m.IsDefault}
+	if m.UserID != nil {
+		fields["user_id"] = *m.UserID
+	}
+	if m.CustomerLogin != nil {
+		fields["customer_login"] = *m.CustomerLogin
+	}
+	return fields
+}
 
 var slugRegex = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 

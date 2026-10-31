@@ -86,6 +86,7 @@ var AllPageTemplates = map[string]bool{
 	"pages/admin/postmaster_filters.pongo2":            true,
 	"pages/admin/postmaster_filter_form.pongo2":        true,
 	"pages/admin/postmaster_decision_filter.pongo2":    true,
+	"pages/admin/audit_log.pongo2":                     true,
 	"pages/admin/acl.pongo2":                           true,
 	"pages/admin/generic_agent.pongo2":                 true,
 	"pages/admin/customer_groups.pongo2":               true,
@@ -1133,6 +1134,20 @@ func TestAllAdminTemplatesRender(t *testing.T) {
 				ctx["ConfigUnreadable"] = true
 				ctx["MaxOptions"] = 26
 				ctx["MaxTimeout"] = 120
+				return ctx
+			}(),
+		},
+		{
+			name:     "admin/audit_log",
+			template: "pages/admin/audit_log.pongo2",
+			ctx: func() pongo2.Context {
+				ctx := adminContext()
+				ctx["Settings"] = map[string]interface{}{"RetentionDays": 365, "RecordReadAccess": true}
+				ctx["Categories"] = []string{"auth", "admin", "access", "system"}
+				ctx["Outcomes"] = []string{"success", "failure", "denied"}
+				ctx["MaxRetentionDays"] = 3650
+				ctx["PageSize"] = 50
+				ctx["TimeZone"] = "Europe/London"
 				return ctx
 			}(),
 		},

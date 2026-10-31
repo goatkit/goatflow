@@ -12,7 +12,6 @@ import (
 
 	_ "github.com/goatkit/goatflow/internal/platform/api"
 	"github.com/goatkit/goatflow/internal/platform/database"
-	"github.com/goatkit/goatflow/internal/platform/httpcookie"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	_ "github.com/goatkit/goatflow/internal/selfservice" // registers the self-service route handlers
@@ -235,34 +234,8 @@ func ensureCoreHandlers() {
 		"handleStaticFiles":         HandleStaticFiles,
 		"handleServiceWorkerConfig": HandleServiceWorkerConfig,
 		"handleLogout":              handleLogout,
-		"handleCustomerLogout": func(c *gin.Context) {
-			// Delete session record from database (check customer-specific session cookie)
-			if sessionID, err := c.Cookie("customer_session_id"); err == nil && sessionID != "" {
-				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-					_ = sessionSvc.KillSession(sessionID) // Best effort, don't fail logout
-				}
-			}
-			// Also check legacy session_id cookie for backwards compatibility
-			if sessionID, err := c.Cookie("session_id"); err == nil && sessionID != "" {
-				if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
-					_ = sessionSvc.KillSession(sessionID)
-				}
-			}
-			// Clear customer-specific auth cookies
-			httpcookie.SetAuth(c, "customer_auth_token", "", -1)
-			httpcookie.SetAuth(c, "customer_access_token", "", -1)
-			httpcookie.SetAuth(c, "customer_session_id", "", -1)
-			httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
-			// Also clear legacy cookies for backwards compatibility
-			httpcookie.SetAuth(c, "auth_token", "", -1)
-			httpcookie.SetAuth(c, "access_token", "", -1)
-			httpcookie.SetAuth(c, "token", "", -1)
-			httpcookie.SetAuth(c, "session_id", "", -1)
-			httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
-			c.Header("HX-Redirect", "/customer/login")
-			c.Redirect(http.StatusSeeOther, "/customer/login")
-		},
-		"handleCustomerLoginPage": handleCustomerLoginPage,
+		"handleCustomerLogout":      handleCustomerLogout,
+		"handleCustomerLoginPage":   handleCustomerLoginPage,
 		"handleCustomerLogin": func(c *gin.Context) {
 			handleCustomerLogin(shared.GetJWTManager())(c)
 		},

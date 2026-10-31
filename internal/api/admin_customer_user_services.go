@@ -9,6 +9,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 )
@@ -246,7 +247,7 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 				Services []string `json:"services"`
 			}
 			if err := c.ShouldBindJSON(&req); err != nil {
-				shared.SendToastResponse(c, false, "Invalid request", "")
+				failCustomerUserServices(c, "customer_user", customerUserLogin, "Invalid request")
 				return
 			}
 			selectedServices = req.Services
@@ -258,10 +259,12 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		before := loadServiceAssignmentKeys(db, "customer_user_login", customerUserLogin, "service")
+
 		// Start transaction
 		tx, err := db.Begin()
 		if err != nil {
-			shared.SendToastResponse(c, false, "Transaction failed", "")
+			failCustomerUserServices(c, "customer_user", customerUserLogin, "Transaction failed")
 			return
 		}
 		defer func() { _ = tx.Rollback() }()
@@ -270,7 +273,7 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 		deleteQuery := "DELETE FROM service_customer_user WHERE customer_user_login = ?"
 		_, err = tx.Exec(database.ConvertPlaceholders(deleteQuery), customerUserLogin)
 		if err != nil {
-			shared.SendToastResponse(c, false, "Failed to clear existing services", "")
+			failCustomerUserServices(c, "customer_user", customerUserLogin, "Failed to clear existing services")
 			return
 		}
 
@@ -281,16 +284,17 @@ func handleAdminCustomerUserServicesUpdate(db *sql.DB) gin.HandlerFunc {
 				VALUES (?, ?, NOW(), ?)
 			`), customerUserLogin, serviceID, actorID)
 			if err != nil {
-				shared.SendToastResponse(c, false, "Failed to assign service", "")
+				failCustomerUserServices(c, "customer_user", customerUserLogin, "Failed to assign service")
 				return
 			}
 		}
 
 		if err := tx.Commit(); err != nil {
-			shared.SendToastResponse(c, false, "Failed to save changes", "")
+			failCustomerUserServices(c, "customer_user", customerUserLogin, "Failed to save changes")
 			return
 		}
 
+		recordCustomerUserServicesEvent(c, "customer_user", customerUserLogin, before, "service", selectedServices)
 		shared.SendToastResponse(c, true, "Services updated successfully", "")
 	}
 }
@@ -397,7 +401,7 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 				CustomerUsers []string `json:"customer_users"`
 			}
 			if err := c.ShouldBindJSON(&req); err != nil {
-				shared.SendToastResponse(c, false, "Invalid request", "")
+				failCustomerUserServices(c, "service", serviceID, "Invalid request")
 				return
 			}
 			selectedUsers = req.CustomerUsers
@@ -409,10 +413,12 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		before := loadServiceAssignmentKeys(db, "service_id", serviceID, "customer_user")
+
 		// Start transaction
 		tx, err := db.Begin()
 		if err != nil {
-			shared.SendToastResponse(c, false, "Transaction failed", "")
+			failCustomerUserServices(c, "service", serviceID, "Transaction failed")
 			return
 		}
 		defer func() { _ = tx.Rollback() }()
@@ -420,7 +426,7 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 		// Clear existing assignments for this service
 		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE service_id = ?"), serviceID)
 		if err != nil {
-			shared.SendToastResponse(c, false, "Failed to clear existing assignments", "")
+			failCustomerUserServices(c, "service", serviceID, "Failed to clear existing assignments")
 			return
 		}
 
@@ -431,16 +437,17 @@ func handleAdminServiceCustomerUsersUpdate(db *sql.DB) gin.HandlerFunc {
 				VALUES (?, ?, NOW(), ?)
 			`), userLogin, serviceID, actorID)
 			if err != nil {
-				shared.SendToastResponse(c, false, "Failed to assign customer user", "")
+				failCustomerUserServices(c, "service", serviceID, "Failed to assign customer user")
 				return
 			}
 		}
 
 		if err := tx.Commit(); err != nil {
-			shared.SendToastResponse(c, false, "Failed to save changes", "")
+			failCustomerUserServices(c, "service", serviceID, "Failed to save changes")
 			return
 		}
 
+		recordCustomerUserServicesEvent(c, "service", serviceID, before, "customer_user", selectedUsers)
 		shared.SendToastResponse(c, true, "Customer users updated successfully", "")
 	}
 }
@@ -529,7 +536,7 @@ func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 				Services []string `json:"services"`
 			}
 			if err := c.ShouldBindJSON(&req); err != nil {
-				shared.SendToastResponse(c, false, "Invalid request", "")
+				failCustomerUserServices(c, "customer_user", defaultServicesLogin, "Invalid request")
 				return
 			}
 			selectedServices = req.Services
@@ -541,10 +548,12 @@ func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		before := loadServiceAssignmentKeys(db, "customer_user_login", defaultServicesLogin, "service")
+
 		// Start transaction
 		tx, err := db.Begin()
 		if err != nil {
-			shared.SendToastResponse(c, false, "Transaction failed", "")
+			failCustomerUserServices(c, "customer_user", defaultServicesLogin, "Transaction failed")
 			return
 		}
 		defer func() { _ = tx.Rollback() }()
@@ -552,7 +561,7 @@ func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 		// Clear existing default service assignments
 		_, err = tx.Exec(database.ConvertPlaceholders("DELETE FROM service_customer_user WHERE customer_user_login = '<DEFAULT>'"))
 		if err != nil {
-			shared.SendToastResponse(c, false, "Failed to clear existing default services", "")
+			failCustomerUserServices(c, "customer_user", defaultServicesLogin, "Failed to clear existing default services")
 			return
 		}
 
@@ -563,16 +572,79 @@ func handleAdminDefaultServicesUpdate(db *sql.DB) gin.HandlerFunc {
 				VALUES ('<DEFAULT>', ?, NOW(), ?)
 			`), serviceID, actorID)
 			if err != nil {
-				shared.SendToastResponse(c, false, "Failed to assign default service", "")
+				failCustomerUserServices(c, "customer_user", defaultServicesLogin, "Failed to assign default service")
 				return
 			}
 		}
 
 		if err := tx.Commit(); err != nil {
-			shared.SendToastResponse(c, false, "Failed to save changes", "")
+			failCustomerUserServices(c, "customer_user", defaultServicesLogin, "Failed to save changes")
 			return
 		}
 
+		recordCustomerUserServicesEvent(c, "customer_user", defaultServicesLogin, before, "service", selectedServices)
 		shared.SendToastResponse(c, true, "Default services updated successfully", "")
 	}
+}
+
+// defaultServicesLogin is the service_customer_user login that holds the
+// services every customer user gets.
+const defaultServicesLogin = "<DEFAULT>"
+
+// loadServiceAssignmentKeys reads the service_customer_user rows whose
+// column (customer_user_login or service_id) equals value, as
+// "<kind>:<other side>" keys for the audit log. A failed read gives an
+// empty set.
+func loadServiceAssignmentKeys(db *sql.DB, column, value, kind string) map[string]bool {
+	query := "SELECT service_id FROM service_customer_user WHERE customer_user_login = ?"
+	if column == "service_id" {
+		query = "SELECT customer_user_login FROM service_customer_user WHERE service_id = ?"
+	}
+	out := map[string]bool{}
+	rows, err := db.Query(database.ConvertPlaceholders(query), value)
+	if err != nil {
+		log.Printf("customer user services: audit before-state: %v", err)
+		return out
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var other string
+		if err := rows.Scan(&other); err != nil {
+			return out
+		}
+		out[kind+":"+other] = true
+	}
+	return out
+}
+
+func recordCustomerUserServicesEvent(c *gin.Context, targetType, targetID string, before map[string]bool, kind string, selected []string) {
+	after := make(map[string]bool, len(selected))
+	for _, s := range selected {
+		after[kind+":"+s] = true
+	}
+	added, removed := customerAuditSetDiff(before, after)
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.customer_user_services.update",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  targetType,
+		TargetID:    targetID,
+		TargetLabel: targetID,
+		Details:     map[string]any{"added": added, "removed": removed},
+	})
+}
+
+// failCustomerUserServices answers a failed services update. A plain form
+// post gets the failure toast with HTTP 200, so the failure is recorded here.
+func failCustomerUserServices(c *gin.Context, targetType, targetID, msg string) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.customer_user_services.update",
+		Outcome:     audit.OutcomeFailure,
+		TargetType:  targetType,
+		TargetID:    targetID,
+		TargetLabel: targetID,
+		Details:     map[string]any{"reason": msg},
+	})
+	shared.SendToastResponse(c, false, msg, "")
 }

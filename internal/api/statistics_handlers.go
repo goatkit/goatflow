@@ -1172,6 +1172,8 @@ func HandleExportStatisticsAPI(c *gin.Context) {
 		}
 	}
 
+	recordReadAccess(c, "access.export", "statistics", exportType, "",
+		map[string]any{"format": format, "type": exportType, "rows": len(csvRows)})
 	stamp := now.Format("20060102_150405")
 	if format == "csv" {
 		var buf bytes.Buffer

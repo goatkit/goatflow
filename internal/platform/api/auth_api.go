@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
@@ -58,6 +60,7 @@ func HandleLoginAPI(c *gin.Context) {
 	// Server-side rate limiting (fail2ban style)
 	clientIP := c.ClientIP()
 	if blocked, remaining := auth.DefaultLoginRateLimiter.IsBlocked(clientIP, loginRequest.Login); blocked {
+		recordAPILogin(c, nil, loginRequest.Login, audit.OutcomeDenied, map[string]any{"method": "password", "reason": "rate_limited"})
 		c.JSON(http.StatusTooManyRequests, gin.H{
 			"success":         false,
 			"error":           fmt.Sprintf("too many failed attempts, try again in %d seconds", int(remaining.Seconds())),
@@ -80,15 +83,16 @@ func HandleLoginAPI(c *gin.Context) {
 	authService := service.NewAuthService(db, getJWTManager(), auth.GetOIDCClient(), auth.GetStateStore(), shared.GetSessionService())
 
 	// Authenticate user
-	user, err := authService.Login(context.Background(), loginRequest.Login, loginRequest.Password)
+	user, provider, err := authService.Login(context.Background(), loginRequest.Login, loginRequest.Password)
 	if err != nil {
 		auth.DefaultLoginRateLimiter.RecordFailure(clientIP, loginRequest.Login)
-		if err == auth.ErrInvalidCredentials {
+		recordAPILogin(c, nil, loginRequest.Login, audit.OutcomeFailure, map[string]any{"method": "password", "reason": auth.FailureReason(err)})
+		if errors.Is(err, auth.ErrInvalidCredentials) || errors.Is(err, auth.ErrUserNotFound) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"error":   "Invalid credentials",
 			})
-		} else if err == auth.ErrUserDisabled {
+		} else if errors.Is(err, auth.ErrUserDisabled) {
 			c.JSON(http.StatusForbidden, gin.H{
 				"success": false,
 				"error":   "User account is disabled",
@@ -119,6 +123,7 @@ func HandleLoginAPI(c *gin.Context) {
 		return
 	}
 	if mfaRequired {
+		recordAPILogin(c, user, loginRequest.Login, audit.OutcomeDenied, map[string]any{"method": auth.LoginMethod(provider), "reason": "mfa_required"})
 		c.JSON(http.StatusForbidden, gin.H{
 			"success": false,
 			"error":   "This account requires a second factor. Sign in through the web UI, or use an API token.",
@@ -139,7 +144,22 @@ func HandleLoginAPI(c *gin.Context) {
 		return
 	}
 
+	recordAPILogin(c, user, loginRequest.Login, audit.OutcomeSuccess, map[string]any{"method": auth.LoginMethod(provider), "provider": strings.ToLower(provider)})
 	c.JSON(http.StatusOK, tokenPairResponse(user, accessToken, refreshToken))
+}
+
+// recordAPILogin records an auth.login on this endpoint. Without a user the
+// caller is anonymous and login is the name that was tried.
+func recordAPILogin(c *gin.Context, user *platformmodels.User, login, outcome string, details map[string]any) {
+	e := audit.Event{Category: audit.CategoryAuth, Action: "auth.login", Outcome: outcome,
+		ActorType: audit.ActorAnonymous, ActorLogin: login, Details: details}
+	if user != nil {
+		e.ActorType, e.ActorID, e.ActorLogin = audit.ActorAgent, int64(user.ID), user.Login // #nosec G115 -- user ids are positive auto-increment keys
+		if strings.EqualFold(user.Role, "customer") {
+			e.ActorType = audit.ActorCustomer
+		}
+	}
+	audit.RecordRequest(c, e)
 }
 
 // secondFactorRequired reports whether the account has TOTP or a passkey

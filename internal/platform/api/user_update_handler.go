@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
@@ -105,8 +106,10 @@ func HandleUpdateUserAPI(c *gin.Context) {
 	}
 
 	// Check if user exists
-	var existingLogin string
-	err = db.QueryRow(database.ConvertPlaceholders(`SELECT login FROM users WHERE id = ?`), userID).Scan(&existingLogin)
+	var existingLogin, existingFirst, existingLast string
+	var existingValid int
+	err = db.QueryRow(database.ConvertPlaceholders(`SELECT login, first_name, last_name, valid_id FROM users WHERE id = ?`), userID).
+		Scan(&existingLogin, &existingFirst, &existingLast, &existingValid)
 	if err == sql.ErrNoRows {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -127,6 +130,7 @@ func HandleUpdateUserAPI(c *gin.Context) {
 	args := []interface{}{}
 
 	var email string
+	var prevEmail []byte
 	if req.Email != nil {
 		email = strings.TrimSpace(*req.Email)
 		if email == "" || !strings.Contains(email, "@") {
@@ -158,6 +162,9 @@ func HandleUpdateUserAPI(c *gin.Context) {
 			})
 			return
 		}
+		_ = db.QueryRow(database.ConvertPlaceholders(`
+			SELECT preferences_value FROM user_preferences
+			WHERE user_id = ? AND preferences_key = 'UserEmail'`), userID).Scan(&prevEmail)
 	}
 
 	// first_name and last_name are NOT NULL in the users table.
@@ -279,6 +286,35 @@ func HandleUpdateUserAPI(c *gin.Context) {
 		})
 		return
 	}
+
+	before := map[string]any{"first_name": existingFirst, "last_name": existingLast, "valid_id": existingValid}
+	after := map[string]any{"first_name": existingFirst, "last_name": existingLast, "valid_id": existingValid}
+	if req.FirstName != nil {
+		after["first_name"] = *req.FirstName
+	}
+	if req.LastName != nil {
+		after["last_name"] = *req.LastName
+	}
+	if req.ValidID != nil {
+		after["valid_id"] = *req.ValidID
+	}
+	if req.Email != nil {
+		before["email"] = string(prevEmail)
+		after["email"] = email
+	}
+	if req.Password != nil && *req.Password != "" {
+		before["password"] = ""
+		after["password"] = "(new)"
+	}
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.user.update",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "user",
+		TargetID:    audit.ID(int64(userID)),
+		TargetLabel: existingLogin,
+		Details:     map[string]any{"changes": audit.Changes(before, after)},
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

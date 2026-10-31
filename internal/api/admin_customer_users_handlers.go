@@ -12,6 +12,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
@@ -428,6 +429,13 @@ func HandleAdminCustomerUsersCreate(c *gin.Context) {
 		return
 	}
 
+	recordCustomerUserEvent(c, "create", newID, req.Login, map[string]any{"fields": audit.Snapshot(map[string]any{
+		"login": req.Login, "email": req.Email, "customer_id": req.CustomerID, "password": customerUserPasswordMarker(req.Password),
+		"title": req.Title, "first_name": req.FirstName, "last_name": req.LastName, "phone": req.Phone,
+		"fax": req.Fax, "mobile": req.Mobile, "street": req.Street, "zip": req.Zip, "city": req.City,
+		"country": req.Country, "comments": req.Comments, "valid_id": req.ValidID,
+	})})
+
 	// Check if this is a form submission (redirect) or API call (JSON)
 	if c.GetHeader("Content-Type") == "application/x-www-form-urlencoded" ||
 		c.GetHeader("HX-Request") == "true" {
@@ -510,6 +518,8 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 		return
 	}
 
+	before, _ := loadCustomerUserAuditFields(db, id)
+
 	// Build update query
 	updateQuery := `
 		UPDATE customer_user SET
@@ -561,6 +571,18 @@ func HandleAdminCustomerUsersUpdate(c *gin.Context) {
 		return
 	}
 
+	after := map[string]any{
+		"login": req.Login, "email": req.Email, "customer_id": req.CustomerID,
+		"title": req.Title, "first_name": req.FirstName, "last_name": req.LastName, "phone": req.Phone,
+		"fax": req.Fax, "mobile": req.Mobile, "street": req.Street, "zip": req.Zip, "city": req.City,
+		"country": req.Country, "comments": req.Comments, "valid_id": req.ValidID,
+	}
+	if req.Password != "" {
+		before["password"] = ""
+		after["password"] = "(new)"
+	}
+	recordCustomerUserEvent(c, "update", int64(id), req.Login, map[string]any{"changes": audit.Changes(before, after)})
+
 	// Check if this is a form submission (redirect) or API call (JSON)
 	if c.GetHeader("Content-Type") == "application/x-www-form-urlencoded" ||
 		c.GetHeader("HX-Request") == "true" {
@@ -602,6 +624,8 @@ func HandleAdminCustomerUsersDelete(c *gin.Context) {
 		return
 	}
 
+	before, _ := loadCustomerUserAuditFields(db, id)
+
 	// Soft delete by setting valid_id to 2 (invalid)
 	updateQuery := database.ConvertPlaceholders(`
 		UPDATE customer_user
@@ -628,6 +652,8 @@ func HandleAdminCustomerUsersDelete(c *gin.Context) {
 		})
 		return
 	}
+	login, _ := before["login"].(string)
+	recordCustomerUserEvent(c, "delete", int64(id), login, map[string]any{"fields": audit.Snapshot(before)})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -792,6 +818,7 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 
 	var imported, failed int
 	var errors []string
+	importedLogins := make([]string, 0, len(records)-1)
 
 	// Process data rows
 	for i := 1; i < len(records); i++ {
@@ -857,8 +884,23 @@ func HandleAdminCustomerUsersImport(c *gin.Context) {
 			failed++
 		} else {
 			imported++
+			importedLogins = append(importedLogins, login)
 		}
 	}
+
+	outcome := audit.OutcomeSuccess
+	details := map[string]any{"imported": imported, "failed": failed, "logins": importedLogins}
+	if imported == 0 && failed > 0 {
+		outcome = audit.OutcomeFailure
+		details["reason"] = "no rows imported"
+	}
+	audit.RecordRequest(c, audit.Event{
+		Category:   audit.CategoryAdmin,
+		Action:     "admin.customer_user.import",
+		Outcome:    outcome,
+		TargetType: "customer_user",
+		Details:    details,
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success":  true,
@@ -1058,9 +1100,70 @@ func HandleAdminCustomerUsersBulkAction(c *gin.Context) {
 	if err != nil {
 		rowsAffected = 0
 	}
+	audit.RecordRequest(c, audit.Event{
+		Category:   audit.CategoryAdmin,
+		Action:     "admin.customer_user.bulk_" + req.Action,
+		Outcome:    audit.OutcomeSuccess,
+		TargetType: "customer_user",
+		Details:    map[string]any{"targets": intIDs, "rows_affected": rowsAffected},
+	})
 	c.JSON(http.StatusOK, gin.H{
 		"success":       true,
 		"message":       message,
 		"rows_affected": rowsAffected,
 	})
+}
+
+func recordCustomerUserEvent(c *gin.Context, action string, id int64, login string, details map[string]any) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.customer_user." + action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "customer_user",
+		TargetID:    audit.ID(id),
+		TargetLabel: login,
+		Details:     details,
+	})
+}
+
+// customerUserPasswordMarker stands in for a supplied password in audit
+// details; the "password" key is redacted, so only "set" vs unset shows.
+func customerUserPasswordMarker(password string) string {
+	if password == "" {
+		return ""
+	}
+	return "(new)"
+}
+
+// loadCustomerUserAuditFields reads a customer user's stored fields (not the
+// password) for the audit log. It returns an empty map when the read fails.
+func loadCustomerUserAuditFields(db *sql.DB, id int) (map[string]any, error) {
+	fields := map[string]any{}
+	var login, email, customerID, title, firstName, lastName, phone, fax, mobile, street, zip, city, country, comments sql.NullString
+	var validID int
+	err := db.QueryRow(database.ConvertPlaceholders(`
+		SELECT login, email, customer_id, title, first_name, last_name, phone, fax,
+			mobile, street, zip, city, country, comments, valid_id
+		FROM customer_user WHERE id = ?`), id).Scan(
+		&login, &email, &customerID, &title, &firstName, &lastName, &phone, &fax,
+		&mobile, &street, &zip, &city, &country, &comments, &validID)
+	if err != nil {
+		return fields, err
+	}
+	fields["login"] = login.String
+	fields["email"] = email.String
+	fields["customer_id"] = customerID.String
+	fields["title"] = title.String
+	fields["first_name"] = firstName.String
+	fields["last_name"] = lastName.String
+	fields["phone"] = phone.String
+	fields["fax"] = fax.String
+	fields["mobile"] = mobile.String
+	fields["street"] = street.String
+	fields["zip"] = zip.String
+	fields["city"] = city.String
+	fields["country"] = country.String
+	fields["comments"] = comments.String
+	fields["valid_id"] = validID
+	return fields, nil
 }

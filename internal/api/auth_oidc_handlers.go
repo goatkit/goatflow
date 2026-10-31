@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
@@ -115,6 +116,7 @@ func handleOIDCCallback(c *gin.Context) {
 	entry, ok := stateStore.GetState(state)
 	if !ok || !ssoBrowserMatches(c, entry.BrowserBinding) {
 		stateStore.ConsumeState(state)
+		recordLoginFailure(c, "", audit.OutcomeFailure, map[string]any{"method": methodOIDC, "reason": "invalid_state"})
 		c.Redirect(http.StatusFound, "/login?error=invalid_state")
 		return
 	}
@@ -171,6 +173,7 @@ func handleOIDCCallback(c *gin.Context) {
 	user, err := prov.CompleteAuthFlow(c.Request.Context(), code, state)
 	if err != nil {
 		log.Printf("OIDC CompleteAuthFlow failed for provider %d: %v", providerID, err)
+		recordLoginFailure(c, "", audit.OutcomeFailure, ssoLoginDetails(methodOIDC, provider, "idp_rejected"))
 		c.Redirect(http.StatusFound, "/login?error=auth_failed")
 		return
 	}
@@ -195,7 +198,7 @@ func handleOIDCCallback(c *gin.Context) {
 		return
 	}
 
-	createSession(c, user)
+	createSession(c, user, ssoLoginDetails(methodOIDC, provider, ""))
 }
 
 func generateState() string {
@@ -227,8 +230,8 @@ func needs2FA(userID uint) (bool, error) {
 
 // createSession completes an SSO (OIDC, SAML) login: it creates the sessions
 // row, so the login is listed and killable under /admin/sessions like a
-// password login, and issues the token bound to it.
-func createSession(c *gin.Context, user *models.User) {
+// password login, issues the token bound to it and records the sign-in.
+func createSession(c *gin.Context, user *models.User, details map[string]any) {
 	jwtMgr := shared.GetJWTManager()
 	if jwtMgr == nil {
 		c.Redirect(http.StatusFound, "/login?error=server_error")
@@ -254,5 +257,16 @@ func createSession(c *gin.Context, user *models.User) {
 	httpcookie.SetAuth(c, "auth_token", token, sessionTimeout)
 	httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
 	httpcookie.SetAuthState(c, "goatflow_logged_in", "1", sessionTimeout)
+	recordLogin(c, user, details)
 	c.Redirect(http.StatusFound, agentLandingRedirect(user.ID))
+}
+
+// ssoLoginDetails are the audit details of an SSO sign-in through provider;
+// reason is set for a refused one.
+func ssoLoginDetails(method string, provider *models.IdentityProvider, reason string) map[string]any {
+	d := map[string]any{"method": method, "provider": provider.Name, "provider_id": provider.ID}
+	if reason != "" {
+		d["reason"] = reason
+	}
+	return d
 }

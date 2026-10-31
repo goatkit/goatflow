@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/httpcookie"
@@ -158,6 +159,7 @@ func handleSAMLCallback(c *gin.Context) {
 	entry, ok := stateStore.ConsumeState(token)
 	if !ok || entry.ProviderID != uint(providerID) || entry.ProviderType != provider.ProviderType ||
 		!ssoBrowserMatches(c, entry.BrowserBinding) {
+		recordLoginFailure(c, "", audit.OutcomeFailure, ssoLoginDetails(methodSAML, provider, "invalid_state"))
 		c.Redirect(http.StatusFound, "/login?error=invalid_state")
 		return
 	}
@@ -175,6 +177,7 @@ func handleSAMLCallback(c *gin.Context) {
 	user, err := prov.CompleteAuthFlow(c.Request.Context(), c.Request, entry.RequestID)
 	if err != nil {
 		log.Printf("SAML login for provider %d refused: %v", providerID, err)
+		recordLoginFailure(c, "", audit.OutcomeFailure, ssoLoginDetails(methodSAML, provider, "idp_rejected"))
 		c.Redirect(http.StatusFound, "/login?error=auth_failed")
 		return
 	}
@@ -199,7 +202,7 @@ func handleSAMLCallback(c *gin.Context) {
 		return
 	}
 
-	createSession(c, user)
+	createSession(c, user, ssoLoginDetails(methodSAML, provider, ""))
 }
 
 // handleSAMLMetadata serves the SP metadata XML for auto-configuration in IdPs.

@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/sysconfig"
@@ -104,6 +105,18 @@ func HandleAdminUserResetPassword(c *gin.Context) {
 		})
 		return
 	}
+
+	var login string
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT login FROM users WHERE id = ?"), id).Scan(&login)
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.user.password_reset",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "user",
+		TargetID:    audit.ID(int64(id)),
+		TargetLabel: login,
+		Details:     map[string]any{"generated": req.Password == ""},
+	})
 
 	response := gin.H{
 		"success": true,

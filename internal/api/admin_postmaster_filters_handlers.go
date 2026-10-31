@@ -12,6 +12,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/repository"
 )
@@ -255,6 +256,7 @@ func HandleCreatePostmasterFilter(c *gin.Context) {
 		return
 	}
 
+	recordPostmasterFilterEvent(c, "create", filter.Name, map[string]any{"fields": audit.Snapshot(postmasterFilterAuditFields(filter))})
 	c.JSON(http.StatusCreated, gin.H{"success": true, "message": "Filter created successfully", "data": filter})
 }
 
@@ -323,6 +325,9 @@ func HandleUpdatePostmasterFilter(c *gin.Context) {
 		return
 	}
 
+	recordPostmasterFilterEvent(c, "update", name, map[string]any{
+		"changes": audit.Changes(postmasterFilterAuditFields(existing), postmasterFilterAuditFields(filter)),
+	})
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Filter updated successfully", "data": filter})
 }
 
@@ -342,10 +347,46 @@ func HandleDeletePostmasterFilter(c *gin.Context) {
 
 	repo := repository.NewPostmasterFilterRepository(db)
 
+	existing, _ := repo.Get(c.Request.Context(), name)
 	if err := repo.Delete(c.Request.Context(), name); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Filter not found"})
 		return
 	}
 
+	var details map[string]any
+	if existing != nil {
+		details = map[string]any{"fields": audit.Snapshot(postmasterFilterAuditFields(existing))}
+	}
+	recordPostmasterFilterEvent(c, "delete", name, details)
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Filter deleted successfully"})
+}
+
+func recordPostmasterFilterEvent(c *gin.Context, action, name string, details map[string]any) {
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.postmaster_filter." + action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "postmaster_filter",
+		TargetID:    name,
+		TargetLabel: name,
+		Details:     details,
+	})
+}
+
+// postmasterFilterAuditFields lists a filter's rules as readable strings
+// ("Subject =~ pattern", "X-GoatFlow-Queue = Raw") for the audit log.
+func postmasterFilterAuditFields(f *repository.PostmasterFilter) map[string]any {
+	matches := make([]string, 0, len(f.Matches))
+	for _, m := range f.Matches {
+		op := " =~ "
+		if m.Not {
+			op = " !~ "
+		}
+		matches = append(matches, m.Key+op+m.Value)
+	}
+	sets := make([]string, 0, len(f.Sets))
+	for _, s := range f.Sets {
+		sets = append(sets, s.Key+" = "+s.Value)
+	}
+	return map[string]any{"name": f.Name, "stop": f.Stop, "matches": matches, "sets": sets}
 }

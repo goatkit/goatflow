@@ -118,9 +118,10 @@ func getConfiguredProviderOrder() []string {
 // longer valid.
 var ErrRefreshRejected = errors.New("refresh token rejected")
 
-// Login authenticates a user. It issues no tokens: callers decide whether a
-// second factor is still due, then call IssueTokens.
-func (s *AuthService) Login(ctx context.Context, username, password string) (*platformmodels.User, error) {
+// Login authenticates a user and names the provider that accepted the login
+// (see auth.Authenticator.Authenticate for the errors). It issues no tokens:
+// callers decide whether a second factor is still due, then call IssueTokens.
+func (s *AuthService) Login(ctx context.Context, username, password string) (*platformmodels.User, string, error) {
 	return s.authenticator.Authenticate(ctx, username, password)
 }
 

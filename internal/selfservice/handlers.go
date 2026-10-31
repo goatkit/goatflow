@@ -13,6 +13,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
@@ -129,6 +130,7 @@ func forgotPasswordSubmit(p portal) gin.HandlerFunc {
 		ctx := pongo2.Context{"Portal": p, "Identifier": identifier}
 
 		if !allowIP(c) {
+			recordReset(c, "auth.password.reset_request", audit.OutcomeDenied, nil, identifier, map[string]any{"portal": p.Type, "reason": "rate_limited"})
 			ctx["Error"] = translate(lang, "self_service.rate_limited")
 			c.Header("Retry-After", "3600")
 			render(c, http.StatusTooManyRequests, "pages/forgot_password.pongo2", ctx)
@@ -143,6 +145,7 @@ func forgotPasswordSubmit(p portal) gin.HandlerFunc {
 		if !ok {
 			return
 		}
+		matched := 0
 		if len(identifier) <= maxIdentifierLen {
 			accounts, err := s.findAccounts(c.Request.Context(), p.Type, identifier)
 			if err != nil {
@@ -154,7 +157,9 @@ func forgotPasswordSubmit(p portal) gin.HandlerFunc {
 			if len(accounts) > 0 {
 				go sendResetLinks(s, p, lang, accounts)
 			}
+			matched = len(accounts)
 		}
+		recordReset(c, "auth.password.reset_request", audit.OutcomeSuccess, nil, identifier, map[string]any{"portal": p.Type, "accounts_matched": matched})
 		ctx["Sent"] = true
 		ctx["Identifier"] = ""
 		render(c, http.StatusOK, "pages/forgot_password.pongo2", ctx)
@@ -318,6 +323,7 @@ func resetPasswordSubmit(p portal) gin.HandlerFunc {
 		// Same per-IP budget as the forgot-password form, so reset tokens
 		// cannot be guessed at an unlimited rate.
 		if !allowIP(c) {
+			recordReset(c, "auth.password.reset", audit.OutcomeDenied, nil, "", map[string]any{"portal": p.Type, "reason": "rate_limited"})
 			ctx["Token"] = raw
 			ctx["Error"] = translate(lang, "self_service.rate_limited")
 			c.Header("Retry-After", "3600")
@@ -331,6 +337,7 @@ func resetPasswordSubmit(p portal) gin.HandlerFunc {
 			acct, err = s.accountForToken(reqCtx, p.Type, tok)
 		}
 		if err != nil {
+			recordReset(c, "auth.password.reset", audit.OutcomeFailure, nil, "", map[string]any{"portal": p.Type, "reason": tokenFailReason(err)})
 			if !errors.Is(err, errTokenInvalid) {
 				slog.Error("selfservice: reset token check", "error", err)
 			}
@@ -341,6 +348,7 @@ func resetPasswordSubmit(p portal) gin.HandlerFunc {
 
 		hash, msg := checkNewPassword(c, lang, policy)
 		if msg != "" {
+			recordReset(c, "auth.password.reset", audit.OutcomeFailure, acct, "", map[string]any{"portal": p.Type, "reason": "password_rejected"})
 			ctx["Error"] = msg
 			render(c, http.StatusBadRequest, "pages/reset_password.pongo2", ctx)
 			return
@@ -349,14 +357,15 @@ func resetPasswordSubmit(p portal) gin.HandlerFunc {
 			if !errors.Is(err, errTokenInvalid) {
 				slog.Error("selfservice: reset password", "login", acct.Login, "error", err)
 			}
+			recordReset(c, "auth.password.reset", audit.OutcomeFailure, acct, "", map[string]any{"portal": p.Type, "reason": tokenFailReason(err)})
 			invalidLink(c, ctx, lang)
 			return
 		}
-		if n, err := s.killSessions(reqCtx, acct); err != nil {
+		n, err := s.killSessions(reqCtx, acct)
+		if err != nil {
 			slog.Error("selfservice: end sessions after reset", "login", acct.Login, "error", err)
-		} else {
-			slog.Info("selfservice: password reset", "type", acct.Type, "login", acct.Login, "sessions_ended", n)
 		}
+		recordReset(c, "auth.password.reset", audit.OutcomeSuccess, acct, "", map[string]any{"portal": p.Type, "sessions_ended": n})
 		auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), acct.Login)
 
 		delete(ctx, "Token")
@@ -364,6 +373,25 @@ func resetPasswordSubmit(p portal) gin.HandlerFunc {
 		ctx["Message"] = translate(lang, "self_service.reset_password.success")
 		render(c, http.StatusOK, "pages/reset_password.pongo2", ctx)
 	}
+}
+
+// recordReset records a self-service password event. acct is the account a
+// valid link belongs to; without one the caller is anonymous and login is
+// the name that was entered (if any).
+func recordReset(c *gin.Context, action, outcome string, acct *Account, login string, details map[string]any) {
+	e := audit.Event{Category: audit.CategoryAuth, Action: action, Outcome: outcome,
+		ActorType: audit.ActorAnonymous, ActorLogin: login, Details: details}
+	if acct != nil {
+		e.ActorType, e.ActorID, e.ActorLogin = acct.Type, int64(acct.ID), acct.Login
+	}
+	audit.RecordRequest(c, e)
+}
+
+func tokenFailReason(err error) string {
+	if errors.Is(err, errTokenInvalid) {
+		return "invalid_or_expired_token"
+	}
+	return "server_error"
 }
 
 // ---------------------------------------------------------------------------

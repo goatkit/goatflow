@@ -10,6 +10,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/auth"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/constants"
@@ -154,12 +155,9 @@ func handleLogout(c *gin.Context) {
 			sessionIDs[sessionID] = true
 		}
 	}
-	if token := middleware.ExtractToken(c); token != "" && !middleware.IsAPIToken(token) {
-		if jwtManager := shared.GetJWTManager(); jwtManager != nil {
-			if claims, err := jwtManager.ValidateToken(token); err == nil {
-				sessionIDs[claims.SessionID] = true
-			}
-		}
+	claims := requestClaims(c)
+	if claims != nil {
+		sessionIDs[claims.SessionID] = true
 	}
 	if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
 		for sessionID := range sessionIDs {
@@ -168,6 +166,7 @@ func handleLogout(c *gin.Context) {
 			}
 		}
 	}
+	recordLogout(c, claims)
 
 	// Clear all agent auth cookies
 	httpcookie.SetAuth(c, "access_token", "", -1)
@@ -184,6 +183,68 @@ func handleLogout(c *gin.Context) {
 	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
 
 	c.Redirect(http.StatusFound, loginRedirectPath(c))
+}
+
+// handleCustomerLogout ends the customer's session and clears its cookies.
+func handleCustomerLogout(c *gin.Context) {
+	claims := requestClaims(c)
+	if sessionSvc := shared.GetSessionService(); sessionSvc != nil {
+		// The customer session cookie, and the legacy session_id cookie.
+		for _, name := range []string{"customer_session_id", "session_id"} {
+			if sessionID, err := c.Cookie(name); err == nil && sessionID != "" {
+				_ = sessionSvc.KillSession(sessionID) // Best effort, don't fail logout
+			}
+		}
+	}
+	recordLogout(c, claims)
+	// Clear customer-specific auth cookies
+	httpcookie.SetAuth(c, "customer_auth_token", "", -1)
+	httpcookie.SetAuth(c, "customer_access_token", "", -1)
+	httpcookie.SetAuth(c, "customer_session_id", "", -1)
+	httpcookie.SetAuthState(c, "goatflow_customer_logged_in", "", -1)
+	// Also clear legacy cookies for backwards compatibility
+	httpcookie.SetAuth(c, "auth_token", "", -1)
+	httpcookie.SetAuth(c, "access_token", "", -1)
+	httpcookie.SetAuth(c, "token", "", -1)
+	httpcookie.SetAuth(c, "session_id", "", -1)
+	httpcookie.SetAuthState(c, "goatflow_logged_in", "", -1)
+	c.Header("HX-Redirect", "/customer/login")
+	c.Redirect(http.StatusSeeOther, "/customer/login")
+}
+
+// requestClaims returns the claims of the request's session token, or nil
+// when it carries none or an invalid one.
+func requestClaims(c *gin.Context) *auth.Claims {
+	token := middleware.ExtractToken(c)
+	if token == "" || middleware.IsAPIToken(token) {
+		return nil
+	}
+	jwtManager := shared.GetJWTManager()
+	if jwtManager == nil {
+		return nil
+	}
+	claims, err := jwtManager.ValidateToken(token)
+	if err != nil {
+		return nil
+	}
+	return claims
+}
+
+// recordLogout records auth.logout for the account the token belonged to.
+// A sign-out without a valid token ends no known session and is not recorded.
+func recordLogout(c *gin.Context, claims *auth.Claims) {
+	if claims == nil {
+		return
+	}
+	typ := audit.ActorAgent
+	if strings.EqualFold(claims.Role, "customer") {
+		typ = audit.ActorCustomer
+	}
+	login := claims.Login
+	if login == "" {
+		login = claims.Email
+	}
+	recordAuth(c, "auth.logout", audit.OutcomeSuccess, typ, int64(claims.UserID), login, nil) // #nosec G115 -- user ids are positive auto-increment keys
 }
 
 func loginRedirectPath(c *gin.Context) string {
@@ -279,7 +340,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		userID := session.UserID
 		username := session.Username
 		limiterKey := twoFactorLimiterKey(false, username)
-		if rejectIfLoginBlocked(c, limiterKey) {
+		if rejectSecondFactorIfBlocked(c, session, limiterKey) {
 			return
 		}
 
@@ -313,10 +374,11 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		totpService := service.NewTOTPService(db, "GoatFlow")
+		codesBefore := totpService.GetRemainingRecoveryCodes(userID)
 		valid, err := totpService.ValidateCode(userID, code)
 		if err != nil || !valid {
 			auth.DefaultLoginRateLimiter.RecordFailure(c.ClientIP(), limiterKey)
-			remaining := sessionMgr.RecordFailedAttempt(pendingToken)
+			remaining := secondFactorFailed(c, session, pendingToken, methodTOTP)
 			if remaining <= 0 {
 				sessionMgr.InvalidateSession(pendingToken)
 				httpcookie.SetAuth(c, "2fa_pending", "", -1)
@@ -335,6 +397,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		auth.DefaultLoginRateLimiter.RecordSuccess(c.ClientIP(), limiterKey)
+		method := codeMethod(c, session, codesBefore, totpService.GetRemainingRecoveryCodes(userID))
 		// 2FA verified - clear session and cookie
 		sessionMgr.InvalidateSession(pendingToken)
 		httpcookie.SetAuth(c, "2fa_pending", "", -1)
@@ -395,6 +458,7 @@ func handle2FAVerify(jwtManager *auth.JWTManager) gin.HandlerFunc {
 		}
 
 		httpcookie.SetAuth(c, "session_id", sessionID, sessionTimeout)
+		recordSecondFactorLogin(c, session, method, 0)
 
 		// Respond based on request type
 		target := agentLandingRedirect(uint(userID))

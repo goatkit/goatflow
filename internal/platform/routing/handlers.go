@@ -261,17 +261,19 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 		// Admins are session/JWT users with role "Admin" or callers the auth
 		// layer marked as admin-group members (isInAdminGroup=true: admin
 		// group membership in JWT claims, '*' / 'admin:*' scoped API tokens).
+		// Refusals and admin writes are recorded in the audit log.
 		"admin": func(c *gin.Context) {
 			if role, exists := c.Get("user_role"); exists && role == "Admin" {
-				c.Next()
+				middleware.AuditAdminWrite(c)
 				return
 			}
 			if inAdminGroup, exists := c.Get("isInAdminGroup"); exists {
 				if b, isBool := inAdminGroup.(bool); isBool && b {
-					c.Next()
+					middleware.AuditAdminWrite(c)
 					return
 				}
 			}
+			middleware.AuditAdminDenied(c)
 			c.JSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
 			c.Abort()
 		},
@@ -282,10 +284,6 @@ func RegisterExistingHandlers(registry *HandlerRegistry) {
 
 		// customer admits customer JWTs/sessions and customer API tokens.
 		"customer": middleware.RequireCustomer(),
-
-		"audit": func(c *gin.Context) {
-			c.Next()
-		},
 
 		"customer-portal":           middleware.CustomerPortalGate(shared.GetJWTManager()),
 		"customer-captive-redirect": middleware.CustomerCaptiveRedirect(shared.GetJWTManager()),

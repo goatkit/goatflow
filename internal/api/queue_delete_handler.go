@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -62,8 +63,9 @@ func HandleDeleteQueueAPI(c *gin.Context) {
 
 	// Soft delete: the queue keeps its group (queue.group_id) so it can be
 	// restored as it was.
-	var exists int
-	err = db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = ?`), queueID).Scan(&exists)
+	var name string
+	var prevValid int
+	err = db.QueryRow(database.ConvertPlaceholders(`SELECT name, valid_id FROM queue WHERE id = ?`), queueID).Scan(&name, &prevValid)
 	if errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
 		return
@@ -80,6 +82,9 @@ func HandleDeleteQueueAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to delete queue"})
 		return
 	}
+
+	recordAdminAccessEvent(c, "admin.queue.delete", "queue", audit.ID(int64(queueID)), name,
+		map[string]any{"changes": audit.Changes(map[string]any{"valid_id": prevValid}, map[string]any{"valid_id": 2})})
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Queue deleted successfully"})
 }

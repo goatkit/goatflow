@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/service"
 )
@@ -433,6 +435,11 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 			}
 		}
 
+		before, err := loadCompanyServiceAssignments(db, company.CustomerID)
+		if err != nil {
+			log.Printf("company %q services update: audit before-state: %v", company.CustomerID, err)
+		}
+
 		tx, err := db.Begin()
 		if err != nil {
 			sendErrorResponse(c, http.StatusInternalServerError, "Failed to save services")
@@ -467,10 +474,74 @@ func handleAdminUpdateCustomerCompanyServices(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		after := make(map[string]bool, len(pairs))
+		for _, p := range pairs {
+			after[companyServiceAssignmentKey(p.login, p.serviceID)] = true
+		}
+		added, removed := customerAuditSetDiff(before, after)
+		audit.RecordRequest(c, audit.Event{
+			Category:    audit.CategoryAdmin,
+			Action:      "admin.customer_company.services.update",
+			Outcome:     audit.OutcomeSuccess,
+			TargetType:  "customer_company",
+			TargetID:    company.CustomerID,
+			TargetLabel: company.Name,
+			Details:     map[string]any{"added": added, "removed": removed},
+		})
+
 		if wantsJSONResponse(c) {
 			c.JSON(http.StatusOK, gin.H{"success": true, "assigned": len(pairs)})
 			return
 		}
 		c.Redirect(http.StatusSeeOther, "/admin/customer/companies/"+url.PathEscape(company.CustomerID)+"/services?saved=1")
 	}
+}
+
+func companyServiceAssignmentKey(login string, serviceID int) string {
+	return login + ":service:" + strconv.Itoa(serviceID)
+}
+
+// loadCompanyServiceAssignments returns the company users' assignments to
+// valid services as companyServiceAssignmentKey keys, for the audit log.
+func loadCompanyServiceAssignments(db *sql.DB, customerID string) (map[string]bool, error) {
+	rows, err := db.Query(database.ConvertPlaceholders(`
+		SELECT scu.customer_user_login, scu.service_id
+		FROM service_customer_user scu
+		JOIN customer_user cu ON cu.login = scu.customer_user_login
+		JOIN service s ON s.id = scu.service_id
+		WHERE cu.customer_id = ? AND s.valid_id = 1`), customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]bool{}
+	for rows.Next() {
+		var login string
+		var serviceID int
+		if err := rows.Scan(&login, &serviceID); err != nil {
+			return out, err
+		}
+		out[companyServiceAssignmentKey(login, serviceID)] = true
+	}
+	return out, rows.Err()
+}
+
+// customerAuditSetDiff returns the sorted keys only in after (added) and only in
+// before (removed).
+func customerAuditSetDiff(before, after map[string]bool) (added, removed []string) {
+	added = make([]string, 0, len(after))
+	for k := range after {
+		if !before[k] {
+			added = append(added, k)
+		}
+	}
+	removed = make([]string, 0, len(before))
+	for k := range before {
+		if !after[k] {
+			removed = append(removed, k)
+		}
+	}
+	sort.Strings(added)
+	sort.Strings(removed)
+	return added, removed
 }

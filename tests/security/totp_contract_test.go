@@ -1164,55 +1164,6 @@ func TestVuln_V7_FailedAttemptIncrementsCounter(t *testing.T) {
 }
 
 // =============================================================================
-// V8 REGRESSION: Audit Logging Present
-// =============================================================================
-
-func TestVuln_V8_AuditEventsExist(t *testing.T) {
-	// Verify audit event types are defined
-	expectedEvents := []string{
-		"2FA_SETUP_STARTED",
-		"2FA_SETUP_COMPLETED",
-		"2FA_SETUP_FAILED",
-		"2FA_DISABLED",
-		"2FA_VERIFY_SUCCESS",
-		"2FA_VERIFY_FAILED",
-		"2FA_SESSION_CREATED",
-		"2FA_SESSION_EXPIRED",
-		"2FA_SESSION_LOCKED",
-		"2FA_RECOVERY_CODE_USED",
-	}
-
-	for _, event := range expectedEvents {
-		t.Logf("V8 REGRESSION: Audit event '%s' must be logged", event)
-	}
-
-	// The actual implementation is in internal/auth/totp_audit.go
-	assert.Len(t, expectedEvents, 10,
-		"V8 REGRESSION: All 10 audit event types must be defined")
-}
-
-func TestVuln_V8_AuditLogFormat(t *testing.T) {
-	// Verify audit log contains required fields
-	requiredFields := []string{
-		"event",     // Event type
-		"status",    // SUCCESS/FAILURE
-		"user_type", // agent/customer
-		"user",      // User identifier
-		"ip",        // Client IP
-		"details",   // Additional details
-	}
-
-	// Example log format: [SECURITY] [2FA] event=2FA_VERIFY_SUCCESS status=SUCCESS user_type=agent user=admin ip=192.168.1.1 details="2FA verification successful"
-
-	for _, field := range requiredFields {
-		t.Logf("V8 REGRESSION: Audit log must include '%s' field", field)
-	}
-
-	assert.Len(t, requiredFields, 6,
-		"V8 REGRESSION: All required audit fields must be present")
-}
-
-// =============================================================================
 // Input Validation Tests
 // =============================================================================
 

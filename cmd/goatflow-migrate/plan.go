@@ -208,8 +208,6 @@ var importPlan = []tablePlan{
 	skip("cloud_service_config", "OTRS Group cloud services"),
 	skip("system_data", "OTRS registration and system state"),
 
-	goatflowOnly("admin_action_log"),
-	goatflowOnly("admin_action_type"),
 	goatflowOnly("canned_response"),
 	goatflowOnly("canned_response_category"),
 	goatflowOnly("user_api_tokens"),

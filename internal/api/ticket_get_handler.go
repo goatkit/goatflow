@@ -255,6 +255,7 @@ func HandleGetTicketAPI(c *gin.Context) {
 	}
 	response["article_count"] = articleCount
 
+	recordTicketView(c, ticketID, ticket.TicketNumber)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    response,

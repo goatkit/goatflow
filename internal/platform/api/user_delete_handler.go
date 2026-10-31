@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -76,10 +77,11 @@ func HandleDeleteUserAPI(c *gin.Context) {
 
 	// Check if user exists and is not already deleted
 	var currentValidID int
+	var login string
 	checkQuery := database.ConvertPlaceholders(`
-		SELECT valid_id FROM users WHERE id = ?
+		SELECT valid_id, login FROM users WHERE id = ?
 	`)
-	err = db.QueryRow(checkQuery, userID).Scan(&currentValidID)
+	err = db.QueryRow(checkQuery, userID).Scan(&currentValidID, &login)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -122,6 +124,17 @@ func HandleDeleteUserAPI(c *gin.Context) {
 		})
 		return
 	}
+
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.user.delete",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "user",
+		TargetID:    audit.ID(int64(userID)),
+		TargetLabel: login,
+		Details: map[string]any{"changes": audit.Changes(
+			map[string]any{"valid_id": currentValidID}, map[string]any{"valid_id": 2})},
+	})
 
 	// Return 204 No Content on successful deletion
 	c.Status(http.StatusNoContent)

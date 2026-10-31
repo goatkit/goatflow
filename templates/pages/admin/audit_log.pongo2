@@ -1,0 +1,292 @@
+{% extends "layouts/base.pongo2" %}
+
+{% block title %}{{ t("admin_audit_log.title")|default:"Audit Log" }} - GoatFlow Admin{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 min-h-screen">
+    <header class="mb-8">
+        <div class="sm:flex sm:items-center sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold gk-heading">
+                    <span class="gk-text-gradient">{{ t("admin_audit_log.title")|default:"Audit Log" }}</span>
+                </h1>
+                <p class="mt-2 text-sm" style="color: var(--gk-text-muted);">
+                    {{ t("admin_audit_log.description")|default:"Sign-ins, account and credential changes, admin changes and, when enabled, read access." }}
+                </p>
+            </div>
+            <div class="mt-4 sm:mt-0">
+                <a href="/admin" class="gk-btn-secondary">
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {{ t("common.back")|default:"Back" }}
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div id="audit-log-i18n" class="hidden"
+        data-no-events="{{ t("admin_audit_log.no_events")|default:"No audit events match these filters." }}"
+        data-load-failed="{{ t("admin_audit_log.load_failed")|default:"Failed to load the audit log" }}"
+        data-saved="{{ t("admin_audit_log.saved")|default:"Audit settings saved" }}"
+        data-save-failed="{{ t("admin_audit_log.save_failed")|default:"Failed to save audit settings" }}"
+        data-details="{{ t("admin_audit_log.details")|default:"Details" }}"
+        data-page="{{ t("admin_audit_log.page")|default:"Page" }}"
+        data-of="{{ t("admin_audit_log.of")|default:"of" }}"
+        data-events="{{ t("admin_audit_log.events")|default:"events" }}"
+        data-cat-auth="{{ t("admin_audit_log.category_auth")|default:"Sign-in and credentials" }}"
+        data-cat-admin="{{ t("admin_audit_log.category_admin")|default:"Administration" }}"
+        data-cat-access="{{ t("admin_audit_log.category_access")|default:"Read access" }}"
+        data-cat-system="{{ t("admin_audit_log.category_system")|default:"System" }}"
+        data-out-success="{{ t("admin_audit_log.outcome_success")|default:"Success" }}"
+        data-out-failure="{{ t("admin_audit_log.outcome_failure")|default:"Failure" }}"
+        data-out-denied="{{ t("admin_audit_log.outcome_denied")|default:"Denied" }}"></div>
+
+    <div class="space-y-6">
+        <form id="auditFilterForm" class="gk-card-glow rounded-lg p-6">
+            <h2 class="text-lg font-medium mb-4" style="color: var(--gk-text-primary);">{{ t("admin_audit_log.filters")|default:"Filters" }}</h2>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                    <label for="af-from" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_audit_log.from")|default:"From" }}</label>
+                    <input type="date" id="af-from" name="from" class="gk-input-neon w-full">
+                </div>
+                <div>
+                    <label for="af-to" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_audit_log.to")|default:"To" }}</label>
+                    <input type="date" id="af-to" name="to" class="gk-input-neon w-full">
+                </div>
+                <div>
+                    <label for="af-category" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_audit_log.category")|default:"Category" }}</label>
+                    <select id="af-category" name="category" class="gk-select-neon w-full">
+                        <option value="">{{ t("admin_audit_log.any")|default:"Any" }}</option>
+                        {% for cat in Categories %}
+                        <option value="{{ cat }}" data-label-key="cat-{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="af-outcome" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_audit_log.outcome")|default:"Outcome" }}</label>
+                    <select id="af-outcome" name="outcome" class="gk-select-neon w-full">
+                        <option value="">{{ t("admin_audit_log.any")|default:"Any" }}</option>
+                        {% for out in Outcomes %}
+                        <option value="{{ out }}" data-label-key="out-{{ out }}">{{ out }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="af-action" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_audit_log.action")|default:"Action" }}</label>
+                    <input type="text" id="af-action" name="action" class="gk-input-neon w-full" maxlength="100" placeholder="{{ t('admin_audit_log.action_placeholder')|default:'e.g. auth.login' }}">
+                </div>
+                <div>
+                    <label for="af-actor" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_audit_log.actor")|default:"Actor" }}</label>
+                    <input type="text" id="af-actor" name="actor" class="gk-input-neon w-full" maxlength="255" placeholder="{{ t('admin_audit_log.actor_placeholder')|default:'Login name' }}">
+                </div>
+                <div>
+                    <label for="af-target-type" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_audit_log.target_type")|default:"Target type" }}</label>
+                    <input type="text" id="af-target-type" name="target_type" class="gk-input-neon w-full" maxlength="100" placeholder="{{ t('admin_audit_log.target_type_placeholder')|default:'e.g. ticket, user' }}">
+                </div>
+                <div>
+                    <label for="af-target-id" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin_audit_log.target_id")|default:"Target ID" }}</label>
+                    <input type="text" id="af-target-id" name="target_id" class="gk-input-neon w-full" maxlength="100">
+                </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-3 mt-4">
+                <p class="text-xs" style="color: var(--gk-text-muted);">
+                    {{ t("admin_audit_log.times_in")|default:"Times are shown in" }} {{ TimeZone }}.
+                    {{ t("admin_audit_log.export_help")|default:"The export uses the current filters, holds at most 100000 events and is itself recorded." }}
+                </p>
+                <div class="flex items-center gap-3">
+                    <button type="reset" class="gk-btn-secondary">{{ t("admin_audit_log.reset")|default:"Reset" }}</button>
+                    <a id="audit-export" href="/admin/api/audit-log/export.csv" class="gk-btn-secondary">{{ t("admin_audit_log.export_csv")|default:"Export CSV" }}</a>
+                    <button type="submit" class="gk-btn-neon">{{ t("admin_audit_log.apply")|default:"Apply" }}</button>
+                </div>
+            </div>
+        </form>
+
+        <section class="gk-card-glow rounded-lg p-6">
+            <div class="overflow-x-auto rounded-lg" style="border: 1px solid var(--gk-border-default);">
+                <table class="gk-table" id="audit-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ t("admin_audit_log.time")|default:"Time" }}</th>
+                            <th scope="col">{{ t("admin_audit_log.category")|default:"Category" }}</th>
+                            <th scope="col">{{ t("admin_audit_log.action")|default:"Action" }}</th>
+                            <th scope="col">{{ t("admin_audit_log.outcome")|default:"Outcome" }}</th>
+                            <th scope="col">{{ t("admin_audit_log.actor")|default:"Actor" }}</th>
+                            <th scope="col">{{ t("admin_audit_log.ip")|default:"IP address" }}</th>
+                            <th scope="col">{{ t("admin_audit_log.target")|default:"Target" }}</th>
+                            <th scope="col">{{ t("admin_audit_log.details")|default:"Details" }}</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-rows"></tbody>
+                </table>
+            </div>
+            <div class="flex items-center justify-between mt-4">
+                <p id="audit-page-info" class="text-sm" style="color: var(--gk-text-muted);"></p>
+                <div class="flex items-center gap-3">
+                    <button type="button" id="audit-prev" class="gk-btn-secondary" disabled>{{ t("admin_audit_log.previous")|default:"Previous" }}</button>
+                    <button type="button" id="audit-next" class="gk-btn-secondary" disabled>{{ t("admin_audit_log.next")|default:"Next" }}</button>
+                </div>
+            </div>
+        </section>
+
+        <form id="auditSettingsForm" class="gk-card-glow rounded-lg p-6 space-y-6 max-w-3xl">
+            <h2 class="text-lg font-medium" style="color: var(--gk-text-primary);">{{ t("admin_audit_log.settings")|default:"Settings" }}</h2>
+            <div>
+                <label for="as-retention" class="block text-sm font-medium mb-2" style="color: var(--gk-text-secondary);">{{ t("admin_audit_log.retention_days")|default:"Retention (days)" }}</label>
+                <input type="number" id="as-retention" class="gk-input-neon w-full sm:w-48" min="0" max="{{ MaxRetentionDays }}" step="1" value="{{ Settings.RetentionDays }}" required>
+                <p class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("admin_audit_log.retention_help")|default:"Events older than this are deleted once a day. 0 keeps them forever." }} (0-{{ MaxRetentionDays }})</p>
+            </div>
+            <div>
+                <label class="inline-flex items-center gap-2 text-sm" style="color: var(--gk-text-secondary);">
+                    <input type="checkbox" id="as-read-access" class="h-4 w-4 rounded" style="accent-color: var(--gk-primary);" {% if Settings.RecordReadAccess %}checked{% endif %}>
+                    {{ t("admin_audit_log.record_read_access")|default:"Record read access" }}
+                </label>
+                <p class="text-xs mt-1" style="color: var(--gk-text-muted);">{{ t("admin_audit_log.record_read_access_help")|default:"Also record ticket views, attachment downloads and exports. This adds one event per view." }}</p>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="gk-btn-neon">{{ t("common.save")|default:"Save" }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function () {
+    const I18N = document.getElementById('audit-log-i18n').dataset;
+    const filterForm = document.getElementById('auditFilterForm');
+    const rowsEl = document.getElementById('audit-rows');
+    const prevBtn = document.getElementById('audit-prev');
+    const nextBtn = document.getElementById('audit-next');
+    const pageInfo = document.getElementById('audit-page-info');
+    const exportLink = document.getElementById('audit-export');
+    let page = 1;
+
+    function camel(key) {
+        return key.replace(/-([a-z])/g, function (_, ch) { return ch.toUpperCase(); });
+    }
+    function label(prefix, value) {
+        return I18N[camel(prefix + '-' + value)] || value;
+    }
+    filterForm.querySelectorAll('option[data-label-key]').forEach(function (opt) {
+        opt.textContent = I18N[camel(opt.dataset.labelKey)] || opt.textContent;
+    });
+
+    function filterQuery() {
+        const params = new URLSearchParams();
+        new FormData(filterForm).forEach(function (value, key) {
+            const v = String(value).trim();
+            if (v !== '') { params.set(key, v); }
+        });
+        return params;
+    }
+
+    function cell(text, mono) {
+        const td = document.createElement('td');
+        td.textContent = text || '';
+        if (mono) { td.classList.add('font-mono', 'text-xs'); }
+        return td;
+    }
+
+    function render(data) {
+        rowsEl.replaceChildren();
+        if (!data.events.length) {
+            const tr = document.createElement('tr');
+            const td = cell(I18N.noEvents);
+            td.colSpan = 8;
+            td.style.color = 'var(--gk-text-muted)';
+            tr.appendChild(td);
+            rowsEl.appendChild(tr);
+        }
+        data.events.forEach(function (ev) {
+            const tr = document.createElement('tr');
+            tr.className = 'audit-row';
+            const time = cell(ev.time);
+            time.title = ev.time_utc;
+            time.classList.add('whitespace-nowrap');
+            tr.appendChild(time);
+            tr.appendChild(cell(label('cat', ev.category)));
+            tr.appendChild(cell(ev.action, true));
+            const outcome = cell(label('out', ev.outcome));
+            outcome.style.color = ev.outcome === 'success' ? 'var(--gk-success)' : (ev.outcome === 'denied' ? 'var(--gk-warning)' : 'var(--gk-error)');
+            tr.appendChild(outcome);
+            const actor = cell(ev.actor_type + (ev.actor_login ? ': ' + ev.actor_login : (ev.actor_id ? ' #' + ev.actor_id : '')));
+            if (ev.user_agent) { actor.title = ev.user_agent; }
+            tr.appendChild(actor);
+            tr.appendChild(cell(ev.ip, true));
+            const target = [ev.target_type, ev.target_id].filter(Boolean).join(' #');
+            tr.appendChild(cell(target + (ev.target_label ? ' (' + ev.target_label + ')' : '')));
+            const detailsCell = document.createElement('td');
+            if (ev.details) {
+                const d = document.createElement('details');
+                const s = document.createElement('summary');
+                s.textContent = I18N.details;
+                s.className = 'cursor-pointer text-sm';
+                const pre = document.createElement('pre');
+                pre.className = 'text-xs mt-2 p-2 rounded overflow-x-auto max-w-md';
+                pre.style.background = 'var(--gk-bg-tertiary)';
+                pre.textContent = ev.details;
+                d.appendChild(s);
+                d.appendChild(pre);
+                detailsCell.appendChild(d);
+            }
+            tr.appendChild(detailsCell);
+            rowsEl.appendChild(tr);
+        });
+        const pages = Math.max(1, Math.ceil(data.total / data.page_size));
+        pageInfo.textContent = I18N.page + ' ' + data.page + ' ' + I18N.of + ' ' + pages + ' (' + data.total + ' ' + I18N.events + ')';
+        prevBtn.disabled = data.page <= 1;
+        nextBtn.disabled = data.page >= pages;
+    }
+
+    function load() {
+        const params = filterQuery();
+        exportLink.href = '/admin/api/audit-log/export.csv' + (params.toString() ? '?' + params.toString() : '');
+        params.set('page', String(page));
+        fetch('/admin/api/audit-log?' + params.toString(), { headers: { 'Accept': 'application/json' } })
+            .then(function (response) { return response.json().catch(function () { return {}; }); })
+            .then(function (result) {
+                if (result.success) {
+                    render(result);
+                } else {
+                    window.showToast(result.error || I18N.loadFailed, 'error');
+                }
+            })
+            .catch(function () { window.showToast(I18N.loadFailed, 'error'); });
+    }
+
+    filterForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        page = 1;
+        load();
+    });
+    filterForm.addEventListener('reset', function () {
+        setTimeout(function () { page = 1; load(); }, 0);
+    });
+    prevBtn.addEventListener('click', function () { if (page > 1) { page--; load(); } });
+    nextBtn.addEventListener('click', function () { page++; load(); });
+
+    document.getElementById('auditSettingsForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        fetch('/admin/api/audit-log/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                retention_days: parseInt(document.getElementById('as-retention').value, 10),
+                record_read_access: document.getElementById('as-read-access').checked
+            })
+        })
+            .then(function (response) { return response.json().catch(function () { return {}; }); })
+            .then(function (result) {
+                if (result.success) {
+                    window.showToast(I18N.saved, 'success');
+                } else {
+                    window.showToast(result.error || I18N.saveFailed, 'error');
+                }
+            })
+            .catch(function () { window.showToast(I18N.saveFailed, 'error'); });
+    });
+
+    load();
+})();
+</script>
+{% endblock %}

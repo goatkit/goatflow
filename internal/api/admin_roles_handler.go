@@ -10,6 +10,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -241,6 +242,11 @@ func handleAdminRoleCreate(c *gin.Context) {
 		}
 	}
 
+	recordAdminAccessEvent(c, "admin.role.create", "role", audit.ID(id64), input.Name,
+		map[string]any{"fields": audit.Snapshot(map[string]any{
+			"name": input.Name, "comments": comments, "valid_id": input.ValidID, "permissions": input.Permissions,
+		})})
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Role created successfully",
@@ -379,6 +385,8 @@ func handleAdminRoleUpdate(c *gin.Context) {
 		validIDVal = 1 // Default to valid if not specified
 	}
 
+	before := roleAuditState(db, id, len(input.Permissions) > 0)
+
 	// Update the role
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE roles
@@ -421,10 +429,52 @@ func handleAdminRoleUpdate(c *gin.Context) {
 		}
 	}
 
+	after := roleAuditState(db, id, len(input.Permissions) > 0)
+	name, _ := after["name"].(string)
+	recordAdminAccessEvent(c, "admin.role.update", "role", audit.ID(int64(id)), name,
+		map[string]any{"changes": audit.Changes(before, after)})
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Role updated successfully",
 	})
+}
+
+// roleAuditState returns a role's name, comments and valid_id and, when
+// withPermissions is set, its group permissions as "group:<name>.<permission>"
+// keys, for audit changes. It is empty when the role cannot be read.
+func roleAuditState(db *sql.DB, id int, withPermissions bool) map[string]any {
+	state := map[string]any{}
+	if role, err := loadRoleByID(db, id); err == nil {
+		state["name"] = role.Name
+		state["comments"] = ""
+		if role.Comments != nil {
+			state["comments"] = *role.Comments
+		}
+		state["valid_id"] = role.ValidID
+	}
+	if withPermissions {
+		for k, v := range roleGroupPermissionState(db, id) {
+			state[k] = v
+		}
+	}
+	return state
+}
+
+// roleGroupPermissionState returns a role's granted group permissions as
+// "group:<name>.<permission>" keys, for audit changes.
+func roleGroupPermissionState(db *sql.DB, roleID int) map[string]any {
+	return permissionStateForAudit(db, `
+		SELECT g.name, gr.permission_key FROM group_role gr
+		JOIN groups g ON g.id = gr.group_id
+		WHERE gr.role_id = ? AND gr.permission_value = 1`, "group:", uint(roleID))
+}
+
+// roleNameForAudit returns a role's name for an audit label, or "".
+func roleNameForAudit(db *sql.DB, id int) string {
+	var name string
+	_ = db.QueryRow(database.ConvertPlaceholders("SELECT name FROM roles WHERE id = ?"), id).Scan(&name)
+	return name
 }
 
 // saveRolePermissions saves role permissions to the group_role table.
@@ -641,6 +691,8 @@ func handleAdminRoleDelete(c *gin.Context) {
 		return
 	}
 
+	before := roleAuditState(db, id, false)
+
 	// Soft delete by setting valid_id = 2
 	result, err := db.Exec(database.ConvertPlaceholders(`
 		UPDATE roles
@@ -667,6 +719,11 @@ func handleAdminRoleDelete(c *gin.Context) {
 		})
 		return
 	}
+
+	name, _ := before["name"].(string)
+	recordAdminAccessEvent(c, "admin.role.delete", "role", audit.ID(int64(id)), name,
+		map[string]any{"changes": audit.Changes(
+			map[string]any{"valid_id": before["valid_id"]}, map[string]any{"valid_id": 2})})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -931,6 +988,9 @@ func handleAdminRoleUserAdd(c *gin.Context) {
 		return
 	}
 
+	recordAdminAccessEvent(c, "admin.role.members.add", "role", audit.ID(int64(roleID)), roleNameForAudit(db, roleID),
+		map[string]any{"user_id": input.UserID, "login": agentLoginForAudit(db, uint(input.UserID)), "already_member": existing > 0})
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "User added to role successfully",
@@ -993,6 +1053,9 @@ func handleAdminRoleUserRemove(c *gin.Context) {
 		})
 		return
 	}
+
+	recordAdminAccessEvent(c, "admin.role.members.remove", "role", audit.ID(int64(roleID)), roleNameForAudit(db, roleID),
+		map[string]any{"user_id": userID, "login": agentLoginForAudit(db, uint(userID))})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -1128,6 +1191,8 @@ func handleAdminRolePermissionsUpdate(c *gin.Context) {
 		return
 	}
 
+	before := roleGroupPermissionState(db, id)
+
 	// Begin transaction
 	tx, err := db.Begin()
 	if err != nil {
@@ -1185,6 +1250,9 @@ func handleAdminRolePermissionsUpdate(c *gin.Context) {
 		})
 		return
 	}
+
+	recordAdminAccessEvent(c, "admin.role.permissions.update", "role", audit.ID(int64(id)), roleNameForAudit(db, id),
+		map[string]any{"changes": audit.Changes(before, roleGroupPermissionState(db, id))})
 
 	// Return success for HTMX or redirect for standard form
 	if c.GetHeader("HX-Request") != "" {

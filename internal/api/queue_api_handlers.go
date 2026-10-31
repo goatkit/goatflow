@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -203,12 +204,23 @@ func HandleAPIQueueStatus(c *gin.Context) {
 		return
 	}
 
+	var name string
+	var prevValid int
+	_ = db.QueryRow(database.ConvertPlaceholders(`SELECT name, valid_id FROM queue WHERE id = ?`), id).Scan(&name, &prevValid)
+
 	// Update queue status
 	_, err = db.Exec(database.ConvertPlaceholders(`UPDATE queue SET valid_id = ? WHERE id = ?`), req.ValidID, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update queue status"})
 		return
 	}
+
+	var from any
+	if prevValid != 0 {
+		from = prevValid
+	}
+	recordAdminAccessEvent(c, "admin.queue.status", "queue", audit.ID(int64(id)), name,
+		map[string]any{"changes": audit.Changes(map[string]any{"valid_id": from}, map[string]any{"valid_id": req.ValidID})})
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "Queue status updated"})
 }

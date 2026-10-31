@@ -41,7 +41,7 @@ Each version has an `.up.sql` and a `.down.sql` file. Both folders hold versions
 | 000005 | `canned_response` | `canned_response`, `canned_response_category` |
 | 000006 | `znuny_color_columns` | `color` column on `ticket_priority` and `ticket_state` (as in Znuny) |
 | 000007 | `api_tokens` | `user_api_tokens` |
-| 000008 | `admin_audit_log` | `admin_action_type`, `admin_action_log` |
+| 000008 | `admin_audit_log` | `admin_action_type`, `admin_action_log` (dropped by 000035) |
 | 000009 | `custom_fields` | `gk_custom_field_def`, `gk_custom_field_value` |
 | 000010 | `plugin_uis` | `gk_plugin_ui` |
 | 000011 | `organisations` | `gk_organisation`, `gk_user_organisation`, `sysconfig_org` |
@@ -64,6 +64,7 @@ Each version has an `.up.sql` and a `.down.sql` file. Both folders hold versions
 | 000028 | `webhooks` | `gk_webhook`, `gk_webhook_delivery`, `gk_webhook_event_cursor` |
 | 000029 | `otrs_default_lookups` | OTRS/Znuny default lookup rows a fresh install lacked (ticket states, lock types, history types, link types, auto response types) |
 | 000031 | `scheduler_job_lock` | `gk_scheduler_job_lock`: one row per scheduled job; replicas claim each run there so a job tick runs once |
+| 000035 | `audit_event` | `gk_audit_event` (see [SECURITY.md](../SECURITY.md#audit)); copies the `admin_action_log` rows into it and drops `admin_action_log` and `admin_action_type` |
 
 To check that both folders still match:
 

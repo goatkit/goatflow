@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -104,8 +105,9 @@ func HandleAssignQueueGroupAPI(c *gin.Context) {
 
 	// Existence is checked up front: MySQL reports 0 affected rows for an
 	// UPDATE that changes nothing, so RowsAffected cannot detect a missing queue.
-	var exists int
-	err = db.QueryRow(database.ConvertPlaceholders(`SELECT 1 FROM queue WHERE id = ?`), queueID).Scan(&exists)
+	var queueName string
+	var prevGroupID int
+	err = db.QueryRow(database.ConvertPlaceholders(`SELECT name, group_id FROM queue WHERE id = ?`), queueID).Scan(&queueName, &prevGroupID)
 	if errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "Queue not found"})
 		return
@@ -127,6 +129,10 @@ func HandleAssignQueueGroupAPI(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to assign group"})
 		return
 	}
+
+	recordAdminAccessEvent(c, "admin.queue.groups.add", "queue", audit.ID(int64(queueID)), queueName,
+		map[string]any{"changes": audit.Changes(
+			map[string]any{"group_id": prevGroupID}, map[string]any{"group_id": req.GroupID}), "group_name": groupName})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

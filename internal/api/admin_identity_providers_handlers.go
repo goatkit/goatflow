@@ -3,8 +3,10 @@ package api
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -18,6 +20,7 @@ import (
 	"github.com/flosch/pongo2/v6"
 	"github.com/gin-gonic/gin"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/models"
 	"github.com/goatkit/goatflow/internal/platform/routing"
@@ -198,6 +201,15 @@ func handleAdminIdentityProviderCreate(c *gin.Context) {
 		return
 	}
 
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.identity_provider.create",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "identity_provider",
+		TargetID:    strconv.FormatUint(uint64(p.ID), 10),
+		TargetLabel: p.Name,
+		Details:     map[string]any{"fields": audit.Snapshot(idpAuditFields(p))},
+	})
 	c.JSON(http.StatusOK, gin.H{"success": true, "id": p.ID})
 }
 
@@ -343,6 +355,7 @@ func handleAdminIdentityProviderUpdate(c *gin.Context) {
 		sendErrorResponse(c, http.StatusNotFound, "Identity provider not found")
 		return
 	}
+	before := idpAuditFields(p)
 
 	p.IdPMetadataXML = idpMetadataXML
 	p.Name = name
@@ -377,6 +390,15 @@ func handleAdminIdentityProviderUpdate(c *gin.Context) {
 		return
 	}
 
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.identity_provider.update",
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "identity_provider",
+		TargetID:    strconv.FormatUint(uint64(p.ID), 10),
+		TargetLabel: p.Name,
+		Details:     map[string]any{"changes": audit.Changes(before, idpAuditFields(p))},
+	})
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -396,11 +418,24 @@ func handleAdminIdentityProviderDelete(c *gin.Context) {
 	}
 
 	repo := repository.NewIdentityProviderRepository(db)
+	existing, getErr := repo.GetProvider(uint(id))
 	if err := repo.DeleteProvider(uint(id)); err != nil {
 		sendErrorResponse(c, http.StatusInternalServerError, "Failed to delete provider")
 		return
 	}
 
+	ev := audit.Event{
+		Category:   audit.CategoryAdmin,
+		Action:     "admin.identity_provider.delete",
+		Outcome:    audit.OutcomeSuccess,
+		TargetType: "identity_provider",
+		TargetID:   strconv.FormatUint(id, 10),
+	}
+	if getErr == nil && existing != nil {
+		ev.TargetLabel = existing.Name
+		ev.Details = map[string]any{"fields": audit.Snapshot(idpAuditFields(existing))}
+	}
+	audit.RecordRequest(c, ev)
 	c.JSON(http.StatusOK, gin.H{"success": true})
 }
 
@@ -432,6 +467,7 @@ func handleAdminIdentityProviderToggle(c *gin.Context) {
 		return
 	}
 
+	wasEnabled := p.Enabled
 	if action == "enable" {
 		p.Enabled = true
 	} else {
@@ -445,7 +481,55 @@ func handleAdminIdentityProviderToggle(c *gin.Context) {
 		return
 	}
 
+	audit.RecordRequest(c, audit.Event{
+		Category:    audit.CategoryAdmin,
+		Action:      "admin.identity_provider." + action,
+		Outcome:     audit.OutcomeSuccess,
+		TargetType:  "identity_provider",
+		TargetID:    strconv.FormatUint(uint64(p.ID), 10),
+		TargetLabel: p.Name,
+		Details: map[string]any{"changes": audit.Changes(
+			map[string]any{"enabled": wasEnabled}, map[string]any{"enabled": p.Enabled})},
+	})
 	c.JSON(http.StatusOK, gin.H{"success": true, "enabled": p.Enabled})
+}
+
+// idpAuditFields lists a provider's settings for the audit log. The client
+// secret and private key keep sensitive names so audit redacts them; the
+// certificate and IdP metadata appear only as digests.
+func idpAuditFields(p *models.IdentityProvider) map[string]any {
+	var orgID any
+	if p.OrgID != nil {
+		orgID = *p.OrgID
+	}
+	return map[string]any{
+		"name":                p.Name,
+		"provider_type":       p.ProviderType,
+		"client_id":           p.ClientID,
+		"client_secret":       p.ClientSecret,
+		"discovery_url":       p.DiscoveryURL,
+		"signing_cert_sha256": idpAuditDigest(p.SigningCert),
+		"private_key":         p.PrivateKey,
+		"entity_id":           p.EntityID,
+		"idp_metadata_sha256": idpAuditDigest(p.IdPMetadataXML),
+		"acs_url":             p.ACSURL,
+		"scopes":              p.Scopes,
+		"user_claim_email":    p.UserClaimEmail,
+		"user_claim_name":     p.UserClaimName,
+		"user_claim_groups":   p.UserClaimGroups,
+		"org_id":              orgID,
+		"enabled":             p.Enabled,
+		"auto_provision":      p.AutoProvision,
+		"user_table":          p.UserTable,
+	}
+}
+
+func idpAuditDigest(s string) string {
+	if s == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:8])
 }
 
 // validateIdPURL checks an admin-supplied URL the server will fetch (OIDC

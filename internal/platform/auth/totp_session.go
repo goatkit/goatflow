@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -13,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/database"
 )
 
@@ -158,14 +160,14 @@ func (m *TOTPSessionManager) ValidateAndGetSession(token, clientIP, userAgent st
 
 	// Check expiration
 	if time.Now().After(session.ExpiresAt) {
-		log.Printf("[SECURITY] 2FA session expired for user %d/%s", session.UserID, session.UserLogin)
+		session.audit(clientIP, userAgent, audit.OutcomeFailure, "session_expired", nil)
 		m.InvalidateSession(token)
 		return nil
 	}
 
 	// Check max attempts (V7)
 	if session.Attempts >= session.MaxAttempts {
-		log.Printf("[SECURITY] 2FA session locked due to max attempts for user %d/%s", session.UserID, session.UserLogin)
+		session.audit(clientIP, userAgent, audit.OutcomeDenied, "locked", nil)
 		m.InvalidateSession(token)
 		return nil
 	}
@@ -173,8 +175,7 @@ func (m *TOTPSessionManager) ValidateAndGetSession(token, clientIP, userAgent st
 	// T3: Strict IP binding - reject if client IP changed since session creation
 	// This prevents session hijacking during the 2FA window
 	if session.ClientIP != "" && session.ClientIP != clientIP {
-		log.Printf("[SECURITY] 2FA session REJECTED - IP mismatch: expected=%s, got=%s, user=%d/%s",
-			session.ClientIP, clientIP, session.UserID, session.UserLogin)
+		session.audit(clientIP, userAgent, audit.OutcomeDenied, "ip_mismatch", map[string]any{"session_ip": session.ClientIP})
 		m.InvalidateSession(token)
 		return nil
 	}
@@ -188,6 +189,35 @@ func (m *TOTPSessionManager) ValidateAndGetSession(token, clientIP, userAgent st
 	}
 
 	return session
+}
+
+// AuditActor returns the audit actor type, id and login of the account the
+// session belongs to. Pending customer sessions carry no id.
+func (s *PendingTOTPSession) AuditActor() (string, int64, string) {
+	if s.IsCustomer {
+		return audit.ActorCustomer, 0, s.UserLogin
+	}
+	return audit.ActorAgent, int64(s.UserID), s.Username
+}
+
+// audit records an auth.2fa.verify refused by the session checks.
+func (s *PendingTOTPSession) audit(clientIP, userAgent, outcome, reason string, details map[string]any) {
+	typ, id, login := s.AuditActor()
+	if details == nil {
+		details = map[string]any{}
+	}
+	details["reason"] = reason
+	audit.Record(context.Background(), audit.Event{
+		Category:   audit.CategoryAuth,
+		Action:     "auth.2fa.verify",
+		Outcome:    outcome,
+		ActorType:  typ,
+		ActorID:    id,
+		ActorLogin: login,
+		IP:         clientIP,
+		UserAgent:  userAgent,
+		Details:    details,
+	})
 }
 
 // isSimilarUserAgent checks if two user agents are "similar enough" (same browser/OS family).

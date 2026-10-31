@@ -8,6 +8,29 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Audit log.** Security-relevant events are recorded in one table, `gk_audit_event`, and listed
+  at Admin -> Audit Log (`/admin/audit-log`) with filters and CSV export. Before, only admin 2FA
+  overrides were stored; 2FA events went to the application log and sign-ins, password changes,
+  API tokens and admin changes were not recorded at all. Now recorded:
+  - **Sign-in:** success and failure for password, LDAP, OIDC, SAML and passkey sign-in (with
+    the reason for a failure), rate-limited attempts, the 2FA step (including locks, recovery
+    code use and IP mismatch) and sign-out.
+  - **Credentials:** 2FA and passkey changes, password changes, reset requests and resets, admin
+    password resets, API tokens created and revoked, sessions ended by an administrator.
+  - **Admin changes:** every write through an admin page or admin API, and every admin request
+    refused to a signed-in user. Users, groups, roles, permissions, queues, customers,
+    organisations, identity providers, webhooks, plugins, PostMaster filters and every
+    dynamic-module page (System Configuration, mail accounts, ...) record which fields changed.
+  - **Read access (opt-in):** with "Record read access" on, ticket views, attachment downloads
+    and statistics exports. Exports of the audit log itself are always recorded.
+
+  Secrets are never stored: a changed password, token, key or client secret shows as
+  `[redacted]`. Events are kept for 365 days by default (0 keeps them forever), purged daily by
+  the runner's `audit-retention` job. Each event is also written to the application log as an
+  `audit` line. Migration 000035 copies the existing `admin_action_log` rows into the new table
+  and drops `admin_action_log` and `admin_action_type`; the Audit Logs dashboard card now opens
+  the new page, and Recent Activity reads from it. Tamper evidence (hash chaining) is left to
+  the goatkit-audit plugin.
 - **Agents can set their time zone.** Profile → Preferences has a Timezone field (IANA name,
   with the browser's zone pre-filled until one is saved; empty follows the instance
   `app.timezone`), stored as the `UserTimeZone` preference and served by `GET`/`POST

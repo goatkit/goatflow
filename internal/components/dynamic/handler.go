@@ -1103,6 +1103,8 @@ func (h *DynamicModuleHandler) handleCreate(c *gin.Context, config *ModuleConfig
 		}
 	}
 
+	recordModuleChange(c, config, "create", fmt.Sprint(newID), nil, h.auditState(config, newID), nil)
+
 	c.JSON(http.StatusCreated, gin.H{
 		"success": true,
 		"message": fmt.Sprintf("%s created successfully", config.Module.Singular),
@@ -1135,6 +1137,8 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 	if currentUserID == 0 {
 		currentUserID = 1 // Default to admin user if not found
 	}
+
+	before := h.auditState(config, id)
 
 	// Build UPDATE query
 	sets := []string{}
@@ -1219,6 +1223,10 @@ func (h *DynamicModuleHandler) handleUpdate(c *gin.Context, config *ModuleConfig
 		// If groups field wasn't submitted, preserve existing group memberships
 	}
 
+	after := h.auditState(config, id)
+	markPasswordChanges(config, data, after)
+	recordModuleChange(c, config, "update", id, before, after, nil)
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": fmt.Sprintf("%s updated successfully", config.Module.Singular),
@@ -1231,6 +1239,7 @@ func (h *DynamicModuleHandler) handleDelete(c *gin.Context, config *ModuleConfig
 	lang := middleware.GetLanguage(c)
 	config = h.resolveConfigTranslations(config, lang)
 
+	before := h.auditState(config, id)
 	var query string
 
 	if config.Features.SoftDelete {
@@ -1249,6 +1258,7 @@ func (h *DynamicModuleHandler) handleDelete(c *gin.Context, config *ModuleConfig
 	if config.Features.SoftDelete {
 		action = "deactivated"
 	}
+	recordModuleChange(c, config, "delete", id, nil, before, map[string]any{"soft_delete": config.Features.SoftDelete})
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -2070,6 +2080,10 @@ func (h *DynamicModuleHandler) handleReset(c *gin.Context, config *ModuleConfig,
 // handleSysconfigReset handles sysconfig reset to default.
 func (h *DynamicModuleHandler) handleSysconfigReset(c *gin.Context, config *ModuleConfig, configName string) {
 	// Remove any custom value from sysconfig_modified table
+	var modified, def sql.NullString
+	_ = h.queryRow(`SELECT effective_value FROM sysconfig_modified WHERE name = ?`, configName).Scan(&modified) //nolint:errcheck // audit context only
+	_ = h.queryRow(`SELECT effective_value FROM sysconfig_default WHERE name = ?`, configName).Scan(&def)       //nolint:errcheck // audit context only
+
 	query := `DELETE FROM sysconfig_modified WHERE name = ?`
 
 	_, err := h.exec(query, configName)
@@ -2077,6 +2091,10 @@ func (h *DynamicModuleHandler) handleSysconfigReset(c *gin.Context, config *Modu
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	recordModuleChange(c, config, "reset", configName,
+		map[string]any{"name": configName, "effective_value": nullValue(modified)},
+		map[string]any{"name": configName, "effective_value": nullValue(def)}, nil)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
