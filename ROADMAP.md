@@ -264,7 +264,7 @@ Already done towards 1.0.0:
 
 - [x] Security response policy and CVE process (`SECURITY.md`: GitHub private reporting with email fallback, response targets by severity, advisory and CVE flow)
 - General rate limit for JWT/session API calls — *login, second-factor codes, passkey, self-service forms, API tokens (per-token hourly limit), plugin webhooks and public plugin UIs are already rate limited*
-- Dependency vulnerability scanning in CI (`govulncheck`, failing the build on known-exploitable findings) — *Dependabot is already active; all open alerts were cleared in 0.10.0*
+- Dependency vulnerability scanning in CI (`govulncheck`, failing the build on known-exploitable findings) — *Dependabot alerts are on and `.github/dependabot.yml` opens weekly update PRs against `dev`; govulncheck and `bun audit` were clean after the October dependency update*
 - OWASP Top 10 review, with findings fixed or recorded
 - Security hardening guide (deployment, secrets, TLS, headers, backups)
 - Book the third-party security audit for the 1.0.0 release candidate

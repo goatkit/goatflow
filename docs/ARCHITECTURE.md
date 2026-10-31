@@ -77,7 +77,7 @@ This separation enables:
 
 ### Application Server (goats binary)
 
-- **Language**: Go 1.25
+- **Language**: Go 1.26
 - **Framework**: Gin
 - **Template Engine**: Pongo2
 - **Build**: Multi-stage Docker build with Go compiler

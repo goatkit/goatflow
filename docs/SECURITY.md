@@ -230,8 +230,14 @@ From `.github/workflows/test.yml`:
 | Tests | Route authorization matrix test, platform boundary lint |
 
 Outside the repository's workflows, Semgrep managed scans cover the repository: Semgrep Code
-(static analysis, Pro and community rules) and Semgrep Supply Chain (`go.mod`, `sdk/go/go.mod`,
-`bun.lock` and `package-lock.json`, with reachability analysis and malicious-package rules).
+(static analysis, Pro and community rules) and Semgrep Supply Chain (`go.mod`, `sdk/go/go.mod` and
+`bun.lock`, with reachability analysis and malicious-package rules).
+
+Dependabot alerts are on. `.github/dependabot.yml` opens weekly update PRs against `dev` for Go
+modules (`go.mod`, `sdk/go/go.mod`), frontend packages (`bun.lock`), GitHub Actions, Dockerfile and
+Compose base images and the Helm chart's dependencies. Minor and patch updates are grouped into one
+PR per ecosystem; major updates come one PR each. Nothing merges automatically: each PR runs CI and
+is reviewed. The Go toolchain version is updated by hand.
 
 ## Security changes in 0.10.0
 

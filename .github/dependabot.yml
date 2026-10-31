@@ -1,0 +1,89 @@
+# Weekly dependency update PRs against dev. Minor and patch updates are grouped
+# into one PR per ecosystem; major updates arrive one PR each. Nothing merges
+# automatically: every PR runs the normal CI and is reviewed.
+#
+# Dependabot security updates (repository setting) always target main and
+# exist only for gomod and github-actions; bun, docker, docker-compose and
+# helm get version updates only. The Go toolchain (GO_IMAGE in .env.example,
+# go.mod, Dockerfile ARGs, CI) is bumped by hand, in one change.
+version: 2
+
+updates:
+  - package-ecosystem: gomod
+    directories:
+      - /
+      - /sdk/go
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      go-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: bun
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      tiptap:
+        patterns: ["@tiptap/*"]
+      js-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directories:
+      - /
+      - /deploy
+      - /docker/mariadb
+      - /docker/mariadb/testdb
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      images-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker-compose
+    directories:
+      - /
+      - /deploy
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      compose-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: helm
+    directory: /charts/goatflow
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"

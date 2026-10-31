@@ -4,7 +4,7 @@ Client libraries for the GoatFlow REST API (`/api/v1`).
 
 | SDK | Path | Package | Runtime |
 |-----|------|---------|---------|
-| Go | [`go/`](go/) | `github.com/goatkit/goatflow/sdk/go` | Go 1.23+ |
+| Go | [`go/`](go/) | `github.com/goatkit/goatflow/sdk/go` | Go 1.25+ |
 | TypeScript/JavaScript | [`typescript/`](typescript/) | `@goatflow/sdk` (ESM) | Node 18+, Bun, browsers (`fetch`) |
 | Python | [`python/`](python/) | `goatflow-sdk` | Python 3.8+, asyncio (httpx, Pydantic v2) |
 

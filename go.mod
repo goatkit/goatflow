@@ -1,6 +1,6 @@
 module github.com/goatkit/goatflow
 
-go 1.25.12
+go 1.26.10
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
@@ -41,14 +41,14 @@ require (
 	github.com/testcontainers/testcontainers-go v0.43.0
 	github.com/tetratelabs/wazero v1.11.0
 	github.com/xeipuuv/gojsonschema v1.2.0
-	github.com/xuri/excelize/v2 v2.11.0
+	github.com/xuri/excelize/v2 v2.11.1-0.20261029001137-c5fd73bde8f6
 	github.com/yuin/goldmark v1.7.17
-	golang.org/x/crypto v0.55.0
-	golang.org/x/mod v0.38.0
-	golang.org/x/net v0.58.0
+	golang.org/x/crypto v0.58.0
+	golang.org/x/mod v0.41.0
+	golang.org/x/net v0.62.0
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/text v0.41.0
-	golang.org/x/tools v0.48.0
+	golang.org/x/text v0.43.0
+	golang.org/x/tools v0.51.0
 	google.golang.org/grpc v1.83.2
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -160,7 +160,7 @@ require (
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.60.0 // indirect
-	github.com/richardlehane/mscfb v1.0.7 // indirect
+	github.com/richardlehane/mscfb v1.0.9 // indirect
 	github.com/richardlehane/msoleps v1.0.6 // indirect
 	github.com/russellhaering/goxmldsig v1.6.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
@@ -181,7 +181,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
-	github.com/xuri/efp v0.0.1 // indirect
+	github.com/xuri/efp v0.0.3-0.20260924042702-217b81952dec // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
@@ -195,8 +195,8 @@ require (
 	golang.org/x/arch v0.23.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/image v0.44.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

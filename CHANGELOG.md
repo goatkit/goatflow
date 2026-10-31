@@ -120,6 +120,33 @@ project adheres to [Semantic Versioning](https://semver.org/).
   before the message exists, so every message passed. It now runs in the new `commit-msg` hook,
   which ignores git's comment lines and the `git commit -v` diff. `make setup-hooks` (or an
   existing `core.hooksPath=.githooks`) activates it.
+- **`make build` failed at the API map step.** `scripts/api_map.sh` wrote its temporary files to
+  `/cache/tmp`, which the toolbox no longer mounts; it now uses the workspace `tmp/`.
+
+### Security
+- **Go 1.26.10 (from 1.25.12).** Go 1.25 no longer receives security fixes. govulncheck found 25
+  vulnerabilities reachable from GoatFlow code, most in the standard library (HTTP/2 and HTTP
+  servers, TLS, `html/template`, x509 certificate distrust, XML and ASN.1 decoding), the rest in
+  `golang.org/x/net` and excelize; it now finds none. Every Dockerfile, the Makefile, CI and
+  `.env.example` move together. A local `.env` that sets `GO_IMAGE=golang:1.25.12-alpine` must be
+  changed to `golang:1.26.10-alpine`: `go.mod` now requires Go 1.26.10.
+- **Excel import (Admin -> Ticket Attribute Relations) uses a fixed excelize.** Six high-severity
+  advisories in parsing uploaded `.xlsx` files are fixed only on excelize's main branch, so
+  GoatFlow pins that commit (`v2.11.1-0.20261029001137-c5fd73bde8f6`) until v2.11.1 is tagged.
+- **Editor paste XSS fixed.** `prosemirror-view` before 1.42.3 could run script from pasted
+  content (GHSA-c8x8-7fp4-3x9w). The tiptap packages move to 3.32.2 and an override keeps
+  `prosemirror-view` at 1.42.3 or later. `source-map-js` (1.2.2) and `postcss-selector-parser`
+  (6.1.5) are updated for denial-of-service advisories in the CSS build.
+- **Plugin SDK:** `sdk/go` requires `golang.org/x/net` 0.55.0, so plugins built with it need
+  Go 1.25 or later (was 1.23).
+- **One frontend lockfile.** `package-lock.json` had not been updated since July while the image
+  is built from `bun.lock`, so Dependabot reported on versions that were not shipped and missed
+  ones that were. It is removed. The unused `wrangler` dev dependency, which pulled in 19
+  advisories for `undici` and `sharp`, is removed too.
+- **Dependency updates are proposed automatically.** `.github/dependabot.yml` opens weekly update
+  PRs against `dev` for Go modules, `bun.lock`, GitHub Actions, Dockerfile and Compose base images
+  and the Helm chart. Minor and patch updates are grouped per ecosystem; nothing merges
+  automatically.
 
 ## [0.10.0] - 2026-10-04
 

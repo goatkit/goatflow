@@ -18,7 +18,7 @@ Trade-off: Slightly higher latency than WASM (~1ms per call).
 
 ## Prerequisites
 
-- Go 1.21+
+- Go 1.26.10 or later (the minimum in GoatFlow's `go.mod`, which the plugin imports)
 - GoatFlow running locally
 
 ## Step 1: Scaffold the Plugin

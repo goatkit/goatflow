@@ -302,7 +302,7 @@ validation:
 
 ### Requirements
 - PostgreSQL 12+
-- Go 1.21+
+- Go 1.26.10+
 - 10MB disk space for modules
 - Network access to database
 

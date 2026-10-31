@@ -4,7 +4,7 @@ set -eu
 BASE_TPL=templates
 BASE_JS=static/js
 OUT_DIR=generated/api-map
-TMP_DIR=/cache/tmp
+TMP_DIR=tmp/api-map
 
 mkdir -p "$OUT_DIR" "$TMP_DIR"
 chmod 775 "$OUT_DIR" || true
