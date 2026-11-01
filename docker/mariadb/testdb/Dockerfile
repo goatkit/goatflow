@@ -1,4 +1,4 @@
-FROM docker.io/mariadb:11
+FROM docker.io/mariadb:13
 
 USER 999:999
 
