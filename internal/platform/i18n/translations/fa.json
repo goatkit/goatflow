@@ -1186,6 +1186,8 @@
     "plugin_description": "توضیحات",
     "plugin_details": "جزئیات افزونه",
     "plugin_file_types": "پشتیبانی: .wasm، .zip (بسته افزونه)",
+    "plugin_signature_file": "امضا (.wasm.sig)",
+    "plugin_signature_help": "برای فایل .wasm. بسته .zip امضای خود را در بر دارد. افزونه‌های بدون امضا رد می‌شوند، مگر اینکه امضاها خاموش باشند (GOATFLOW_REQUIRE_SIGNATURES=0).",
     "plugin_health": "وضعیت سلامت",
     "plugin_jobs": "کارهای زمان‌بندی شده",
     "plugin_license": "مجوز",

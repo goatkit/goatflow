@@ -365,6 +365,14 @@ config:
     # Maximum session lifetime in seconds (auth.session.SessionMaxTime)
     lifetime: 28800  # 8 hours
 
+  # Plugin signatures. Every plugin binary must be signed by a trusted
+  # publisher; the GoatKit key is built in. trustedKeys adds publisher keys
+  # (hex ed25519 public keys) as GOATFLOW_TRUSTED_KEYS. Set requireSignatures
+  # to false only on a development cluster running unsigned plugins.
+  plugins:
+    requireSignatures: true
+    trustedKeys: []
+
   # File storage (STORAGE_TYPE / STORAGE_PATH): fs article attachments
   # (<path>/var/article) and plugin files (<path>/plugins)
   storage:

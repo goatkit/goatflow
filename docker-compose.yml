@@ -14,6 +14,13 @@ x-email-env: &email-env
   GOATFLOW_EMAIL_FROM: ${EMAIL_FROM:-noreply@goatflow.local}
   GOATFLOW_EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
 
+# Plugin signatures: required unless GOATFLOW_REQUIRE_SIGNATURES=0 (a development
+# system running plugins built from source). GOATFLOW_TRUSTED_KEYS adds publisher
+# keys (comma-separated hex) to the built-in GoatKit key.
+x-plugin-signing-env: &plugin-signing-env
+  GOATFLOW_REQUIRE_SIGNATURES: ${GOATFLOW_REQUIRE_SIGNATURES:-}
+  GOATFLOW_TRUSTED_KEYS: ${GOATFLOW_TRUSTED_KEYS:-}
+
 services:
   # MariaDB Database - runs as the image's mysql user (999), never root
   mariadb:
@@ -143,7 +150,7 @@ services:
       ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD:-}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
       # Outgoing email (TOTP / plugin mail is sent directly by the backend)
-      <<: *email-env
+      <<: [*email-env, *plugin-signing-env]
       # Plugin system (defaults set in Dockerfile, override here if needed)
       # GOATFLOW_PLUGIN_LAZY_LOAD: ${GOATFLOW_PLUGIN_LAZY_LOAD:-true}
       # GOATFLOW_PLUGIN_HOT_RELOAD: ${GOATFLOW_PLUGIN_HOT_RELOAD:-false}
@@ -202,7 +209,7 @@ services:
       GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
       # Outgoing email (customer-side direct sends)
-      <<: *email-env
+      <<: [*email-env, *plugin-signing-env]
     stop_grace_period: 45s
     ports:
       - "${CUSTOMER_FE_PORT:-8083}:${CUSTOMER_FE_APP_PORT:-8080}"
@@ -242,7 +249,7 @@ services:
       DB_PGSQL_USER: ${DB_PGSQL_USER}
       DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
       # Email configuration for queue processing
-      <<: *email-env
+      <<: [*email-env, *plugin-signing-env]
       # Must match the backend: the runner decrypts webhook signing secrets
       GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
       # Same search settings as the backend: the runner keeps the index in sync
@@ -369,6 +376,8 @@ services:
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
       <<: *email-env
+      # Locally built test images ship unsigned bundled plugins
+      GOATFLOW_REQUIRE_SIGNATURES: "0"
       GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
     stop_grace_period: 45s
     ports:
@@ -408,6 +417,8 @@ services:
       DB_PASSWORD: ${TEST_DB_MYSQL_PASSWORD}
       # Email configuration for queue processing
       <<: *email-env
+      # Locally built test images ship unsigned bundled plugins
+      GOATFLOW_REQUIRE_SIGNATURES: "0"
       # Must match backend-test: the runner decrypts webhook signing secrets
       GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
     stop_grace_period: 45s
@@ -451,6 +462,8 @@ services:
       MIGRATE_PASSWORD_HASHES: ${MIGRATE_PASSWORD_HASHES:-false}
       STORAGE_PATH: ${STORAGE_PATH:-/app/storage}
       <<: *email-env
+      # Locally built test images ship unsigned bundled plugins
+      GOATFLOW_REQUIRE_SIGNATURES: "0"
       GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
     stop_grace_period: 45s
     ports:

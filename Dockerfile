@@ -162,6 +162,27 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 go build -ldflags="-w -s" -o goatflow-plugin-exec ./cmd/goatflow-plugin-exec
 
 # ============================================
+# Stage 3b: Sign the bundled WASM plugins
+# ============================================
+# GoatFlow loads only signed plugins unless GOATFLOW_REQUIRE_SIGNATURES=0.
+# Release builds pass the GoatKit signing key as the plugin_signing_key
+# secret and set REQUIRE_SIGNED_PLUGINS=true, so a missing key fails the
+# build; local builds without it ship the bundled plugins unsigned.
+FROM builder AS bundled-plugins
+ARG REQUIRE_SIGNED_PLUGINS=false
+COPY --from=wasm-builder /plugins/ /plugins/
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=secret,id=plugin_signing_key,required=false \
+    if [ -s /run/secrets/plugin_signing_key ]; then \
+        CGO_ENABLED=0 go build -o /tmp/gk ./cmd/gk && \
+        for f in /plugins/*/*.wasm; do /tmp/gk sign "$f" --key-file /run/secrets/plugin_signing_key; done; \
+    elif [ "$REQUIRE_SIGNED_PLUGINS" = "true" ]; then \
+        echo "ERROR: REQUIRE_SIGNED_PLUGINS=true but no plugin_signing_key secret"; exit 1; \
+    else \
+        echo "No plugin_signing_key secret: the bundled plugins are unsigned (development build)"; \
+    fi
+
+# ============================================
 # Stage 4: Export build artifacts
 # ============================================
 FROM scratch AS artifacts
@@ -232,7 +253,7 @@ COPY --chown=appuser:appgroup modules ./modules/
 COPY --chown=appuser:appgroup migrations ./migrations/
 COPY --chown=appuser:appgroup config ./config/
 COPY --chown=appuser:appgroup plugins ./config/plugins/
-COPY --from=wasm-builder --chown=appuser:appgroup /plugins/ ./config/plugins/
+COPY --from=bundled-plugins --chown=appuser:appgroup /plugins/ ./config/plugins/
 
 # Overlay downloaded third-party assets
 COPY --from=assets --chown=appuser:appgroup /assets/js/*.js ./static/js/
@@ -265,10 +286,10 @@ COPY --chown=appuser:appgroup modules ./modules/
 COPY --chown=appuser:appgroup migrations ./migrations/
 COPY --chown=appuser:appgroup config ./config/
 COPY --chown=appuser:appgroup plugins ./config/plugins/
-COPY --from=wasm-builder --chown=appuser:appgroup /plugins/ ./config/plugins/
+COPY --from=bundled-plugins --chown=appuser:appgroup /plugins/ ./config/plugins/
 # Pristine copy of the bundled plugins: at startup goats installs them into
 # config/plugins, which a volume may hold from an older release.
-COPY --from=wasm-builder /plugins/ ./bundled-plugins/
+COPY --from=bundled-plugins /plugins/ ./bundled-plugins/
 
 # Overlay downloaded third-party assets
 COPY --from=assets --chown=appuser:appgroup /assets/js/*.js ./static/js/

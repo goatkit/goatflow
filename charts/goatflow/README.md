@@ -462,6 +462,8 @@ extraResources:
 | `config.logLevel` | Application log level (`LOG_LEVEL`) | `info` |
 | `config.baseUrl` | Public URL (`BASE_URL`); reset and sign-up emails are not sent while empty | `""` |
 | `config.session.lifetime` | Maximum session lifetime in seconds (`GOATFLOW_AUTH_SESSION_SESSIONMAXTIME`) | `28800` |
+| `config.plugins.requireSignatures` | Load only plugins signed by a trusted publisher (`GOATFLOW_REQUIRE_SIGNATURES`); `false` only for development clusters | `true` |
+| `config.plugins.trustedKeys` | Publisher public keys (hex ed25519) trusted besides the built-in GoatKit key (`GOATFLOW_TRUSTED_KEYS`) | `[]` |
 | `config.storage.type` | Attachment storage: `db` or `fs` (`STORAGE_TYPE`) | `db` |
 | `config.storage.path` | Storage root for `fs` (`STORAGE_PATH`) | `/data/storage` |
 | `config.authProviders` | Auth provider order (`AUTH_PROVIDERS`), e.g. `["ldap", "database"]` | `[]` (Config.yaml) |

@@ -386,6 +386,13 @@ through the GOATFLOW_ prefix, and plain os.Getenv names.
     secretKeyRef:
       name: {{ include "goatflow.appSecretName" . }}
       key: secure-key
+# Plugin signatures (the GoatKit publisher key is built in)
+- name: GOATFLOW_REQUIRE_SIGNATURES
+  value: {{ ternary "1" "0" .Values.config.plugins.requireSignatures | quote }}
+{{- with .Values.config.plugins.trustedKeys }}
+- name: GOATFLOW_TRUSTED_KEYS
+  value: {{ join "," . | quote }}
+{{- end }}
 # Outgoing email
 {{- $email := .Values.config.email }}
 - name: GOATFLOW_EMAIL_ENABLED

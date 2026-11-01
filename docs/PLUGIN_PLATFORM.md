@@ -356,13 +356,13 @@ Independent of the K8s controller-managed restarts, the in-process plugin manage
 
 ### Plugin Signing
 
-Optional ed25519 signature verification for plugin binaries (`internal/platform/plugin/signing/signing.go`):
+Plugin code must be signed (`internal/platform/plugin/signing`). Every gRPC binary and WASM module needs a `<file>.sig` next to it: the hex ed25519 signature of the file's SHA-256 hash, made with `gk sign <file>` (or `SignBinary()`).
 
-- **Key generation** — `GenerateKeyPair()` creates ed25519 key pairs for signing
-- **Signing** — `SignBinary()` computes SHA-256 hash of the binary and signs with ed25519, writing hex-encoded signature to `<binary>.sig`
-- **Verification** — `VerifyBinary()` checks binary against its `.sig` file using a list of trusted public keys
-- **Opt-in enforcement** — set `GOATFLOW_REQUIRE_SIGNATURES=1` to require valid signatures; without it, unsigned plugins load with a warning
-- **Tamper detection** — any modification to the binary after signing invalidates the signature
+- **Trusted keys** — the GoatKit publisher key is built in; `GOATFLOW_TRUSTED_KEYS` (comma-separated hex) and `GOATFLOW_TRUSTED_KEYS_FILE` (one key per line) add other publishers. An invalid key stops `goats` from starting. A key named in the marketplace index is not trusted by itself: the error for such a plugin names it so an administrator can add it
+- **When it is checked** — on every load (a plugin that fails is not started and the error is logged), and before an install replaces anything: marketplace installs check the package's `.zip.sig` and then the binary's own `.sig` in the staging directory; uploads check a `.zip` package's binary, or a `.wasm` file against the separate signature file uploaded with it. A refused upload is a 400, a refused marketplace install a 422
+- **Bundled plugins** — release images ship them signed with the GoatKit key (the `bundled-plugins` Dockerfile stage signs them with the `plugin_signing_key` build secret; release builds fail without it). Local builds ship them unsigned
+- **Development** — `GOATFLOW_REQUIRE_SIGNATURES=0` (or `false`) loads unsigned plugins and `goats` logs a warning at start-up; use it only on a system running plugins built from source. The test stack sets it, as its images are local builds
+- **Not covered** — template plugins (HTML and YAML only) have no binary to sign; a marketplace install still checks their package signature, an upload does not
 
 ### Permission System
 

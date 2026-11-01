@@ -2,6 +2,7 @@ package signing
 
 import (
 	"crypto/ed25519"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,8 +106,8 @@ func TestVerifyBinaryWithWrongKey(t *testing.T) {
 		t.Fatal("Expected verification to fail with wrong key, but it succeeded")
 	}
 
-	if !strings.Contains(err.Error(), "signature verification failed") {
-		t.Errorf("Expected signature verification error, got: %v", err)
+	if !errors.Is(err, ErrUntrusted) {
+		t.Errorf("wrong key not reported as untrusted: %v", err)
 	}
 }
 

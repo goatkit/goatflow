@@ -1186,6 +1186,8 @@
     "plugin_description": "Descrição",
     "plugin_details": "Detalhes do Plugin",
     "plugin_file_types": "Suportado: .wasm, .zip (pacote de plugin)",
+    "plugin_signature_file": "Assinatura (.wasm.sig)",
+    "plugin_signature_help": "Para um ficheiro .wasm. Um pacote .zip inclui a sua assinatura. Plugins sem assinatura são recusados, salvo se as assinaturas estiverem desativadas (GOATFLOW_REQUIRE_SIGNATURES=0).",
     "plugin_health": "Saúde",
     "plugin_jobs": "Tarefas agendadas",
     "plugin_license": "Licença",

@@ -1206,6 +1206,8 @@
     "plugin_description": "QIj",
     "plugin_details": "ngogh De'",
     "plugin_file_types": ".wasm, .zip (plugin naQ) lulo'lu'",
+    "plugin_signature_file": "QIn Degh (.wasm.sig)",
+    "plugin_signature_help": ".wasm teywI' QIn Degh. .zip QIn Degh ngaS. QIn Degh Hutlhbogh plugin lajQo'lu', GOATFLOW_REQUIRE_SIGNATURES=0 ghaHbe'chugh.",
     "plugin_health": "ghu'",
     "plugin_jobs": "vuDleH Qu'mey",
     "plugin_license": "chaw'",

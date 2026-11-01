@@ -1215,6 +1215,8 @@
     "plugin_description": "تفصیل",
     "plugin_details": "پلگ ان کی تفصیلات",
     "plugin_file_types": "معاون فارمیٹ: .wasm، .zip (پلگ ان پیکیج)",
+    "plugin_signature_file": "دستخط (.wasm.sig)",
+    "plugin_signature_help": ".wasm فائل کے لیے۔ .zip پیکج میں اس کا دستخط شامل ہوتا ہے۔ بغیر دستخط پلگ اِن مسترد کیے جاتے ہیں جب تک دستخط بند نہ ہوں (GOATFLOW_REQUIRE_SIGNATURES=0)۔",
     "plugin_health": "صحت",
     "plugin_jobs": "طے شدہ کام",
     "plugin_license": "لائسنس",

@@ -1292,6 +1292,8 @@
     "plugin_description": "Description",
     "plugin_details": "Plugin Details",
     "plugin_file_types": "Supported: .wasm, .zip (plugin package)",
+    "plugin_signature_file": "Signature (.wasm.sig)",
+    "plugin_signature_help": "For a .wasm file. A .zip package carries its signature inside. Unsigned plugins are refused unless signatures are turned off (GOATFLOW_REQUIRE_SIGNATURES=0).",
     "plugin_health": "Health",
     "plugin_jobs": "Scheduled Jobs",
     "plugin_license": "License",

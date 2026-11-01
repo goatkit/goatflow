@@ -115,6 +115,10 @@ jobs:
             GIT_COMMIT=${{ steps.version.outputs.commit }}
             GIT_BRANCH=${{ steps.version.outputs.branch }}
             BUILD_DATE=${{ steps.version.outputs.date }}
+            REQUIRE_SIGNED_PLUGINS=${{ github.event.inputs.push_to_registry == 'true' || github.event_name == 'push' }}
+          # Signs the bundled plugins (Dockerfile stage bundled-plugins).
+          secrets: |
+            plugin_signing_key=${{ secrets.SIGNING_KEY }}
 
       - name: Output image name
         id: image
@@ -206,6 +210,10 @@ jobs:
             GIT_COMMIT=${{ steps.version.outputs.commit }}
             GIT_BRANCH=${{ steps.version.outputs.branch }}
             BUILD_DATE=${{ steps.version.outputs.date }}
+            REQUIRE_SIGNED_PLUGINS=${{ github.event.inputs.push_to_registry == 'true' || github.event_name == 'push' }}
+          # Signs the bundled plugins (Dockerfile stage bundled-plugins).
+          secrets: |
+            plugin_signing_key=${{ secrets.SIGNING_KEY }}
           cache-from: type=registry,ref=ghcr.io/${{ github.repository }}-runner:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ github.repository }}-runner:buildcache,mode=max
           provenance: true

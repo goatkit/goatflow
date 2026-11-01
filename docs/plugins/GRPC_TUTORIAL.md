@@ -255,20 +255,14 @@ On non-Linux platforms (macOS, Windows), process sandboxing is not available. A 
 
 ### Plugin Signing
 
-You can sign your plugin binary with ed25519 for tamper detection:
+GoatFlow loads only signed plugin binaries, so sign yours as part of the release:
 
 ```bash
-# During your build/release process:
-# 1. Build the binary
 go build -o my-plugin .
-
-# 2. Sign it (using the signing package or CLI tool)
-# This creates my-plugin.sig containing the hex-encoded ed25519 signature
+gk sign my-plugin --key "$GOATFLOW_SIGNING_KEY"   # writes my-plugin.sig
 ```
 
-Ship both `my-plugin` and `my-plugin.sig` in your plugin directory. The host verifies the signature against trusted public keys on load.
-
-Signing is opt-in by default. Set `GOATFLOW_REQUIRE_SIGNATURES=1` on the host to enforce it.
+Ship both `my-plugin` and `my-plugin.sig` in your plugin package. The host checks the signature against its trusted keys (the GoatKit key plus `GOATFLOW_TRUSTED_KEYS`) at install and on every start; see [Plugin Signing](AUTHOR_GUIDE.md#plugin-signing). While developing, run GoatFlow with `GOATFLOW_REQUIRE_SIGNATURES=0` to load unsigned builds.
 
 ### Caller Identity
 

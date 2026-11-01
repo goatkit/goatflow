@@ -1186,6 +1186,8 @@
     "plugin_description": "תיאור",
     "plugin_details": "פרטי התוסף",
     "plugin_file_types": "נתמך: .wasm, .zip (חבילת תוסף)",
+    "plugin_signature_file": "חתימה (.wasm.sig)",
+    "plugin_signature_help": "עבור קובץ .wasm. חבילת .zip כוללת את החתימה שלה. תוספים לא חתומים נדחים אלא אם החתימות כבויות (GOATFLOW_REQUIRE_SIGNATURES=0).",
     "plugin_health": "מצב תקינות",
     "plugin_jobs": "משימות מתוזמנות",
     "plugin_license": "רישיון",

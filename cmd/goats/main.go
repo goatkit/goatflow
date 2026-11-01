@@ -59,6 +59,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/core"
 	pluginloader "github.com/goatkit/goatflow/internal/platform/plugin/loader"
+	"github.com/goatkit/goatflow/internal/platform/plugin/signing"
 	"github.com/goatkit/goatflow/internal/platform/runner"
 	"github.com/goatkit/goatflow/internal/platform/search"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
@@ -536,8 +537,16 @@ func main() {
 	}
 	api.SetPluginDir(pluginDir) // Enable plugin uploads
 
-	// Configure loader options
-	var loaderOpts []pluginloader.LoaderOption
+	// Plugin signatures: required unless GOATFLOW_REQUIRE_SIGNATURES=0.
+	verifier, err := signing.VerifierFromEnv()
+	if err != nil {
+		log.Fatalf("plugin signatures: %v", err)
+	}
+	if !verifier.Required {
+		slog.Warn("plugin signatures are not required (GOATFLOW_REQUIRE_SIGNATURES=0): unsigned plugins will load; use this only on a development system")
+	}
+	api.SetPluginVerifier(verifier)
+	loaderOpts := []pluginloader.LoaderOption{pluginloader.WithVerifier(verifier)}
 	if os.Getenv("GOATFLOW_PLUGIN_LAZY_LOAD") == "true" {
 		loaderOpts = append(loaderOpts, pluginloader.WithLazyLoading())
 	}

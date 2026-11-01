@@ -126,8 +126,8 @@ Installing inventory v1.1.0...
 3. Resolve the version (see [Versions](#versions)); `@version` pins a listed one
 4. Plan the missing dependencies (see [Dependencies](#dependencies))
 5. For each dependency, then the plugin: download the ZIP for that version from its GitHub Release
-6. Verify the ed25519 signature if a `.sig` file exists (required when `GOATFLOW_REQUIRE_SIGNATURES=1`)
-7. Extract into a staging directory under `plugins/` (`.gk-staging-*`, ignored by the plugin loader) and move it to `plugins/<name>/`
+6. Verify the package's `.zip.sig` against the trusted keys; an unsigned or untrusted package is refused (unless `GOATFLOW_REQUIRE_SIGNATURES=0`)
+7. Extract into a staging directory under `plugins/` (`.gk-staging-*`, ignored by the plugin loader), check the binary's own `.sig` there, and move it to `plugins/<name>/`
 8. Print activation instructions
 
 ### `gk info <plugin>`
@@ -268,7 +268,7 @@ Plugin authors who want localised descriptions can optionally include them in th
 
 ## Security Considerations
 
-1. **Signature verification** — ed25519 signatures checked on install (already implemented in GoatFlow)
+1. **Signature verification** — the package's `.zip.sig` and the binary's own `.sig` (inside the ZIP) must verify against a trusted key (the built-in GoatKit key or `GOATFLOW_TRUSTED_KEYS`) before anything is replaced; the loader checks the binary again on every start. The `public_key` in the index is shown in the error for an untrusted plugin but is not trusted by itself
 2. **HTTPS only** — marketplace index and downloads over HTTPS
 3. **No auto-install** — marketplace is browse-only; admin explicitly triggers install
 4. **No auto-update** — updates require admin confirmation

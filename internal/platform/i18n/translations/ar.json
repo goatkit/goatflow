@@ -1186,6 +1186,8 @@
     "plugin_description": "الوصف",
     "plugin_details": "تفاصيل الإضافة",
     "plugin_file_types": "المدعوم: .wasm، .zip (حزمة الإضافة)",
+    "plugin_signature_file": "التوقيع (.wasm.sig)",
+    "plugin_signature_help": "لملف .wasm. تحتوي حزمة .zip على توقيعها. تُرفض الإضافات غير الموقّعة ما لم تُعطَّل التواقيع (GOATFLOW_REQUIRE_SIGNATURES=0).",
     "plugin_health": "الحالة الصحية",
     "plugin_jobs": "المهام المجدولة",
     "plugin_license": "الرخصة",

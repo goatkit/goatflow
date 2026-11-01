@@ -1186,6 +1186,8 @@
     "plugin_description": "描述",
     "plugin_details": "插件详情",
     "plugin_file_types": "支持格式：.wasm、.zip（插件包）",
+    "plugin_signature_file": "签名 (.wasm.sig)",
+    "plugin_signature_help": "用于 .wasm 文件。.zip 包内含签名。除非关闭签名 (GOATFLOW_REQUIRE_SIGNATURES=0)，未签名的插件将被拒绝。",
     "plugin_health": "健康状态",
     "plugin_jobs": "计划任务",
     "plugin_license": "许可证",

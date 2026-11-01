@@ -1186,6 +1186,8 @@
     "plugin_description": "Descripción",
     "plugin_details": "Detalles del Plugin",
     "plugin_file_types": "Formatos admitidos: .wasm, .zip (paquete de plugin)",
+    "plugin_signature_file": "Firma (.wasm.sig)",
+    "plugin_signature_help": "Para un archivo .wasm. Un paquete .zip incluye su firma. Los plugins sin firma se rechazan salvo que las firmas estén desactivadas (GOATFLOW_REQUIRE_SIGNATURES=0).",
     "plugin_health": "Estado",
     "plugin_jobs": "Tareas programadas",
     "plugin_license": "Licencia",

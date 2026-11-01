@@ -2,7 +2,6 @@ package loader
 
 import (
 	"context"
-	"crypto/ed25519"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -52,9 +51,9 @@ type Loader struct {
 
 	lazy bool // If true, don't load on discover
 
-	// Signature verification
-	signatureVerification bool
-	trustedKeys           []ed25519.PublicKey
+	// verifier checks plugin signatures before a binary is loaded; the zero
+	// value (tests) accepts everything.
+	verifier signing.Verifier
 
 	// Hot reload
 	watcher     *fsnotify.Watcher
@@ -74,12 +73,11 @@ func WithLazyLoading() LoaderOption {
 	}
 }
 
-// WithSignatureVerification enables plugin binary signature verification.
-// Only plugins signed with one of the trusted keys will be allowed to load.
-func WithSignatureVerification(trustedKeys []ed25519.PublicKey) LoaderOption {
+// WithVerifier makes the loader check every gRPC binary and WASM module
+// against its .sig file with v before loading it.
+func WithVerifier(v signing.Verifier) LoaderOption {
 	return func(l *Loader) {
-		l.signatureVerification = true
-		l.trustedKeys = trustedKeys
+		l.verifier = v
 	}
 }
 
@@ -665,19 +663,8 @@ func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest 
 		return fmt.Errorf("binary %s is not executable", binaryPath)
 	}
 
-	// Verify binary signature if verification is enabled
-	if l.signatureVerification || signing.IsSignatureRequired() {
-		sigPath := signing.DefaultSignaturePath(binaryPath)
-		if err := signing.VerifyBinary(binaryPath, sigPath, l.trustedKeys); err != nil {
-			return fmt.Errorf("signature verification failed for %s: %w", manifest.Name, err)
-		}
-		l.logger.Info("plugin signature verified", "name", manifest.Name, "binary", binaryPath)
-	} else {
-		// Log warning about unsigned plugin
-		l.logger.Warn("loading unsigned plugin (signature verification disabled)",
-			"name", manifest.Name,
-			"binary", binaryPath,
-			"recommendation", "enable signature verification in production")
+	if err := l.verifier.Check(binaryPath); err != nil {
+		return fmt.Errorf("signature check failed for %s: %w", manifest.Name, err)
 	}
 
 	l.logger.Info("loading gRPC plugin", "name", manifest.Name, "binary", binaryPath)
@@ -708,18 +695,8 @@ func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest 
 func (l *Loader) loadWASMPlugin(ctx context.Context, name, path string) (string, error) {
 	l.logger.Info("loading WASM plugin", "path", path)
 
-	// Verify WASM signature if verification is enabled
-	if l.signatureVerification || signing.IsSignatureRequired() {
-		sigPath := signing.DefaultSignaturePath(path)
-		if err := signing.VerifyBinary(path, sigPath, l.trustedKeys); err != nil {
-			return "", fmt.Errorf("signature verification failed for WASM plugin %s: %w", filepath.Base(path), err)
-		}
-		l.logger.Info("WASM plugin signature verified", "path", path)
-	} else {
-		// Log warning about unsigned plugin
-		l.logger.Warn("loading unsigned WASM plugin (signature verification disabled)",
-			"path", path,
-			"recommendation", "enable signature verification in production")
+	if err := l.verifier.Check(path); err != nil {
+		return "", fmt.Errorf("signature check failed for WASM plugin %s: %w", filepath.Base(path), err)
 	}
 
 	// Load the WASM module

@@ -1186,6 +1186,8 @@
     "plugin_description": "Opis",
     "plugin_details": "Szczegóły wtyczki",
     "plugin_file_types": "Obsługiwane: .wasm, .zip (pakiet wtyczki)",
+    "plugin_signature_file": "Podpis (.wasm.sig)",
+    "plugin_signature_help": "Dla pliku .wasm. Pakiet .zip zawiera swój podpis. Niepodpisane wtyczki są odrzucane, chyba że podpisy są wyłączone (GOATFLOW_REQUIRE_SIGNATURES=0).",
     "plugin_health": "Stan",
     "plugin_jobs": "Zaplanowane zadania",
     "plugin_license": "Licencja",

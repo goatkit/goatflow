@@ -1,6 +1,7 @@
 package marketplace
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"github.com/goatkit/goatflow/internal/platform/plugin/packaging"
@@ -176,6 +177,7 @@ func TestInstall(t *testing.T) {
 
 	pluginsDir := t.TempDir()
 	client := NewClient(pluginsDir)
+	client.verifier = signing.Verifier{} // unsigned fixture
 	client.indexURL = server.URL + "/marketplace.json"
 	u, _ := url.Parse(server.URL)
 	client.httpClient = &http.Client{
@@ -222,6 +224,7 @@ func TestCheckUpdatesSemver(t *testing.T) {
 		[]byte("name: test-plugin\nversion: 1.0.0\nruntime: wasm\n"), 0644)
 
 	client := NewClient(pluginsDir)
+	client.verifier = signing.Verifier{} // unsigned fixture
 	client.index = &Index{
 		Version: 1,
 		Plugins: []PluginEntry{
@@ -322,6 +325,7 @@ func TestInstallSigned(t *testing.T) {
 
 	pluginsDir := t.TempDir()
 	client := NewClient(pluginsDir)
+	client.verifier = signing.Verifier{Required: true, Keys: []ed25519.PublicKey{pub}}
 	client.indexURL = server.URL + "/marketplace.json"
 	u, _ := url.Parse(server.URL)
 	client.httpClient = &http.Client{

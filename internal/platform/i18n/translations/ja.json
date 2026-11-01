@@ -1186,6 +1186,8 @@
     "plugin_description": "説明",
     "plugin_details": "プラグイン詳細",
     "plugin_file_types": "対応形式：.wasm、.zip（プラグインパッケージ）",
+    "plugin_signature_file": "署名 (.wasm.sig)",
+    "plugin_signature_help": ".wasm ファイル用です。.zip パッケージには署名が含まれています。署名が無効化されていない限り (GOATFLOW_REQUIRE_SIGNATURES=0)、署名のないプラグインは拒否されます。",
     "plugin_health": "ヘルス",
     "plugin_jobs": "スケジュールされたジョブ",
     "plugin_license": "ライセンス",

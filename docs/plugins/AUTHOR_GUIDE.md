@@ -324,14 +324,14 @@ Every plugin gets a `SandboxedHostAPI` wrapper that enforces:
 
 ### Plugin Signing
 
-Plugin binaries can be signed with ed25519 keys for tamper detection:
+GoatFlow loads only signed plugin code. Sign the binary (gRPC) or module (WASM) and ship the signature inside your package:
 
-1. **Generate a key pair** — use `signing.GenerateKeyPair()` or the CLI
-2. **Sign your binary** — `signing.SignBinary("my-plugin", "my-plugin.sig", privateKey)` creates a `.sig` file containing the hex-encoded signature of the binary's SHA-256 hash
-3. **Ship both files** — place `my-plugin` and `my-plugin.sig` in your plugin directory
-4. **Verification** — the host checks the signature against its list of trusted public keys
+1. **Generate a key pair** — `gk keygen`. Keep the private key secret (a CI secret for releases)
+2. **Sign the binary** — `gk sign bin/my-plugin --key <private>` writes `bin/my-plugin.sig`, the hex ed25519 signature of the file's SHA-256 hash
+3. **Package both** — put `my-plugin.sig` in the ZIP next to `my-plugin`, then sign the ZIP too (`gk sign my-plugin.zip`) and publish `my-plugin.zip.sig` with the release; the marketplace checks it before unpacking. goat-kb's `make sign` does all three
+4. **Get trusted** — GoatFlow trusts the GoatKit key and the keys an administrator adds with `GOATFLOW_TRUSTED_KEYS`. Publish your public key (the marketplace entry's `public_key`) so administrators can add it
 
-Signing is currently opt-in. Set `GOATFLOW_REQUIRE_SIGNATURES=1` on the host to enforce signature verification. Unsigned plugins will still load without this flag but generate a warning.
+An unsigned or untrusted plugin is refused at install and at every start. While you develop, run GoatFlow with `GOATFLOW_REQUIRE_SIGNATURES=0`; never on a production system.
 
 ### gRPC Process Isolation (Linux)
 

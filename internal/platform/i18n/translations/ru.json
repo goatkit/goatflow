@@ -1186,6 +1186,8 @@
     "plugin_description": "Описание",
     "plugin_details": "Детали плагина",
     "plugin_file_types": "Поддерживаются: .wasm, .zip (пакет плагина)",
+    "plugin_signature_file": "Подпись (.wasm.sig)",
+    "plugin_signature_help": "Для файла .wasm. Пакет .zip содержит свою подпись. Неподписанные плагины отклоняются, если подписи не отключены (GOATFLOW_REQUIRE_SIGNATURES=0).",
     "plugin_health": "Состояние",
     "plugin_jobs": "Запланированные задачи",
     "plugin_license": "Лицензия",

@@ -257,6 +257,13 @@
                     <input type="file" id="plugin-file" accept=".wasm,.zip" class="gk-input-neon w-full" />
                     <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.plugin_file_types")|default:"Supported: .wasm, .zip (plugin package)" }}</p>
                 </div>
+                <div>
+                    <label for="plugin-signature" class="form-label">
+                        {{ t("admin.plugin_signature_file")|default:"Signature (.wasm.sig)" }}
+                    </label>
+                    <input type="file" id="plugin-signature" accept=".sig" class="gk-input-neon w-full" />
+                    <p class="mt-1 text-xs" style="color: var(--gk-text-muted);">{{ t("admin.plugin_signature_help")|default:"For a .wasm file. A .zip package carries its signature inside. Unsigned plugins are refused unless signatures are turned off (GOATFLOW_REQUIRE_SIGNATURES=0)." }}</p>
+                </div>
                 <div id="uploadError" class="hidden gk-alert gk-alert-error">
                     <div class="flex">
                         <div class="flex-shrink-0">
@@ -1155,6 +1162,10 @@ async function uploadPlugin() {
 
     const formData = new FormData();
     formData.append('plugin', file);
+    const sig = document.getElementById('plugin-signature').files[0];
+    if (sig) {
+        formData.append('signature', sig);
+    }
 
     const uploadBtn = document.getElementById('upload-btn');
     const originalHTML = uploadBtn.innerHTML;

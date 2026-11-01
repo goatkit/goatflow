@@ -97,6 +97,8 @@ services:
       GOATFLOW_PLUGIN_LAZY_LOAD: "true"
       GOATFLOW_PLUGIN_HOT_RELOAD: "false"
       <<: *email-env
+      GOATFLOW_REQUIRE_SIGNATURES: ${GOATFLOW_REQUIRE_SIGNATURES:-}
+      GOATFLOW_TRUSTED_KEYS: ${GOATFLOW_TRUSTED_KEYS:-}
     stop_grace_period: 45s
     ports:
       - "${BACKEND_PORT:-8081}:8080"
@@ -135,6 +137,8 @@ services:
       DB_PGSQL_USER: ${DB_PGSQL_USER}
       DB_PGSQL_PASSWORD: ${DB_PGSQL_PASSWORD}
       <<: *email-env
+      GOATFLOW_REQUIRE_SIGNATURES: ${GOATFLOW_REQUIRE_SIGNATURES:-}
+      GOATFLOW_TRUSTED_KEYS: ${GOATFLOW_TRUSTED_KEYS:-}
       GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY must be set to 64 hex characters (openssl rand -hex 32), shared by backend and runner}
     stop_grace_period: 45s
     volumes:

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/goatkit/goatflow/internal/platform/plugin/signing"
 	"github.com/goatkit/goatflow/internal/platform/version"
 )
 
@@ -46,6 +47,7 @@ func newDependencyClient(t *testing.T, srv *multiReleaseServer, plugins ...Plugi
 	u, _ := url.Parse(ts.URL)
 	pluginsDir := t.TempDir()
 	client := NewClient(pluginsDir)
+	client.verifier = signing.Verifier{} // unsigned fixtures; signatures are tested in versions_test.go
 	client.httpClient = &http.Client{Transport: &redirectTransport{target: u.Host}, Timeout: 10 * time.Second}
 	client.index = &Index{Version: IndexVersion, Plugins: plugins}
 	return client, pluginsDir

@@ -130,6 +130,12 @@ There is no SMS or email one-time code.
   the kernel enforces. `goats` marks itself non-dumpable, so same-user
   processes can't read its `/proc` files either.
   Details: [PLUGIN_PLATFORM.md](PLUGIN_PLATFORM.md#os-level-process-isolation-grpc).
+- **Plugin signatures.** Every gRPC binary and WASM module must be signed by a
+  trusted publisher (the built-in GoatKit key, plus `GOATFLOW_TRUSTED_KEYS`),
+  checked before an install or upload replaces anything and on every start.
+  The plugins bundled in release images are signed. `GOATFLOW_REQUIRE_SIGNATURES=0`
+  turns this off for development systems only. Details:
+  [PLUGIN_PLATFORM.md](PLUGIN_PLATFORM.md#plugin-signing).
 
 There is no attribute-based (ABAC) policy engine.
 

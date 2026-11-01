@@ -25,6 +25,9 @@ x-goatflow-env: &goatflow-env
   # Encrypts stored secrets (webhook signing secrets, plugin secure settings).
   # Every process must use the same key or the runner cannot decrypt them.
   GOATFLOW_SECURE_KEY: ${GOATFLOW_SECURE_KEY:?GOATFLOW_SECURE_KEY is required - 64 hex characters, generate with openssl rand -hex 32}
+  # Plugins must be signed by a trusted publisher (the GoatKit key is built in);
+  # GOATFLOW_TRUSTED_KEYS adds publisher keys, comma-separated hex.
+  GOATFLOW_TRUSTED_KEYS: ${GOATFLOW_TRUSTED_KEYS:-}
   BASE_URL: ${BASE_URL:-https://${DOMAIN}}
   # Public demo sites: non-admin users cannot change passwords or MFA
   GOATFLOW_APP_DEMO_MODE: ${GOATFLOW_APP_DEMO_MODE:-false}

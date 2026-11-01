@@ -12,6 +12,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/audit"
 	"github.com/goatkit/goatflow/internal/platform/marketplace"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
+	"github.com/goatkit/goatflow/internal/platform/plugin/signing"
 	"github.com/goatkit/goatflow/internal/platform/routing"
 	"github.com/goatkit/goatflow/internal/platform/version"
 )
@@ -231,7 +232,7 @@ func HandleMarketplaceInstall(c *gin.Context) {
 	if err != nil {
 		plugin.GetLogBuffer().Log(req.Name, "error", fmt.Sprintf("Marketplace install failed: %s", err.Error()), nil)
 		reloadMarketplacePlugins(reload)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Install failed: %v", err), "dependencies": depNames})
+		c.JSON(installFailureStatus(err), gin.H{"error": fmt.Sprintf("Install failed: %v", err), "dependencies": depNames})
 		return
 	}
 
@@ -239,14 +240,14 @@ func HandleMarketplaceInstall(c *gin.Context) {
 		if _, err := client.Update(entry, target.Version); err != nil {
 			plugin.GetLogBuffer().Log(req.Name, "error", fmt.Sprintf("Marketplace update failed: %s", err.Error()), nil)
 			reloadMarketplacePlugins(reload)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Update failed: %v", err), "dependencies": depNames}) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
+			c.JSON(installFailureStatus(err), gin.H{"error": fmt.Sprintf("Update failed: %v", err), "dependencies": depNames}) //nolint:gk-sql-sprintf // hardcoded column fragments; user values bound via ?
 			return
 		}
 	} else {
 		if _, err := client.Install(entry, target.Version); err != nil {
 			plugin.GetLogBuffer().Log(req.Name, "error", fmt.Sprintf("Marketplace install failed: %s", err.Error()), nil)
 			reloadMarketplacePlugins(reload)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Install failed: %v", err), "dependencies": depNames})
+			c.JSON(installFailureStatus(err), gin.H{"error": fmt.Sprintf("Install failed: %v", err), "dependencies": depNames})
 			return
 		}
 	}
@@ -296,4 +297,13 @@ func reloadMarketplacePlugins(names []string) {
 		}
 		RebuildDynamicEngine()
 	}()
+}
+
+// installFailureStatus is 422 for a plugin refused by its signature check (an
+// unsigned or untrusted plugin, not a server fault) and 500 otherwise.
+func installFailureStatus(err error) int {
+	if errors.Is(err, signing.ErrUntrusted) {
+		return http.StatusUnprocessableEntity
+	}
+	return http.StatusInternalServerError
 }

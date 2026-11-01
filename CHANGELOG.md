@@ -193,6 +193,21 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `/cache/tmp`, which the toolbox no longer mounts; it now uses the workspace `tmp/`.
 
 ### Security
+- **Plugins must be signed.** Every gRPC binary and WASM module needs a `.sig` from a trusted
+  publisher, checked on every start and before a marketplace install or upload replaces anything
+  (a refused upload is a 400, a refused marketplace install a 422). The GoatKit publisher key is
+  built in; `GOATFLOW_TRUSTED_KEYS` / `GOATFLOW_TRUSTED_KEYS_FILE` add others, and the key in a
+  marketplace entry is no longer trusted by itself. Before, signatures were opt-in
+  (`GOATFLOW_REQUIRE_SIGNATURES=1`), and turning that on stopped every plugin from loading: the
+  loader had no trusted keys, and release packages signed only the ZIP. Release images now ship
+  the bundled plugins signed (a release build without the key fails); Admin -> Plugins -> Upload
+  takes the signature file for a `.wasm`; Helm has `config.plugins.requireSignatures` and
+  `trustedKeys`. `GOATFLOW_REQUIRE_SIGNATURES=0` loads unsigned plugins on a development system,
+  with a warning at start-up. **Upgrading:** a plugin without a valid `.sig` next to its binary
+  no longer loads. Reinstall Knowledge Base and Kanban from Admin -> Marketplace once their next
+  releases (which carry the binary signature) are out; add the public key of any other publisher
+  to `GOATFLOW_TRUSTED_KEYS`; set `GOATFLOW_REQUIRE_SIGNATURES=0` only where you run plugins built
+  from source.
 - **Plugins can no longer read GoatFlow's secrets or signal it.** gRPC plugin processes run as
   the same user as `goats`, so a plugin could read the backend's environment from
   `/proc/<pid>/environ` (database password, `GOATFLOW_SECURE_KEY`, JWT secret) and send it

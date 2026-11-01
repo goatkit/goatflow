@@ -30,6 +30,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/organisation"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/plugin/packaging"
+	"github.com/goatkit/goatflow/internal/platform/plugin/signing"
 	platformservice "github.com/goatkit/goatflow/internal/platform/service"
 	"github.com/goatkit/goatflow/internal/platform/shared"
 	"github.com/goatkit/goatflow/internal/repository"
@@ -1462,6 +1463,58 @@ var pluginReloader func(ctx context.Context, name string) error
 // pluginUnloader is called before overwriting a gRPC plugin binary to stop the running process.
 var pluginUnloader func(ctx context.Context, name string) error
 
+// pluginVerifier checks uploaded plugin code; the zero value (tests) accepts
+// everything.
+var pluginVerifier signing.Verifier
+
+// SetPluginVerifier sets the plugin signature policy for uploads and
+// marketplace installs.
+func SetPluginVerifier(v signing.Verifier) {
+	pluginVerifier = v
+}
+
+// checkPackageSignature extracts the package at zipPath into a staging
+// directory and checks its gRPC binary or WASM module against the .sig
+// shipped next to it.
+func checkPackageSignature(zipPath string) error {
+	if !pluginVerifier.Required {
+		return nil
+	}
+	staging, err := os.MkdirTemp(pluginDir, ".upload-staging-*")
+	if err != nil {
+		return fmt.Errorf("create staging dir: %w", err)
+	}
+	defer os.RemoveAll(staging)
+	pkg, err := packaging.ExtractPlugin(zipPath, staging)
+	if err != nil {
+		return err
+	}
+	if pkg.BinaryPath == "" {
+		return nil // template plugin: no code to run
+	}
+	return pluginVerifier.Check(pkg.BinaryPath)
+}
+
+// saveUploadedSignature writes the optional "signature" upload to path.
+func saveUploadedSignature(c *gin.Context, path string) error {
+	sig, _, err := c.Request.FormFile("signature")
+	if errors.Is(err, http.ErrMissingFile) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read signature upload: %w", err)
+	}
+	defer sig.Close()
+	data, err := io.ReadAll(io.LimitReader(sig, 4096))
+	if err != nil {
+		return fmt.Errorf("read signature upload: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return fmt.Errorf("save signature upload: %w", err)
+	}
+	return nil
+}
+
 // SetPluginDir sets the plugin directory for uploads.
 func SetPluginDir(dir string) {
 	pluginDir = dir
@@ -1553,6 +1606,15 @@ func HandlePluginUpload(c *gin.Context) {
 		pluginName = manifest.Name
 		previousVersion, existed := installedPluginVersion(pluginName)
 
+		// Check the package's signature in a staging copy, before anything
+		// installed is stopped or replaced.
+		if err := checkPackageSignature(tempPath); err != nil {
+			_ = os.Remove(tempPath)
+			plugin.GetLogBuffer().Log("system", "error", fmt.Sprintf("Plugin upload refused: %s", err.Error()), nil)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Plugin signature: " + err.Error()})
+			return
+		}
+
 		// For gRPC plugins, the binary may be running. Unload it first to
 		// release the file handle so extraction can overwrite it.
 		if pluginUnloader != nil && strings.ToLower(manifest.Runtime) == "grpc" {
@@ -1604,17 +1666,49 @@ func HandlePluginUpload(c *gin.Context) {
 		})
 		return
 	} else {
-		// Direct WASM upload
+		// Direct WASM upload; its signature comes as the "signature" file.
+		// Both are staged under their real names, checked, then moved in.
 		destPath = filepath.Join(pluginDir, filename)
 		pluginName = strings.TrimSuffix(filename, ".wasm")
+		staging, err := os.MkdirTemp(pluginDir, ".upload-staging-*")
+		if err != nil {
+			_ = os.Remove(tempPath)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stage plugin file"})
+			return
+		}
+		defer os.RemoveAll(staging)
+		staged := filepath.Join(staging, filename)
+		if err := os.Rename(tempPath, staged); err != nil {
+			_ = os.Remove(tempPath)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stage plugin file"})
+			return
+		}
+		stagedSig := signing.DefaultSignaturePath(staged)
+		if err := saveUploadedSignature(c, stagedSig); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if err := pluginVerifier.Check(staged); err != nil {
+			plugin.GetLogBuffer().Log("system", "error", fmt.Sprintf("Plugin upload refused: %s", err.Error()), nil)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Plugin signature: " + err.Error()})
+			return
+		}
 		previousVersion, existed := installedPluginVersion(pluginName)
 		if _, statErr := os.Stat(destPath); statErr == nil {
 			existed = true
 		}
-		if err := os.Rename(tempPath, destPath); err != nil {
-			_ = os.Remove(tempPath)
+		if err := os.Rename(staged, destPath); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save plugin file"})
 			return
+		}
+		destSig := signing.DefaultSignaturePath(destPath)
+		if _, err := os.Stat(stagedSig); err == nil {
+			if err := os.Rename(stagedSig, destSig); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save plugin signature"})
+				return
+			}
+		} else {
+			_ = os.Remove(destSig) // a signature for the replaced module no longer applies
 		}
 		log.Printf("🔌 Plugin uploaded: %s", pluginName)
 		plugin.GetLogBuffer().Log(pluginName, "info", fmt.Sprintf("Plugin uploaded: %s (runtime: wasm, size: %d bytes)", pluginName, header.Size), nil)

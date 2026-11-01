@@ -21,22 +21,28 @@ import (
 
 // Client provides marketplace operations: fetch index, install, update, search.
 type Client struct {
-	indexURL   string
-	pluginsDir string
-	httpClient *http.Client
-	index      *Index
+	indexURL    string
+	pluginsDir  string
+	httpClient  *http.Client
+	index       *Index
+	verifier    signing.Verifier
+	verifierErr error // a bad trusted-key setting refuses every install
 }
 
-// NewClient creates a marketplace client.
+// NewClient creates a marketplace client. Signatures are checked as
+// configured by GOATFLOW_REQUIRE_SIGNATURES and the trusted-key settings.
 func NewClient(pluginsDir string) *Client {
 	indexURL := os.Getenv("GOATFLOW_MARKETPLACE_URL")
 	if indexURL == "" {
 		indexURL = DefaultIndexURL
 	}
+	verifier, err := signing.VerifierFromEnv()
 	return &Client{
-		indexURL:   indexURL,
-		pluginsDir: pluginsDir,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		indexURL:    indexURL,
+		pluginsDir:  pluginsDir,
+		httpClient:  &http.Client{Timeout: 30 * time.Second},
+		verifier:    verifier,
+		verifierErr: err,
 	}
 }
 
@@ -282,6 +288,13 @@ func (c *Client) installVersion(entry *PluginEntry, ver string) error {
 	if pkg.Manifest.Name != entry.Name {
 		return fmt.Errorf("package is plugin %q, marketplace entry is %q", pkg.Manifest.Name, entry.Name)
 	}
+	// The package was signed as a whole; the binary also carries its own
+	// signature, which the loader checks on every start.
+	if pkg.BinaryPath != "" {
+		if err := c.verifier.Check(pkg.BinaryPath); err != nil {
+			return fmt.Errorf("plugin %q: %w", entry.Name, err)
+		}
+	}
 
 	pluginDir := filepath.Join(c.pluginsDir, entry.Name)
 	if err := swapDir(filepath.Join(staging, "new", entry.Name), pluginDir, filepath.Join(staging, "old")); err != nil {
@@ -358,19 +371,22 @@ func (c *Client) download(entry *PluginEntry, ver string) (zipPath string, clean
 	return zipPath, cleanup, nil
 }
 
-// verifySignature checks zipPath against the published .sig for ver if one
-// exists; an unsigned plugin is refused when signatures are required.
+// verifySignature checks zipPath against the published .sig for ver with
+// the trusted keys when signatures are required; an unsigned package is
+// refused. The key named in the marketplace index is not trusted by itself.
 func (c *Client) verifySignature(entry *PluginEntry, ver, zipPath string) error {
+	if c.verifierErr != nil {
+		return c.verifierErr
+	}
+	if !c.verifier.Required {
+		return nil
+	}
 	sigResp, sigErr := c.httpClient.Get(SignatureURL(entry.Repo, ver, entry.Name))
-	hasSig := sigErr == nil && sigResp != nil && sigResp.StatusCode == http.StatusOK
-	if !hasSig {
+	if sigErr != nil || sigResp.StatusCode != http.StatusOK {
 		if sigResp != nil {
 			_ = sigResp.Body.Close()
 		}
-		if signing.IsSignatureRequired() {
-			return fmt.Errorf("plugin %q is not signed but signatures are required (GOATFLOW_REQUIRE_SIGNATURES=1)", entry.Name)
-		}
-		return nil
+		return fmt.Errorf("%w: plugin %q v%s is not signed and plugin signatures are required", signing.ErrUntrusted, entry.Name, ver)
 	}
 
 	sigFile, err := os.CreateTemp("", "gk-plugin-*.sig")
@@ -391,23 +407,12 @@ func (c *Client) verifySignature(entry *PluginEntry, ver, zipPath string) error 
 		return fmt.Errorf("write signature: %w", err)
 	}
 
-	keys, err := LoadTrustedKeys()
-	if err != nil {
-		return fmt.Errorf("load trusted keys: %w", err)
-	}
-	if entry.PublicKey != "" {
-		indexKey, err := parsePublicKey(entry.PublicKey)
-		if err != nil {
-			return fmt.Errorf("invalid public key in marketplace index: %w", err)
+	if err := signing.VerifyBinary(zipPath, sigPath, c.verifier.Keys); err != nil {
+		if entry.PublicKey != "" {
+			return fmt.Errorf("plugin %q is not signed by a trusted key; its marketplace entry names publisher key %s, "+
+				"which you can trust by adding it to GOATFLOW_TRUSTED_KEYS: %w", entry.Name, entry.PublicKey, err)
 		}
-		keys = append(keys, indexKey)
-	}
-	if len(keys) == 0 {
-		fmt.Fprintln(os.Stderr, "Warning: signature file exists but no trusted keys configured — skipping verification")
-		return nil
-	}
-	if err := signing.VerifyBinary(zipPath, sigPath, keys); err != nil {
-		return fmt.Errorf("signature verification failed: %w", err)
+		return fmt.Errorf("plugin %q: %w", entry.Name, err)
 	}
 	return nil
 }

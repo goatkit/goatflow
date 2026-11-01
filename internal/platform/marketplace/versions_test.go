@@ -1,6 +1,7 @@
 package marketplace
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -79,6 +80,7 @@ func newReleaseClient(t *testing.T, srv *releaseServer, entry PluginEntry) (*Cli
 
 	pluginsDir := t.TempDir()
 	client := NewClient(pluginsDir)
+	client.verifier = signing.Verifier{} // unsigned fixtures unless a test sets keys
 	client.httpClient = &http.Client{Transport: &redirectTransport{target: u.Host}, Timeout: 10 * time.Second}
 	client.index = &Index{Version: IndexVersion, Plugins: []PluginEntry{entry}}
 	return client, pluginsDir
@@ -204,7 +206,7 @@ func TestUpdateKeepsInstalledPluginWhenDownloadFails(t *testing.T) {
 	cases := []struct {
 		name   string
 		srv    *releaseServer
-		pubKey []byte
+		pubKey ed25519.PublicKey
 	}{
 		{"download 404", &releaseServer{}, pub},
 		{"bad signature", &releaseServer{
@@ -216,6 +218,7 @@ func TestUpdateKeepsInstalledPluginWhenDownloadFails(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			entry := PluginEntry{Name: "demo", Repo: "acme/demo", LatestVersion: "1.1.0", PublicKey: hex.EncodeToString(tc.pubKey)}
 			client, pluginsDir := newReleaseClient(t, tc.srv, entry)
+			client.verifier = signing.Verifier{Required: true, Keys: []ed25519.PublicKey{tc.pubKey}}
 			installLocal(t, pluginsDir, "demo", "1.0.0")
 
 			if _, err := client.Update(&entry, ""); err == nil {
@@ -229,6 +232,7 @@ func TestUpdateKeepsInstalledPluginWhenDownloadFails(t *testing.T) {
 		srv := &releaseServer{zips: map[string][]byte{"1.1.0": zip}, sigs: map[string][]byte{"1.1.0": sig}}
 		entry := PluginEntry{Name: "demo", Repo: "acme/demo", LatestVersion: "1.1.0", PublicKey: hex.EncodeToString(pub)}
 		client, pluginsDir := newReleaseClient(t, srv, entry)
+		client.verifier = signing.Verifier{Required: true, Keys: []ed25519.PublicKey{pub}}
 		installLocal(t, pluginsDir, "demo", "1.0.0")
 
 		got, err := client.Update(&entry, "")
@@ -331,4 +335,90 @@ func TestEntryWithoutVersionsIsSingleVersion(t *testing.T) {
 	if _, err := entry.ResolveInstall(); err != nil {
 		t.Errorf("dev build must bypass min_host_version, got %v", err)
 	}
+}
+
+// wasmPluginZip packages a WASM plugin demo@ver; with signer the module's
+// own .sig is inside the package. It returns the package and its .sig.
+func wasmPluginZip(t *testing.T, ver string, signer, packageSigner ed25519.PrivateKey) (zip, sig []byte) {
+	t.Helper()
+	src := t.TempDir()
+	manifest := fmt.Sprintf("name: demo\nversion: %s\nruntime: wasm\n", ver)
+	if err := os.WriteFile(filepath.Join(src, "plugin.yaml"), []byte(manifest), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(src, "v"+ver+".txt"), []byte(ver), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	module := filepath.Join(src, "demo.wasm")
+	if err := os.WriteFile(module, []byte("module "+ver), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if signer != nil {
+		if err := signing.SignBinary(module, module+".sig", signer); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out := filepath.Join(t.TempDir(), "demo.zip")
+	if err := packaging.PackagePlugin(src, out); err != nil {
+		t.Fatal(err)
+	}
+	if err := signing.SignBinary(out, out+".sig", packageSigner); err != nil {
+		t.Fatal(err)
+	}
+	zip, _ = os.ReadFile(out)
+	sig, _ = os.ReadFile(out + ".sig")
+	return zip, sig
+}
+
+// With signatures required, an install needs both the package signature and
+// the module's own signature from a trusted key; a refusal leaves the
+// installed version in place.
+func TestInstallRequiresSignedPackageAndBinary(t *testing.T) {
+	setHostVersion(t, "0.10.0")
+	pub, priv, err := signing.GenerateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, otherPriv, err := signing.GenerateKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := PluginEntry{Name: "demo", Repo: "acme/demo", LatestVersion: "1.1.0"}
+	verifier := signing.Verifier{Required: true, Keys: []ed25519.PublicKey{pub}}
+
+	refused := map[string]*releaseServer{}
+	z, s := wasmPluginZip(t, "1.1.0", nil, priv)
+	refused["module unsigned"] = &releaseServer{zips: map[string][]byte{"1.1.0": z}, sigs: map[string][]byte{"1.1.0": s}}
+	z, s = wasmPluginZip(t, "1.1.0", otherPriv, priv)
+	refused["module signed by an untrusted key"] = &releaseServer{zips: map[string][]byte{"1.1.0": z}, sigs: map[string][]byte{"1.1.0": s}}
+	z, _ = wasmPluginZip(t, "1.1.0", priv, priv)
+	refused["package unsigned"] = &releaseServer{zips: map[string][]byte{"1.1.0": z}}
+	z, s = wasmPluginZip(t, "1.1.0", priv, otherPriv)
+	refused["package signed by an untrusted key"] = &releaseServer{zips: map[string][]byte{"1.1.0": z}, sigs: map[string][]byte{"1.1.0": s}}
+
+	for name, srv := range refused {
+		t.Run(name, func(t *testing.T) {
+			client, pluginsDir := newReleaseClient(t, srv, entry)
+			client.verifier = verifier
+			installLocal(t, pluginsDir, "demo", "1.0.0")
+			if _, err := client.Update(&entry, ""); err == nil {
+				t.Fatal("update succeeded")
+			}
+			assertInstalled(t, client, pluginsDir, "demo", "1.0.0")
+		})
+	}
+
+	t.Run("both signed by a trusted key", func(t *testing.T) {
+		z, s := wasmPluginZip(t, "1.1.0", priv, priv)
+		srv := &releaseServer{zips: map[string][]byte{"1.1.0": z}, sigs: map[string][]byte{"1.1.0": s}}
+		client, pluginsDir := newReleaseClient(t, srv, entry)
+		client.verifier = verifier
+		if _, err := client.Install(&entry, ""); err != nil {
+			t.Fatalf("Install: %v", err)
+		}
+		module := filepath.Join(pluginsDir, "demo", "demo.wasm")
+		if err := verifier.Check(module); err != nil {
+			t.Errorf("installed module does not verify for the loader: %v", err)
+		}
+	})
 }

@@ -5,8 +5,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 // GenerateKeyPair generates a new ed25519 key pair for plugin signing.
@@ -60,7 +63,7 @@ func VerifyBinary(binaryPath, signaturePath string, trustedKeys []ed25519.Public
 	}
 
 	// Decode hex signature
-	signature, err := hex.DecodeString(string(sigData))
+	signature, err := hex.DecodeString(strings.TrimSpace(string(sigData)))
 	if err != nil {
 		return fmt.Errorf("invalid signature format: %w", err)
 	}
@@ -77,8 +80,12 @@ func VerifyBinary(binaryPath, signaturePath string, trustedKeys []ed25519.Public
 		_ = i // Suppress unused variable warning
 	}
 
-	return fmt.Errorf("signature verification failed: no matching trusted key")
+	return fmt.Errorf("%w: no matching trusted key", ErrUntrusted)
 }
+
+// ErrUntrusted marks plugin code refused because it is unsigned or not
+// signed by a trusted key.
+var ErrUntrusted = errors.New("plugin signature check failed")
 
 // DefaultSignaturePath returns the default signature file path for a binary.
 // For binary "/path/to/plugin", returns "/path/to/plugin.sig"
@@ -86,15 +93,74 @@ func DefaultSignaturePath(binaryPath string) string {
 	return binaryPath + ".sig"
 }
 
-// IsSignatureRequired checks if signature verification should be enforced.
-// This can be configured via environment variable or build tag.
-func IsSignatureRequired() bool {
-	// Check environment variable
-	if os.Getenv("GOATFLOW_REQUIRE_SIGNATURES") == "1" {
-		return true
-	}
+// GoatKitPublicKey is the GoatKit publisher key. It signs the first-party
+// plugins and the plugins bundled with GoatFlow, and is always trusted.
+const GoatKitPublicKey = "fa81e60073ee6f3e5825c575c18a7c2556f2abf2640dcf0e296a98fe4eb60fa6"
 
-	// In production builds, this could default to true
-	// For development, we default to false (opt-in)
-	return false
+// Verifier decides whether plugin code may be installed and run.
+type Verifier struct {
+	// Required: a plugin binary (gRPC executable or WASM module) must carry a
+	// .sig file from a trusted key, and a marketplace package must be signed.
+	Required bool
+	// Keys are the trusted publisher keys.
+	Keys []ed25519.PublicKey
+}
+
+// VerifierFromEnv returns the configured verifier. Signatures are required
+// unless GOATFLOW_REQUIRE_SIGNATURES is "0" or "false". The trusted keys are
+// the GoatKit key plus GOATFLOW_TRUSTED_KEYS (comma-separated hex) and
+// GOATFLOW_TRUSTED_KEYS_FILE (one hex key per line, # comments); an invalid
+// key is an error rather than being skipped.
+func VerifierFromEnv() (Verifier, error) {
+	v := Verifier{Required: true}
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("GOATFLOW_REQUIRE_SIGNATURES"))) {
+	case "0", "false":
+		v.Required = false
+	}
+	raw := []string{GoatKitPublicKey}
+	raw = append(raw, strings.Split(os.Getenv("GOATFLOW_TRUSTED_KEYS"), ",")...)
+	if keyFile := os.Getenv("GOATFLOW_TRUSTED_KEYS_FILE"); keyFile != "" {
+		data, err := os.ReadFile(keyFile) // #nosec G304 G703 -- path from operator-set GOATFLOW_TRUSTED_KEYS_FILE, not request input
+		if err != nil {
+			return v, fmt.Errorf("read GOATFLOW_TRUSTED_KEYS_FILE: %w", err)
+		}
+		raw = append(raw, strings.Split(string(data), "\n")...)
+	}
+	for _, k := range raw {
+		k = strings.TrimSpace(k)
+		if k == "" || strings.HasPrefix(k, "#") {
+			continue
+		}
+		key, err := ParsePublicKey(k)
+		if err != nil {
+			return v, fmt.Errorf("trusted key %q: %w", k, err)
+		}
+		v.Keys = append(v.Keys, key)
+	}
+	return v, nil
+}
+
+// Check verifies the file at path against path+".sig" when signatures are
+// required; otherwise it accepts the file.
+func (v Verifier) Check(path string) error {
+	if !v.Required {
+		return nil
+	}
+	if _, err := os.Stat(DefaultSignaturePath(path)); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%w: %s is not signed (no %s) and plugin signatures are required; "+
+			"set GOATFLOW_REQUIRE_SIGNATURES=0 only on a development system", ErrUntrusted, filepath.Base(path), filepath.Base(DefaultSignaturePath(path)))
+	}
+	return VerifyBinary(path, DefaultSignaturePath(path), v.Keys)
+}
+
+// ParsePublicKey decodes a hex ed25519 public key.
+func ParsePublicKey(hexKey string) (ed25519.PublicKey, error) {
+	keyBytes, err := hex.DecodeString(hexKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid hex: %w", err)
+	}
+	if len(keyBytes) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("expected %d bytes, got %d", ed25519.PublicKeySize, len(keyBytes))
+	}
+	return ed25519.PublicKey(keyBytes), nil
 }
