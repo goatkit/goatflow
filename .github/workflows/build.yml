@@ -825,6 +825,10 @@ jobs:
 
       - name: Run demo smoke test
         run: |
+          # The Playwright image must match the @playwright/test version the
+          # tests install, or the browsers are missing; both come from bun.lock.
+          PW=$(sed -nE 's/^ *"@playwright\/test": \["@playwright\/test@([0-9.]+)".*/\1/p' bun.lock)
+          test -n "$PW"
           docker run --rm \
             --user "$(id -u):$(id -g)" \
             -e HOME=/tmp \
@@ -832,7 +836,7 @@ jobs:
             -w /workspace \
             -e PLAYWRIGHT_SKIP_WEBSERVER=1 \
             -e DEMO_URL=https://goatflow-demo.gibbsoft.com \
-            mcr.microsoft.com/playwright:v1.57.0-jammy \
+            "mcr.microsoft.com/playwright:v${PW}-jammy" \
             sh -c "npm install && npx playwright test demo-smoke --project=chromium"
 
       - name: Upload smoke test screenshots
