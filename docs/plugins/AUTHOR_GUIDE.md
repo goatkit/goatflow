@@ -338,7 +338,7 @@ Signing is currently opt-in. Set `GOATFLOW_REQUIRE_SIGNATURES=1` on the host to 
 On Linux, gRPC plugins are started with the limits from their policy (see [Plugin Platform](../PLUGIN_PLATFORM.md#os-level-process-isolation-grpc)):
 
 - **Memory and CPU** — `memory_mb` (default 512; a Go plugin needs at least 128) and `cpu_millis` (default 1000, one core). Hard cgroup limits apply where the host delegates a cgroup; otherwise a heap limit, `GOMEMLIMIT`, `GOMAXPROCS` and lower priority
-- **Network** — the process can't open network connections unless it declares `{type: network}`; without it, use `HTTPRequest`, which is checked against your `http` scope. Internal addresses (localhost, LAN) are reachable through `HTTPRequest` only when your scope names the host exactly
+- **Network** — the process can't open network connections unless it declares `{type: network}`; without it, use `HTTPRequest`, which is checked against your `http` scope. Internal addresses (localhost, LAN) are reachable through `HTTPRequest` only when your scope names the host exactly (declare `localhost` for a sidecar) or an administrator allows the host. Responses are capped at 32 MB unless you declare `max_http_response_mb` (up to 1024); allow for it in `memory_mb`
 - **Timeouts** — `call_timeout` bounds every call; `init_timeout` (default 10s) bounds `Init`
 - **Parent death signal** — plugin is killed if the host process dies
 - **Minimal environment** — only `PATH`, `HOME`, `TMPDIR`, and `TZ` are set (plus `GOATFLOW_NO_NETWORK=1` without the `network` permission). **No database credentials or secrets are passed to plugin processes**

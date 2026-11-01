@@ -324,10 +324,10 @@ On non-Linux platforms, process sandboxing is not available and a warning is log
 
 `HTTPRequest` goes to a URL only if its host matches the plugin's `http` permission scope (`*`, `*.example.com` for the domain and its subdomains, an exact hostname or an IP literal; no ports). In addition:
 
-- **Internal addresses** (loopback, private, link-local, CGNAT, unspecified, multicast and other reserved ranges, including IPv4 addresses inside IPv6 forms) are reachable only when the scope names that host exactly; wildcards never reach them. The check runs on every resolved address when connecting, so DNS can't be used to slip past it
+- **Internal addresses** (loopback, private, link-local, CGNAT, unspecified, multicast and other reserved ranges, including IPv4 addresses inside IPv6 forms) are reachable only when the scope names that host exactly, or an administrator lists it under "Allowed internal hosts" on the plugin's Limits page (`allowed_internal_hosts` in the policy; up to 20 hostnames or IP addresses, no ports or wildcards, applied at once). Wildcards never reach them. The check runs on every resolved address when connecting, so DNS can't be used to slip past it. A plugin that talks to a sidecar on `localhost` declares it, for example `scope: ["*", "localhost"]`
 - **Cloud metadata addresses** (169.254.169.254, 169.254.170.2, 100.100.100.200, fd00:ec2::254) are always refused
 - **Redirects** — at most 5; every hop must match the scope and passes the same address check; credentials headers are dropped when the host or port changes
-- **Response size** — 32 MiB at most; a larger response is an error, never truncated
+- **Response size** — 32 MiB by default; a larger response is an error, never truncated. A plugin can declare `max_http_response_mb` in its resources and an administrator can change it on the Limits page (1 to 1024, applied at once). The response is held in the plugin's memory, so its `memory_mb` must allow for it
 - **No proxy** — proxy environment variables are ignored for plugin requests, because the destination has to be checked
 
 ### Kubernetes Pod Isolation

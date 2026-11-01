@@ -589,6 +589,9 @@ type ResourceRequest struct {
 
 	// Requested file storage quota. The platform may grant less via ResourcePolicy.
 	MaxFileStorageBytes int64 `json:"max_file_storage_bytes,omitempty" yaml:"max_file_storage_bytes,omitempty"`
+
+	// Largest response body HTTPRequest returns, in MB (0 = DefaultHTTPResponseMB).
+	MaxHTTPResponseMB int `json:"max_http_response_mb,omitempty" yaml:"max_http_response_mb,omitempty"`
 }
 
 // Permission declares a specific capability a plugin requests.
@@ -650,12 +653,22 @@ type ResourcePolicy struct {
 
 	// File storage limits
 	MaxFileStorageBytes int64 `json:"max_file_storage_bytes,omitempty"` // 0 = default (500MB)
+
+	// Host HTTP requests
+	MaxHTTPResponseMB int `json:"max_http_response_mb,omitempty"` // 0 = DefaultHTTPResponseMB
+	// AllowedInternalHosts are hosts an administrator lets the plugin reach
+	// although they resolve to internal addresses (localhost, private
+	// networks). They are added to the http scope as exact hosts; the plugin
+	// still needs the http permission, and cloud metadata stays refused.
+	AllowedInternalHosts []string `json:"allowed_internal_hosts,omitempty"`
 }
 
 // Default process limits for a plugin without a stored policy or a request.
 const (
 	DefaultMemoryMB  = 512
 	DefaultCPUMillis = 1000
+	// DefaultHTTPResponseMB is the response size cap for HTTPRequest.
+	DefaultHTTPResponseMB = 32
 )
 
 // PermissionNetwork is the permission type that lets a gRPC plugin process

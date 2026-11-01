@@ -1212,6 +1212,9 @@
       "db_queries_per_min": "Consultas a la base de datos por minuto",
       "http_req_per_min": "Solicitudes HTTP del host por minuto",
       "rate_help": "0 significa sin límite. Las tasas surten efecto sin recargar.",
+      "http_response_mb": "Tamaño de respuesta HTTP del host (MB)",
+      "internal_hosts": "Hosts internos permitidos",
+      "http_help": "Para las solicitudes que el plugin hace a través de GoatFlow. Una respuesta mayor que el límite se rechaza; la memoria del plugin debe poder contenerla. Los hosts internos (localhost, redes privadas) se rechazan salvo que figuren aquí o se nombren exactamente en el ámbito http del plugin: un nombre de host o dirección IP por línea, sin puerto. Las direcciones de metadatos de la nube siempre se rechazan. Se aplica sin recargar.",
       "status": "Estado de revisión",
       "status_pending_review": "Pendiente de revisión",
       "status_approved": "Aprobado",
@@ -1232,6 +1235,7 @@
       "reload_failed": "Límites guardados, pero no se pudo recargar el plugin: %s",
       "invalid": "Algunos valores no son válidos.",
       "err_range": "Debe estar entre %d y %d.",
+      "err_internal_hosts": "Introduce hasta %d nombres de host o direcciones IP, sin puerto, esquema ni comodines.",
       "err_duration": "Debe ser una duración de %s a %s, por ejemplo 30s o 5m.",
       "err_status": "Elija uno de los estados de la lista.",
       "err_body": "El cuerpo de la solicitud no es una política de plugin válida."

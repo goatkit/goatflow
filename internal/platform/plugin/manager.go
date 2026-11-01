@@ -203,6 +203,9 @@ func policyFromDeclarations(name string, requested *ResourceRequest) ResourcePol
 	if requested.MaxFileStorageBytes > 0 {
 		policy.MaxFileStorageBytes = requested.MaxFileStorageBytes
 	}
+	if requested.MaxHTTPResponseMB > 0 {
+		policy.MaxHTTPResponseMB = requested.MaxHTTPResponseMB
+	}
 	if len(requested.Permissions) > 0 {
 		perms := make([]Permission, 0, len(requested.Permissions))
 		for _, p := range requested.Permissions {

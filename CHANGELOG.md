@@ -111,8 +111,12 @@ project adheres to [Semantic Versioning](https://semver.org/).
   connecting. Cloud metadata addresses are always refused. Redirects are limited to 5, each
   re-checked, with credential headers dropped when the host changes; responses over 32 MiB are an
   error. Proxy environment variables are no longer used for plugin requests.
+  The response size limit is per plugin: declared as `max_http_response_mb` and changed on the
+  Limits page (1 to 1024 MB). Administrators can also list "Allowed internal hosts" there for a
+  plugin, for example a Tika or Browserless sidecar at a custom address; both apply at once.
   **Upgrading:** a plugin that calls a service on localhost or the LAN through `HTTPRequest` needs
-  that host named in its `http` scope.
+  that host named in its `http` scope or listed by an administrator. goatkit-rag (Tika) and
+  goatkit-chat (Browserless) declare `localhost` from their next releases.
 - **Plugin names** must be letters, digits, `.`, `_` or `-` (at most 128, not starting with `.`);
   a gRPC plugin with any other name is not loaded.
 - **One security policy, with a disclosure process.** `SECURITY.md` is the only policy file

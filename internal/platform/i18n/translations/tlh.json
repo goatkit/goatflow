@@ -1232,6 +1232,9 @@
       "db_queries_per_min": "tup wa'DIch database neH",
       "http_req_per_min": "tup wa'DIch host HTTP tlhob",
       "rate_help": "0: veH pagh. lI'choHbe'chugh rate chu'.",
+      "http_response_mb": "host HTTP jang tIn (MB)",
+      "internal_hosts": "Duj qoD host chaw'lu'bogh",
+      "http_help": "GoatFlow vegh plugin tlhob. veH tIn law' jang 'oH; plugin qawHaq 'el'eghnIS. qoD host (localhost, pegh De'wI' QIn) lajlu'be' naDev ponlu'be'chugh pagh plugin http Hop ponlu'be'chugh: tlhegh wa'DIch host pong pagh IP wa'. port Qo'. cloud metadata Daq lajlu'be' reH. lI'choHbe'chugh chu'.",
       "status": "Qej Dotlh",
       "status_pending_review": "Qej loS",
       "status_approved": "chaw'lu'",
@@ -1252,6 +1255,7 @@
       "reload_failed": "veH choqlu', 'ach plugin lI'choHlaHbe': %s",
       "invalid": "'op mI' lugh pagh.",
       "err_range": "%d %d je mI' moj.",
+      "err_internal_hosts": "%d host pong pagh IP ghItlh. port, scheme, wildcard Qo'.",
       "err_duration": "poH %s %s je moj, DaH 30s pagh 5m.",
       "err_status": "Dotlh tetlh wa' yIwIv.",
       "err_body": "tlhob plugin veH lugh ghaj pagh."

@@ -50,7 +50,8 @@ var DefaultResourcePolicy = pkgplugin.DefaultResourcePolicy
 
 // Re-exported policy constants.
 const (
-	DefaultMemoryMB   = pkgplugin.DefaultMemoryMB
-	DefaultCPUMillis  = pkgplugin.DefaultCPUMillis
-	PermissionNetwork = pkgplugin.PermissionNetwork
+	DefaultMemoryMB       = pkgplugin.DefaultMemoryMB
+	DefaultCPUMillis      = pkgplugin.DefaultCPUMillis
+	DefaultHTTPResponseMB = pkgplugin.DefaultHTTPResponseMB
+	PermissionNetwork     = pkgplugin.PermissionNetwork
 )

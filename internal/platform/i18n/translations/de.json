@@ -1220,6 +1220,9 @@
       "db_queries_per_min": "Datenbankabfragen pro Minute",
       "http_req_per_min": "Host-HTTP-Anfragen pro Minute",
       "rate_help": "0 bedeutet unbegrenzt. Raten wirken ohne Neuladen.",
+      "http_response_mb": "Host-HTTP-Antwortgröße (MB)",
+      "internal_hosts": "Erlaubte interne Hosts",
+      "http_help": "Für Anfragen, die das Plugin über GoatFlow stellt. Eine größere Antwort als die Grenze wird abgelehnt; der Speicher des Plugins muss sie fassen. Interne Hosts (localhost, private Netze) werden abgelehnt, außer sie stehen hier oder genau im http-Bereich des Plugins: ein Hostname oder eine IP-Adresse pro Zeile, ohne Port. Cloud-Metadatenadressen werden immer abgelehnt. Wirkt ohne Neuladen.",
       "status": "Prüfstatus",
       "status_pending_review": "Prüfung ausstehend",
       "status_approved": "Genehmigt",
@@ -1240,6 +1243,7 @@
       "reload_failed": "Limits gespeichert, aber das Neuladen des Plugins ist fehlgeschlagen: %s",
       "invalid": "Einige Werte sind ungültig.",
       "err_range": "Muss zwischen %d und %d liegen.",
+      "err_internal_hosts": "Bis zu %d Hostnamen oder IP-Adressen eingeben, ohne Port, Schema oder Platzhalter.",
       "err_duration": "Muss eine Dauer von %s bis %s sein, z. B. 30s oder 5m.",
       "err_status": "Wählen Sie einen der aufgeführten Status.",
       "err_body": "Der Anfrageinhalt ist keine gültige Plugin-Richtlinie."

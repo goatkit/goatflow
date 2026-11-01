@@ -114,6 +114,7 @@ var httpScopeKey = httpScopeKeyType{}
 type httpScope struct {
 	patterns []string
 	all      bool
+	maxBody  int64 // 0 = the client's default
 }
 
 func withHTTPScope(ctx context.Context, s httpScope) context.Context {
@@ -287,24 +288,31 @@ func (p *pluginHTTP) do(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-// readBody reads at most maxBody bytes and errors when the body is larger.
+// readBody reads the response up to the size cap of the request's scope (the
+// client default without one) and errors when the body is larger.
 func (p *pluginHTTP) readBody(resp *http.Response) ([]byte, error) {
-	if resp.ContentLength > p.maxBody {
-		return nil, p.tooLarge()
+	limit := p.maxBody
+	if resp.Request != nil {
+		if s, ok := resp.Request.Context().Value(httpScopeKey).(httpScope); ok && s.maxBody > 0 {
+			limit = s.maxBody
+		}
 	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, p.maxBody+1))
+	if resp.ContentLength > limit {
+		return nil, tooLarge(limit)
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {
 		return nil, fmt.Errorf("read response: %w", err)
 	}
-	if int64(len(data)) > p.maxBody {
-		return nil, p.tooLarge()
+	if int64(len(data)) > limit {
+		return nil, tooLarge(limit)
 	}
 	return data, nil
 }
 
-func (p *pluginHTTP) tooLarge() error {
-	if p.maxBody >= 1<<20 && p.maxBody%(1<<20) == 0 {
-		return fmt.Errorf("response body exceeds the %d MiB limit", p.maxBody>>20)
+func tooLarge(limit int64) error {
+	if limit >= 1<<20 && limit%(1<<20) == 0 {
+		return fmt.Errorf("response body exceeds the %d MiB limit", limit>>20)
 	}
-	return fmt.Errorf("response body exceeds the %d-byte limit", p.maxBody)
+	return fmt.Errorf("response body exceeds the %d-byte limit", limit)
 }

@@ -92,6 +92,11 @@ func TestPluginPolicyUpdateRejectsInvalidValues(t *testing.T) {
 		"db rate above a million": {`{"max_db_queries_per_min": 1000001}`, "max_db_queries_per_min"},
 		"http rate negative":      {`{"max_http_req_per_min": -5}`, "max_http_req_per_min"},
 		"unknown status":          {`{"status": "trusted"}`, "status"},
+		"response size zero":      {`{"max_http_response_mb": 0}`, "max_http_response_mb"},
+		"response size over 1024": {`{"max_http_response_mb": 1025}`, "max_http_response_mb"},
+		"internal host wildcard":  {`{"allowed_internal_hosts": ["*.lan"]}`, "allowed_internal_hosts"},
+		"internal host with port": {`{"allowed_internal_hosts": ["localhost:9998"]}`, "allowed_internal_hosts"},
+		"internal host as URL":    {`{"allowed_internal_hosts": ["http://tika"]}`, "allowed_internal_hosts"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -129,6 +134,25 @@ func TestPluginPolicyUpdateRejectsInvalidValues(t *testing.T) {
 		assert.Equal(t, "1s", p.InitTimeout)
 		assert.Equal(t, 1000000, p.MaxDBQueriesPerMin)
 		assert.Equal(t, "approved", p.Status)
+	})
+
+	t.Run("internal hosts are normalised and replaced", func(t *testing.T) {
+		body := `{"max_http_response_mb": 1024, "allowed_internal_hosts": [" Tika.LAN. ", "10.0.0.5", "[::1]", "tika.lan", ""]}`
+		code, resp := doPolicyRequest(t, r, http.MethodPut, "hello", body)
+		require.Equal(t, http.StatusOK, code, resp)
+		p, _ := mgr.GetPolicy("hello")
+		assert.Equal(t, 1024, p.MaxHTTPResponseMB)
+		assert.Equal(t, []string{"tika.lan", "10.0.0.5", "::1"}, p.AllowedInternalHosts)
+
+		code, _ = doPolicyRequest(t, r, http.MethodPut, "hello", `{"memory_mb": 64}`)
+		require.Equal(t, http.StatusOK, code)
+		p, _ = mgr.GetPolicy("hello")
+		assert.Len(t, p.AllowedInternalHosts, 3, "an update without the field keeps the list")
+
+		code, _ = doPolicyRequest(t, r, http.MethodPut, "hello", `{"allowed_internal_hosts": []}`)
+		require.Equal(t, http.StatusOK, code)
+		p, _ = mgr.GetPolicy("hello")
+		assert.Nil(t, p.AllowedInternalHosts)
 	})
 }
 
@@ -199,9 +223,10 @@ func TestPluginPolicyReloadsOnlyForLaunchChanges(t *testing.T) {
 		withPluginRuntime(t, pluginRuntimeGRPC)
 		reloads := withPolicyReloader(t, nil)
 
-		code, resp := doPolicyRequest(t, r, http.MethodPut, "hello", `{"call_timeout": "45s", "init_timeout": "20s", "max_calls_per_second": 5}`)
+		code, resp := doPolicyRequest(t, r, http.MethodPut, "hello", `{"call_timeout": "45s", "init_timeout": "20s", "max_calls_per_second": 5,
+			"max_http_response_mb": 100, "allowed_internal_hosts": ["tika"]}`)
 		require.Equal(t, http.StatusOK, code, resp)
-		assert.Empty(t, *reloads, "timeouts and rates apply without a reload")
+		assert.Empty(t, *reloads, "timeouts, rates and host HTTP settings apply without a reload")
 		assert.Equal(t, false, resp["reloaded"])
 
 		code, resp = doPolicyRequest(t, r, http.MethodPut, "hello", `{"memory_mb": 1024}`)

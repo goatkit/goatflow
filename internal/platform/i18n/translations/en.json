@@ -1318,6 +1318,9 @@
       "db_queries_per_min": "Database queries per minute",
       "http_req_per_min": "Host HTTP requests per minute",
       "rate_help": "0 means unlimited. Rates take effect without a reload.",
+      "http_response_mb": "Host HTTP response size (MB)",
+      "internal_hosts": "Allowed internal hosts",
+      "http_help": "For requests the plugin makes through GoatFlow. A larger response than the size limit is refused; the plugin's memory must hold it. Internal hosts (localhost, private networks) are refused unless listed here or named exactly in the plugin's own http scope: one hostname or IP address per line, no port. Cloud metadata addresses are always refused. Takes effect without a reload.",
       "status": "Review status",
       "status_pending_review": "Pending review",
       "status_approved": "Approved",
@@ -1338,6 +1341,7 @@
       "reload_failed": "Limits saved, but reloading the plugin failed: %s",
       "invalid": "Some values are not valid.",
       "err_range": "Must be between %d and %d.",
+      "err_internal_hosts": "Enter up to %d hostnames or IP addresses, without a port, scheme or wildcard.",
       "err_duration": "Must be a duration from %s to %s, for example 30s or 5m.",
       "err_status": "Choose one of the listed statuses.",
       "err_body": "The request body is not a valid plugin policy."

@@ -1212,6 +1212,9 @@
       "db_queries_per_min": "每分钟数据库查询次数",
       "http_req_per_min": "每分钟主机 HTTP 请求数",
       "rate_help": "0 表示不限制。速率限制无需重新加载即可生效。",
+      "http_response_mb": "主机 HTTP 响应大小 (MB)",
+      "internal_hosts": "允许的内部主机",
+      "http_help": "适用于插件通过 GoatFlow 发出的请求。超过上限的响应会被拒绝;插件的内存必须能容纳它。内部主机(localhost、私有网络)会被拒绝,除非在此列出或在插件的 http 范围中精确指定:每行一个主机名或 IP 地址,不含端口。云元数据地址始终被拒绝。无需重新加载即可生效。",
       "status": "审核状态",
       "status_pending_review": "待审核",
       "status_approved": "已批准",
@@ -1232,6 +1235,7 @@
       "reload_failed": "限制已保存，但重新加载插件失败：%s",
       "invalid": "部分值无效。",
       "err_range": "必须介于 %d 和 %d 之间。",
+      "err_internal_hosts": "最多输入 %d 个主机名或 IP 地址,不含端口、协议或通配符。",
       "err_duration": "必须是 %s 到 %s 之间的时长，例如 30s 或 5m。",
       "err_status": "请从列出的状态中选择一个。",
       "err_body": "请求正文不是有效的插件策略。"

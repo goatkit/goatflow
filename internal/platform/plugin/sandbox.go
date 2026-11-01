@@ -229,9 +229,18 @@ func (s *SandboxedHostAPI) checkHTTPAccess(url string) error {
 	return fmt.Errorf("plugin %q: HTTP access to %q not permitted (allowed: %v)", s.pluginName, url, scope.patterns)
 }
 
+// httpScope is the plugin's http permission scope plus the internal hosts an
+// administrator allowed (exact hosts, so they may reach internal addresses)
+// and the policy's response size cap.
 func (s *SandboxedHostAPI) httpScope() httpScope {
-	patterns, all, _ := s.grant("http", "")
-	return httpScope{patterns: patterns, all: all}
+	patterns, all, ok := s.grant("http", "")
+	s.policyMu.RLock()
+	defer s.policyMu.RUnlock()
+	scope := httpScope{patterns: patterns, all: all, maxBody: int64(s.policy.MaxHTTPResponseMB) << 20}
+	if ok {
+		scope.patterns = append(scope.patterns, s.policy.AllowedInternalHosts...)
+	}
+	return scope
 }
 
 // checkEntityAccess gates the entity deletion methods. Scope lists the

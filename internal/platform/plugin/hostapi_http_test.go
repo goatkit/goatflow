@@ -351,6 +351,59 @@ func TestPluginHTTP_ResponseSizeCap(t *testing.T) {
 		_, _, err = p.HTTPRequest(ctx, "GET", ts.URL+"/?n=1025", nil, nil)
 		wantRefused(t, err, "response body exceeds the 1024-byte limit")
 	})
+
+	t.Run("policy raises and lowers the limit live", func(t *testing.T) {
+		p := httpPlugin((&fakeNet{}).host(), "127.0.0.1")
+		raised := p.policy
+		cp := *raised
+		cp.MaxHTTPResponseMB = 40
+		p.UpdatePolicy(cp)
+		_, body, err := p.HTTPRequest(ctx, "GET", ts.URL+"/?stream=1&n="+strconv.Itoa(33<<20), nil, nil)
+		if err != nil || len(body) != 33<<20 {
+			t.Fatalf("33 MiB under a 40 MB policy: %d bytes, err %v", len(body), err)
+		}
+		cp.MaxHTTPResponseMB = 1
+		p.UpdatePolicy(cp)
+		_, _, err = p.HTTPRequest(ctx, "GET", ts.URL+"/?n="+strconv.Itoa(1<<20+1), nil, nil)
+		wantRefused(t, err, "response body exceeds the 1 MiB limit")
+	})
+}
+
+func TestPluginHTTP_AdminAllowedInternalHosts(t *testing.T) {
+	ts, hits := countingServer("ok")
+	defer ts.Close()
+	fn := &fakeNet{names: map[string][]string{"tika.lan.test": {"127.0.0.1"}}}
+	h := fn.host()
+	url := "http://tika.lan.test:" + serverPort(t, ts) + "/"
+	ctx := context.Background()
+
+	policy := func(perms []Permission, hosts ...string) ResourcePolicy {
+		return ResourcePolicy{PluginName: "net-test", Status: "approved", Permissions: perms, AllowedInternalHosts: hosts}
+	}
+	wildcard := []Permission{{Type: "http", Scope: []string{"*"}}}
+
+	p := NewSandboxedHostAPI(h, "net-test", policy(wildcard))
+	_, _, err := p.HTTPRequest(ctx, "GET", url, nil, nil)
+	wantRefused(t, err, "http request to tika.lan.test (127.0.0.1) "+internalRefusal)
+
+	p.UpdatePolicy(policy(wildcard, "tika.lan.test"))
+	if _, body, err := p.HTTPRequest(ctx, "GET", url, nil, nil); err != nil || string(body) != "ok" {
+		t.Fatalf("allowed internal host: %q, %v", body, err)
+	}
+
+	// A narrow scope still lets the allowed host through: the admin named it.
+	p.UpdatePolicy(policy([]Permission{{Type: "http", Scope: []string{"api.example.test"}}}, "tika.lan.test"))
+	if _, _, err := p.HTTPRequest(ctx, "GET", url, nil, nil); err != nil {
+		t.Fatalf("allowed internal host under a narrow scope: %v", err)
+	}
+
+	before := hits.Load()
+	p.UpdatePolicy(policy(nil, "tika.lan.test"))
+	_, _, err = p.HTTPRequest(ctx, "GET", url, nil, nil)
+	wantRefused(t, err, "HTTP outbound access not granted")
+	if hits.Load() != before {
+		t.Fatal("request without the http permission reached the server")
+	}
 }
 
 func TestIsInternalAddr(t *testing.T) {

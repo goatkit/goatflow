@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"net/http"
+	"net/netip"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -28,7 +30,12 @@ const (
 	policyMinTimeout      = time.Second
 	policyMaxTimeout      = 24 * time.Hour
 	policyMaxRate         = 1_000_000
+	policyMaxHTTPRespMB   = 1024
+	policyMaxInternalHost = 20
 )
+
+// hostnamePattern matches a DNS hostname (lower case, no port or scheme).
+var hostnamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$`)
 
 // Plugin runtimes reported by the policy API.
 const (
@@ -49,8 +56,33 @@ type pluginPolicyUpdate struct {
 	MaxCallsPerSecond  *int    `json:"max_calls_per_second"`
 	MaxDBQueriesPerMin *int    `json:"max_db_queries_per_min"`
 	MaxHTTPReqPerMin   *int    `json:"max_http_req_per_min"`
-	Network            *bool   `json:"network"`
-	Status             *string `json:"status"`
+	MaxHTTPResponseMB  *int    `json:"max_http_response_mb"`
+	// AllowedInternalHosts replaces the list when present ([] clears it).
+	AllowedInternalHosts *[]string `json:"allowed_internal_hosts"`
+	Network              *bool     `json:"network"`
+	Status               *string   `json:"status"`
+}
+
+// normaliseInternalHosts lower-cases, trims and de-duplicates hosts,
+// returning ok=false when one is not a hostname or IP address (wildcards,
+// ports, schemes and paths are refused) or there are too many.
+func normaliseInternalHosts(hosts []string) ([]string, bool) {
+	out := make([]string, 0, len(hosts))
+	for _, h := range hosts {
+		h = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(h)), ".")
+		if h == "" {
+			continue
+		}
+		if a, err := netip.ParseAddr(strings.TrimSuffix(strings.TrimPrefix(h, "["), "]")); err == nil {
+			h = a.WithZone("").String()
+		} else if len(h) > 253 || !hostnamePattern.MatchString(h) {
+			return nil, false
+		}
+		if !slices.Contains(out, h) {
+			out = append(out, h)
+		}
+	}
+	return out, len(out) <= policyMaxInternalHost
 }
 
 // validate returns a translated message per invalid field of an update to a
@@ -82,6 +114,12 @@ func (u pluginPolicyUpdate) validate(c *gin.Context, runtime string) map[string]
 	checkRange("max_calls_per_second", u.MaxCallsPerSecond, 0, policyMaxRate)
 	checkRange("max_db_queries_per_min", u.MaxDBQueriesPerMin, 0, policyMaxRate)
 	checkRange("max_http_req_per_min", u.MaxHTTPReqPerMin, 0, policyMaxRate)
+	checkRange("max_http_response_mb", u.MaxHTTPResponseMB, 1, policyMaxHTTPRespMB)
+	if u.AllowedInternalHosts != nil {
+		if _, ok := normaliseInternalHosts(*u.AllowedInternalHosts); !ok {
+			fields["allowed_internal_hosts"] = middleware.T(c, "admin.plugin_limits.err_internal_hosts", policyMaxInternalHost)
+		}
+	}
 	if u.Status != nil && !slices.Contains(pluginPolicyStatuses, *u.Status) {
 		fields["status"] = middleware.T(c, "admin.plugin_limits.err_status")
 	}
@@ -113,6 +151,15 @@ func (u pluginPolicyUpdate) apply(current plugin.ResourcePolicy) plugin.Resource
 	}
 	if u.MaxHTTPReqPerMin != nil {
 		p.MaxHTTPReqPerMin = *u.MaxHTTPReqPerMin
+	}
+	if u.MaxHTTPResponseMB != nil {
+		p.MaxHTTPResponseMB = *u.MaxHTTPResponseMB
+	}
+	if u.AllowedInternalHosts != nil {
+		p.AllowedInternalHosts, _ = normaliseInternalHosts(*u.AllowedInternalHosts)
+		if len(p.AllowedInternalHosts) == 0 {
+			p.AllowedInternalHosts = nil
+		}
 	}
 	if u.Status != nil {
 		p.Status = *u.Status
@@ -179,10 +226,11 @@ func pluginPolicyView(name string, policy plugin.ResourcePolicy) gin.H {
 	runtime := pluginRuntime(name)
 	launch := policy.Launch()
 	view := gin.H{
-		"name":    name,
-		"policy":  policy,
-		"stored":  pluginManager.HasStoredPolicy(name),
-		"runtime": runtime,
+		"name":                     name,
+		"policy":                   policy,
+		"stored":                   pluginManager.HasStoredPolicy(name),
+		"runtime":                  runtime,
+		"default_http_response_mb": plugin.DefaultHTTPResponseMB,
 		"launch": gin.H{
 			"memory_mb":  launch.MemoryMB,
 			"cpu_millis": launch.CPUMillis,
@@ -216,8 +264,17 @@ func policyAuditFields(p plugin.ResourcePolicy) map[string]any {
 		"max_calls_per_second":   p.MaxCallsPerSecond,
 		"max_db_queries_per_min": p.MaxDBQueriesPerMin,
 		"max_http_req_per_min":   p.MaxHTTPReqPerMin,
+		"max_http_response_mb":   effectiveHTTPResponseMB(p),
+		"allowed_internal_hosts": strings.Join(p.AllowedInternalHosts, ", "),
 		"network":                p.Launch().Network,
 	}
+}
+
+func effectiveHTTPResponseMB(p plugin.ResourcePolicy) int {
+	if p.MaxHTTPResponseMB > 0 {
+		return p.MaxHTTPResponseMB
+	}
+	return plugin.DefaultHTTPResponseMB
 }
 
 // applyPolicyChange reloads a running plugin whose launch limits changed and

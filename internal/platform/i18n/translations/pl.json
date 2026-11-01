@@ -1212,6 +1212,9 @@
       "db_queries_per_min": "Zapytania do bazy danych na minutę",
       "http_req_per_min": "Żądania HTTP hosta na minutę",
       "rate_help": "0 oznacza bez limitu. Limity częstotliwości działają bez ponownego ładowania.",
+      "http_response_mb": "Rozmiar odpowiedzi HTTP hosta (MB)",
+      "internal_hosts": "Dozwolone hosty wewnętrzne",
+      "http_help": "Dla żądań, które wtyczka wysyła przez GoatFlow. Odpowiedź większa niż limit jest odrzucana; pamięć wtyczki musi ją pomieścić. Hosty wewnętrzne (localhost, sieci prywatne) są odrzucane, chyba że są tu wymienione lub dokładnie nazwane w zakresie http wtyczki: jedna nazwa hosta lub adres IP w wierszu, bez portu. Adresy metadanych chmury są zawsze odrzucane. Działa bez przeładowania.",
       "status": "Status weryfikacji",
       "status_pending_review": "Oczekuje na weryfikację",
       "status_approved": "Zatwierdzona",
@@ -1232,6 +1235,7 @@
       "reload_failed": "Limity zapisane, ale ponowne załadowanie wtyczki nie powiodło się: %s",
       "invalid": "Niektóre wartości są nieprawidłowe.",
       "err_range": "Musi mieścić się w zakresie od %d do %d.",
+      "err_internal_hosts": "Podaj do %d nazw hostów lub adresów IP, bez portu, schematu i symboli wieloznacznych.",
       "err_duration": "Musi to być czas trwania od %s do %s, np. 30s lub 5m.",
       "err_status": "Wybierz jeden z wymienionych statusów.",
       "err_body": "Treść żądania nie jest prawidłową polityką wtyczki."

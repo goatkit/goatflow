@@ -428,6 +428,20 @@
                 </div>
                 <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.rate_help")|default:"0 means unlimited. Rates take effect without a reload." }}</p>
 
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="limit-max_http_response_mb" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.http_response_mb")|default:"Host HTTP response size (MB)" }}</label>
+                        <input type="number" id="limit-max_http_response_mb" name="max_http_response_mb" min="1" max="1024" step="1" class="gk-input-neon w-full">
+                        <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-max_http_response_mb"></p>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label for="limit-allowed_internal_hosts" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.internal_hosts")|default:"Allowed internal hosts" }}</label>
+                        <textarea id="limit-allowed_internal_hosts" name="allowed_internal_hosts" rows="2" class="gk-input-neon w-full font-mono text-sm" placeholder="localhost"></textarea>
+                        <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-allowed_internal_hosts"></p>
+                    </div>
+                </div>
+                <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.http_help")|default:"For requests the plugin makes through GoatFlow. A larger response than the size limit is refused; the plugin's memory must hold it. Internal hosts (localhost, private networks) are refused unless listed here or named exactly in the plugin's own http scope: one hostname or IP address per line, no port. Cloud metadata addresses are always refused. Takes effect without a reload." }}</p>
+
                 <div>
                     <label for="limit-status" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.status")|default:"Review status" }}</label>
                     <select id="limit-status" name="status" class="gk-select-neon w-full">
@@ -903,8 +917,8 @@ function closePluginModal() {
 
 // Resource limits
 let limitsPlugin = null;
-const LIMIT_FIELDS = ['memory_mb', 'cpu_millis', 'call_timeout', 'init_timeout', 'max_calls_per_second', 'max_db_queries_per_min', 'max_http_req_per_min', 'status'];
-const LIMIT_NUMBER_FIELDS = ['memory_mb', 'cpu_millis', 'max_calls_per_second', 'max_db_queries_per_min', 'max_http_req_per_min'];
+const LIMIT_FIELDS = ['memory_mb', 'cpu_millis', 'call_timeout', 'init_timeout', 'max_calls_per_second', 'max_db_queries_per_min', 'max_http_req_per_min', 'max_http_response_mb', 'status'];
+const LIMIT_NUMBER_FIELDS = ['memory_mb', 'cpu_millis', 'max_calls_per_second', 'max_db_queries_per_min', 'max_http_req_per_min', 'max_http_response_mb'];
 
 function limitsText(key) {
     return document.getElementById('plugin-limits-i18n').dataset[key] || '';
@@ -951,6 +965,8 @@ function fillLimitsForm(data) {
     limitInput('max_calls_per_second').value = p.max_calls_per_second || 0;
     limitInput('max_db_queries_per_min').value = p.max_db_queries_per_min || 0;
     limitInput('max_http_req_per_min').value = p.max_http_req_per_min || 0;
+    limitInput('max_http_response_mb').value = p.max_http_response_mb || data.default_http_response_mb || 32;
+    limitInput('allowed_internal_hosts').value = (p.allowed_internal_hosts || []).join('\n');
     limitInput('status').value = p.status || 'pending_review';
     setLimitEnforced('memory_mb', enforced.memory);
     setLimitEnforced('cpu_millis', enforced.cpu);
@@ -1032,6 +1048,7 @@ async function saveLimits() {
     if (!limitInput('network').disabled) {
         body.network = limitInput('network').checked;
     }
+    body.allowed_internal_hosts = limitInput('allowed_internal_hosts').value.split(/[\s,]+/).filter(Boolean);
     const btn = document.getElementById('limits-save-btn');
     btn.disabled = true;
     try {
