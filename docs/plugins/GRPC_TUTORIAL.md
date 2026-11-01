@@ -234,16 +234,19 @@ You can also modify `plugin.yaml` — the loader picks up manifest changes too. 
 
 ### OS-Level Sandboxing (Linux)
 
-On Linux, gRPC plugin processes are launched with OS-level restrictions:
+On Linux, gRPC plugin processes are started through GoatFlow's launcher with the plugin's limits:
 
-- **PID and mount namespace isolation** (`CLONE_NEWNS | CLONE_NEWPID`) — plugins can't see host processes or mounts
+- **Memory** — `memory_mb` caps the heap (default 512 MB; a Go plugin needs at least 128) and sets `GOMEMLIMIT`
+- **CPU** — `cpu_millis` sets `GOMAXPROCS` and the process runs at lower priority; where the host delegates a cgroup, `cpu.max` and `memory.max` are hard limits too
+- **Network** — without the `network` permission your process can't open network connections; use the HostAPI `HTTPRequest`, which is checked against your `http` scope
 - **Parent death signal** (`Pdeathsig: SIGKILL`) — if GoatFlow crashes, plugin processes are killed immediately (no orphans)
 - **Minimal environment** — your process receives only:
   - `PATH=/usr/local/bin:/usr/bin:/bin`
-  - `HOME=/tmp/goatflow-plugin-<name>` (plugin-specific temp dir)
-  - `TMPDIR=/tmp/goatflow-plugin-<name>`
+  - `HOME=/app/tmp/goatflow-plugin-<name>` (plugin-specific temp dir)
+  - `TMPDIR=/app/tmp/goatflow-plugin-<name>`
   - `TZ` (if set on host)
-  - `GOATFLOW_NO_NETWORK=1` (if you don't have `http` permission)
+  - `GOMEMLIMIT` and `GOMAXPROCS` from your limits
+  - `GOATFLOW_NO_NETWORK=1` (if you don't have the `network` permission)
 
 **Important:** Database credentials, API keys, and other host environment variables are **not** passed to plugin processes. Access host resources through the HostAPI only.
 

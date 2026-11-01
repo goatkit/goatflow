@@ -335,12 +335,15 @@ Signing is currently opt-in. Set `GOATFLOW_REQUIRE_SIGNATURES=1` on the host to 
 
 ### gRPC Process Isolation (Linux)
 
-On Linux, gRPC plugins run with OS-level restrictions:
+On Linux, gRPC plugins are started with the limits from their policy (see [Plugin Platform](../PLUGIN_PLATFORM.md#os-level-process-isolation-grpc)):
 
-- **Namespace isolation** — separate PID and mount namespaces
+- **Memory and CPU** — `memory_mb` (default 512; a Go plugin needs at least 128) and `cpu_millis` (default 1000, one core). Hard cgroup limits apply where the host delegates a cgroup; otherwise a heap limit, `GOMEMLIMIT`, `GOMAXPROCS` and lower priority
+- **Network** — the process can't open network connections unless it declares `{type: network}`; without it, use `HTTPRequest`, which is checked against your `http` scope. Internal addresses (localhost, LAN) are reachable through `HTTPRequest` only when your scope names the host exactly
+- **Timeouts** — `call_timeout` bounds every call; `init_timeout` (default 10s) bounds `Init`
 - **Parent death signal** — plugin is killed if the host process dies
-- **Minimal environment** — only `PATH`, `HOME`, `TMPDIR`, and `TZ` are set. **No database credentials or secrets are passed to plugin processes**
-- **Network hint** — `GOATFLOW_NO_NETWORK=1` is set for plugins without HTTP permission
+- **Minimal environment** — only `PATH`, `HOME`, `TMPDIR`, and `TZ` are set (plus `GOATFLOW_NO_NETWORK=1` without the `network` permission). **No database credentials or secrets are passed to plugin processes**
+
+Declare in `plugin.yaml` as well as in your registration: the host reads `plugin.yaml` before starting the process, and restarts it once if the registration asks for different memory, CPU or network.
 
 ## Navigation Control
 

@@ -711,6 +711,7 @@ var pluginAdminPathMarkers = []string{
 	"/upload",
 	"/logs",
 	"/reset-crashloop",
+	"/policy",
 	"/marketplace",
 	"/plugin-uis",
 }

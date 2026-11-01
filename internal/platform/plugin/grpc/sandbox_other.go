@@ -10,14 +10,15 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 )
 
-// applyProcessSandbox applies OS-level restrictions to the plugin command.
-// On non-Linux platforms, this is a no-op with a warning.
-func applyProcessSandbox(cmd *exec.Cmd, policy plugin.ResourcePolicy, pluginName string) error {
-	// Log a warning that process sandboxing is not available
+// pluginCgroup has no counterpart off Linux.
+type pluginCgroup struct{}
+
+func (*pluginCgroup) remove() {}
+
+// pluginCommand returns the command that starts the plugin at execPath. Off
+// Linux there is no launcher: the plugin runs without limits.
+func pluginCommand(execPath, pluginName string, _ plugin.ResourcePolicy) (*exec.Cmd, *pluginCgroup, error) {
 	fmt.Printf("Warning: gRPC plugin process sandboxing not available on %s, plugin %q will run with full system access\n",
 		runtime.GOOS, pluginName)
-
-	// For full security on non-Linux platforms, consider using containers
-	// or restricting gRPC plugins to trusted code only
-	return nil
+	return exec.Command(execPath), nil, nil // #nosec G204 -- plugin binary is chosen by the host
 }

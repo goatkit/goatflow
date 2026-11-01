@@ -576,8 +576,10 @@ type CascadeSpec struct {
 // ResourceRequest describes what a plugin asks for from the platform.
 // These are requests/defaults — the platform may grant less via ResourcePolicy.
 type ResourceRequest struct {
-	// Process limits (gRPC plugins only, ignored for WASM)
-	MemoryMB        int    `json:"memory_mb,omitempty" yaml:"memory_mb,omitempty"`               // Requested RSS limit in MB
+	// Process limits. MemoryMB caps a WASM plugin's linear memory and a gRPC
+	// plugin's heap; CPUMillis caps a gRPC plugin's CPU (1000 = one core).
+	MemoryMB        int    `json:"memory_mb,omitempty" yaml:"memory_mb,omitempty"`               // Requested memory limit in MB
+	CPUMillis       int    `json:"cpu_millis,omitempty" yaml:"cpu_millis,omitempty"`             // Requested CPU limit in millicores (gRPC plugins)
 	CallTimeout     string `json:"call_timeout,omitempty" yaml:"call_timeout,omitempty"`         // Per-call deadline, e.g. "30s"
 	InitTimeout     string `json:"init_timeout,omitempty" yaml:"init_timeout,omitempty"`         // Init must complete within, e.g. "10s"
 	ShutdownTimeout string `json:"shutdown_timeout,omitempty" yaml:"shutdown_timeout,omitempty"` // Shutdown grace period, e.g. "5s"
@@ -601,7 +603,10 @@ type Permission struct {
 	//   article (CreateArticle and attachment create/delete = write, ListArticleAttachments = read),
 	//   ticket  (ChangeTicketStatus = write, ListTicketStates/ListTicketViews = read),
 	//   entity  (EntitySoftDelete/EntityRestore = write, RecycleBinList = read,
-	//            EntityHardDelete = "hard_delete").
+	//            EntityHardDelete = "hard_delete"),
+	//   network (a gRPC plugin process may open its own network connections;
+	//            without it the process can use only the host API. Access and
+	//            scope are ignored).
 	Type string `json:"type" yaml:"type"`
 
 	// Access level: "read", "write" or "readwrite". "readwrite" grants read
@@ -630,6 +635,7 @@ type ResourcePolicy struct {
 
 	// Process limits (overrides plugin request)
 	MemoryMB        int    `json:"memory_mb,omitempty"`
+	CPUMillis       int    `json:"cpu_millis,omitempty"`
 	CallTimeout     string `json:"call_timeout,omitempty"`
 	InitTimeout     string `json:"init_timeout,omitempty"`
 	ShutdownTimeout string `json:"shutdown_timeout,omitempty"`
@@ -646,13 +652,24 @@ type ResourcePolicy struct {
 	MaxFileStorageBytes int64 `json:"max_file_storage_bytes,omitempty"` // 0 = default (500MB)
 }
 
+// Default process limits for a plugin without a stored policy or a request.
+const (
+	DefaultMemoryMB  = 512
+	DefaultCPUMillis = 1000
+)
+
+// PermissionNetwork is the permission type that lets a gRPC plugin process
+// open network connections itself.
+const PermissionNetwork = "network"
+
 // DefaultResourcePolicy returns a restrictive default policy for new plugins.
 // Plugins start with minimal access until an admin reviews them.
 func DefaultResourcePolicy(pluginName string) ResourcePolicy {
 	return ResourcePolicy{
 		PluginName:      pluginName,
 		Status:          "pending_review",
-		MemoryMB:        256,
+		MemoryMB:        DefaultMemoryMB,
+		CPUMillis:       DefaultCPUMillis,
 		CallTimeout:     "30s",
 		InitTimeout:     "10s",
 		ShutdownTimeout: "5s",
@@ -665,4 +682,30 @@ func DefaultResourcePolicy(pluginName string) ResourcePolicy {
 		MaxDBQueriesPerMin: 600,
 		MaxHTTPReqPerMin:   60,
 	}
+}
+
+// LaunchLimits are the limits fixed when a plugin is started: changing them
+// needs the plugin reloaded.
+type LaunchLimits struct {
+	MemoryMB  int  // 0 = DefaultMemoryMB
+	CPUMillis int  // 0 = DefaultCPUMillis
+	Network   bool // gRPC: the process may open its own network connections
+}
+
+// Launch returns the policy's start-time limits, with defaults filled in.
+func (p ResourcePolicy) Launch() LaunchLimits {
+	l := LaunchLimits{MemoryMB: p.MemoryMB, CPUMillis: p.CPUMillis}
+	if l.MemoryMB <= 0 {
+		l.MemoryMB = DefaultMemoryMB
+	}
+	if l.CPUMillis <= 0 {
+		l.CPUMillis = DefaultCPUMillis
+	}
+	for _, perm := range p.Permissions {
+		if perm.Type == PermissionNetwork {
+			l.Network = true
+			break
+		}
+	}
+	return l
 }

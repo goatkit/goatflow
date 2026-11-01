@@ -16,9 +16,9 @@ import (
 	"log"
 	"net/rpc"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -51,7 +51,8 @@ type GRPCPlugin struct {
 	impl         *GKPluginRPCClientHost
 	registration plugin.GKRegistration
 	binding      *hostBinding  // routes the plugin's host callbacks to its sandbox
-	callTimeout  time.Duration // Per-call deadline (0 = no timeout)
+	cgroup       *pluginCgroup // the process's own cgroup (nil = launcher limits only)
+	callTimeout  atomic.Int64  // per-call deadline in nanoseconds (0 = no timeout)
 }
 
 // GKPluginPluginHost is the host-side go-plugin.Plugin implementation.
@@ -131,8 +132,9 @@ func (c *GKPluginRPCClientHost) Shutdown() error {
 }
 
 // LoadGRPCPlugin loads a gRPC plugin from an executable path with OS-level
-// sandboxing. The plugin's host callbacks are refused until Init binds the
-// host the Manager gives the plugin (its SandboxedHostAPI).
+// sandboxing and the policy's launch limits. The plugin's host callbacks are
+// refused until Init binds the host the Manager gives the plugin (its
+// SandboxedHostAPI).
 func LoadGRPCPlugin(execPath, pluginName string, policy plugin.ResourcePolicy) (*GRPCPlugin, error) {
 	logger := hclog.New(&hclog.LoggerOptions{
 		Name:   "plugin",
@@ -146,10 +148,9 @@ func LoadGRPCPlugin(execPath, pluginName string, policy plugin.ResourcePolicy) (
 		"gkplugin": &GKPluginPluginHost{binding: binding, PluginName: pluginName},
 	}
 
-	// Create command with OS-level sandboxing
-	cmd := exec.Command(execPath)
-	if err := applyProcessSandbox(cmd, policy, pluginName); err != nil {
-		return nil, fmt.Errorf("failed to apply process sandbox: %w", err)
+	cmd, cg, err := pluginCommand(execPath, pluginName, policy)
+	if err != nil {
+		return nil, fmt.Errorf("plugin %q: %w", pluginName, err)
 	}
 
 	client := goplugin.NewClient(&goplugin.ClientConfig{
@@ -165,30 +166,31 @@ func LoadGRPCPlugin(execPath, pluginName string, policy plugin.ResourcePolicy) (
 			goplugin.ProtocolNetRPC,
 		},
 	})
+	fail := func(err error) (*GRPCPlugin, error) {
+		client.Kill()
+		cg.remove()
+		return nil, err
+	}
 
 	rpcClient, err := client.Client()
 	if err != nil {
-		client.Kill()
-		return nil, fmt.Errorf("failed to create RPC client: %w", err)
+		return fail(fmt.Errorf("failed to create RPC client: %w", err))
 	}
 
 	raw, err := rpcClient.Dispense("gkplugin")
 	if err != nil {
-		client.Kill()
-		return nil, fmt.Errorf("failed to dispense plugin: %w", err)
+		return fail(fmt.Errorf("failed to dispense plugin: %w", err))
 	}
 
 	impl, ok := raw.(*GKPluginRPCClientHost)
 	if !ok {
-		client.Kill()
-		return nil, fmt.Errorf("plugin does not implement GKPluginInterface")
+		return fail(fmt.Errorf("plugin does not implement GKPluginInterface"))
 	}
 
 	// Get registration
 	reg, err := impl.GKRegister()
 	if err != nil {
-		client.Kill()
-		return nil, fmt.Errorf("failed to get plugin registration: %w", err)
+		return fail(fmt.Errorf("failed to get plugin registration: %w", err))
 	}
 	log.Printf("🔌 Plugin %q registration: %d routes, %d widgets, %d menu items",
 		reg.Name, len(reg.Routes), len(reg.Widgets), len(reg.MenuItems))
@@ -199,6 +201,7 @@ func LoadGRPCPlugin(execPath, pluginName string, policy plugin.ResourcePolicy) (
 		impl:         impl,
 		registration: *reg,
 		binding:      binding,
+		cgroup:       cg,
 	}, nil
 }
 
@@ -207,12 +210,36 @@ func (p *GRPCPlugin) GKRegister() plugin.GKRegistration {
 	return p.registration
 }
 
+// SetDeclaredResources records r as the plugin's requested resources when its
+// own registration declares none (they then come from its manifest).
+func (p *GRPCPlugin) SetDeclaredResources(r *plugin.ResourceRequest) {
+	if p.registration.Resources == nil {
+		p.registration.Resources = r
+	}
+}
+
+// CgroupEnforced reports whether the plugin process runs in its own cgroup
+// with hard cpu.max and memory.max limits; otherwise only the launcher's
+// limits apply.
+func (p *GRPCPlugin) CgroupEnforced() bool {
+	return p.cgroup != nil
+}
+
 // Init implements plugin.Plugin. host is the plugin's SandboxedHostAPI: from
-// here on every host callback from the plugin process goes through it.
+// here on every host callback from the plugin process goes through it. An
+// Init RPC still running when ctx ends is abandoned; the caller shuts the
+// plugin down.
 func (p *GRPCPlugin) Init(ctx context.Context, host plugin.HostAPI) error {
 	p.binding.setHost(host)
 	config := buildPluginConfig(p.registration.Name)
-	return p.impl.Init(config)
+	ch := make(chan error, 1)
+	go func() { ch <- p.impl.Init(config) }()
+	select {
+	case err := <-ch:
+		return err
+	case <-ctx.Done():
+		return fmt.Errorf("plugin %q Init: %w", p.registration.Name, ctx.Err())
+	}
 }
 
 // buildPluginConfig collects configuration for a plugin from environment variables.
@@ -258,9 +285,9 @@ func buildPluginConfig(pluginName string) map[string]string {
 // until Call returns, so the plugin's callbacks that carry the token run with
 // it (acting user, language, call depth, deadline).
 func (p *GRPCPlugin) Call(ctx context.Context, fn string, args json.RawMessage) (json.RawMessage, error) {
-	if p.callTimeout > 0 {
+	if timeout := time.Duration(p.callTimeout.Load()); timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, p.callTimeout)
+		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
 	token, end := p.binding.begin(ctx)
@@ -285,9 +312,10 @@ func (p *GRPCPlugin) Call(ctx context.Context, fn string, args json.RawMessage) 
 	}
 }
 
-// SetCallTimeout sets the per-call timeout for this plugin.
+// SetCallTimeout sets the per-call timeout for this plugin; safe while calls
+// are running.
 func (p *GRPCPlugin) SetCallTimeout(d time.Duration) {
-	p.callTimeout = d
+	p.callTimeout.Store(int64(d))
 }
 
 // Shutdown implements plugin.Plugin.
@@ -319,5 +347,6 @@ func (p *GRPCPlugin) Shutdown(ctx context.Context) error {
 	}
 
 	p.client.Kill()
+	p.cgroup.remove()
 	return shutdownErr
 }

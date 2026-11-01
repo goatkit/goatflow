@@ -119,6 +119,7 @@ func classifyRoute(method, path string) authzClass {
 		"POST /api/v1/search/reindex", "POST /api/lookups/cache/invalidate",
 		"POST /api/v1/plugins/:name/call/:fn", "POST /api/v1/plugins/:name/enable",
 		"POST /api/v1/plugins/:name/disable", "POST /api/v1/plugins/:name/reset-crashloop",
+		"GET /api/v1/plugins/:name/policy", "PUT /api/v1/plugins/:name/policy", "DELETE /api/v1/plugins/:name/policy",
 		"DELETE /api/v1/plugins/:name":
 		return authzAdmin
 	}

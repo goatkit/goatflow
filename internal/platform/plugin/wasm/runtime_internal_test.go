@@ -61,12 +61,12 @@ func TestWriteBytesEmpty(t *testing.T) {
 	}
 
 	// Empty data should return 0
-	result := p.writeBytes(nil)
+	result := p.writeBytes(context.Background(), nil)
 	if result != 0 {
 		t.Errorf("expected 0 for empty data, got %d", result)
 	}
 
-	result = p.writeBytes([]byte{})
+	result = p.writeBytes(context.Background(), []byte{})
 	if result != 0 {
 		t.Errorf("expected 0 for empty slice, got %d", result)
 	}
@@ -77,7 +77,7 @@ func TestWriteStringEmpty(t *testing.T) {
 		module: nil,
 	}
 
-	result := p.writeString("")
+	result := p.writeString(context.Background(), "")
 	if result != 0 {
 		t.Errorf("expected 0 for empty string, got %d", result)
 	}
@@ -89,8 +89,8 @@ func TestFreeWithNilFunction(t *testing.T) {
 	}
 
 	// Should not panic
-	p.free(0)
-	p.free(100)
+	p.free(context.Background(), 0)
+	p.free(context.Background(), 100)
 }
 
 func TestWASMPluginRegistration(t *testing.T) {

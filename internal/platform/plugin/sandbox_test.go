@@ -588,8 +588,8 @@ func TestSandbox_DefaultPolicy(t *testing.T) {
 	if policy.Status != "pending_review" {
 		t.Errorf("default status should be pending_review, got %q", policy.Status)
 	}
-	if policy.MemoryMB != 256 {
-		t.Errorf("default memory should be 256MB, got %d", policy.MemoryMB)
+	if policy.MemoryMB != 512 || policy.CPUMillis != 1000 {
+		t.Errorf("default limits should be 512MB and 1000 millicores, got %d MB, %d", policy.MemoryMB, policy.CPUMillis)
 	}
 	if policy.MaxCallsPerSecond != 100 {
 		t.Errorf("default call rate should be 100/s, got %d", policy.MaxCallsPerSecond)
@@ -634,6 +634,10 @@ func TestMatchURLPattern(t *testing.T) {
 		{"api.tenor.com", "https://api.tenor.com@evil.com/v2/search", false},
 		{"*.tenor.com", "https://api.tenor.com@evil.com/v2/search", false},
 		{"api.tenor.com", "https://api.tenor.com./v2/search", true},
+		{"127.0.0.1", "http://127.0.0.1:8080/x", true},
+		{"127.0.0.1", "http://127.0.0.2/x", false},
+		{"[::1]", "http://[::1]:8080/x", true},
+		{"::1", "http://[0:0:0:0:0:0:0:1]/x", true},
 		{"api.tenor.com", "not a url", false},
 		{"api.tenor.com", "", false},
 	}

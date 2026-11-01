@@ -8,6 +8,21 @@ project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Per-plugin limits, enforced, and an admin page for them.** Admin -> Plugins -> Limits shows
+  and edits each plugin's memory, CPU, call and start-up timeouts, rate limits, network access and
+  status (`GET`/`PUT`/`DELETE /api/v1/plugins/:name/policy`, audited); start-time limits restart
+  the plugin, timeouts apply at once. Before, these values were stored but only the rate limits
+  and permissions were applied: WASM plugins always had 16 MB and 30 s, gRPC plugins had no
+  memory, CPU or time limit at all.
+  - **gRPC plugins** start through the new `goatflow-plugin-exec` launcher (shipped next to
+    `goats`), which caps the heap (`memory_mb`, default 512; `GOMEMLIMIT`), sets `GOMAXPROCS` from
+    `cpu_millis` (default 1000) and lowers priority. Where the host delegates a writable cgroup v2
+    each plugin also gets hard `cpu.max` and `memory.max`. A plugin whose limits can't be applied
+    is not started.
+  - **WASM plugins** get `memory_mb` as their memory limit, and a call past its timeout is now
+    stopped instead of running on.
+  - **Timeouts:** `call_timeout` bounds every call; `init_timeout` (default 10 s) bounds `Init`,
+    and a plugin that doesn't finish is not registered.
 - **Marketplace installs pull in the plugins a plugin needs.** Installing or updating a plugin
   (`gk install`, `gk update` or Admin -> Marketplace) also installs every plugin listed in its
   marketplace `dependencies` that isn't installed yet, directly or through another dependency, at
@@ -82,6 +97,24 @@ project adheres to [Semantic Versioning](https://semver.org/).
   The configured decide provider receives the email text, so a hosted provider is a third party.
 
 ### Changed
+- **gRPC plugins can't open network connections unless they have the `network` permission.**
+  Before, the `http` permission only checked requests made through the host API; the plugin
+  process itself could connect anywhere. A seccomp filter now allows it only the Unix socket it
+  uses to talk to GoatFlow. Plugins that call services directly declare `{type: network}` in
+  their registration and `plugin.yaml`; an admin can grant or remove it on the Limits page.
+  **Upgrading:** a plugin that connects directly and doesn't declare it stops working until it is
+  updated or an admin grants `network`. goatkit-llm, goatkit-memory and goatkit-tts declare it
+  from their next releases.
+- **Plugin HTTP requests through the host reach internal addresses only when named.** Loopback,
+  private, link-local and other reserved addresses are refused unless the plugin's `http` scope
+  names that host exactly (wildcards never reach them), checked on every resolved address when
+  connecting. Cloud metadata addresses are always refused. Redirects are limited to 5, each
+  re-checked, with credential headers dropped when the host changes; responses over 32 MiB are an
+  error. Proxy environment variables are no longer used for plugin requests.
+  **Upgrading:** a plugin that calls a service on localhost or the LAN through `HTTPRequest` needs
+  that host named in its `http` scope.
+- **Plugin names** must be letters, digits, `.`, `_` or `-` (at most 128, not starting with `.`);
+  a gRPC plugin with any other name is not loaded.
 - **One security policy, with a disclosure process.** `SECURITY.md` is the only policy file
   (`.github/SECURITY.md`, which GitHub showed instead and which still called 0.9.x the stable
   release, is gone). Reports go through GitHub private vulnerability reporting, with

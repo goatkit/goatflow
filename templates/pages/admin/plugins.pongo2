@@ -327,6 +327,141 @@
     </div>
 </div>
 
+<!-- Plugin Limits Modal -->
+<div id="plugin-limits-i18n" class="hidden"
+     data-load-failed="{{ t('admin.plugin_limits.load_failed')|default:'Could not load the plugin limits.' }}"
+     data-stored="{{ t('admin.plugin_limits.stored_admin')|default:'Set by an administrator' }}"
+     data-declared="{{ t('admin.plugin_limits.stored_declared')|default:'Declared by the plugin' }}"
+     data-cgroup-on="{{ t('admin.plugin_limits.cgroup_enforced')|default:'Hard cgroup limits in force' }}"
+     data-cgroup-off="{{ t('admin.plugin_limits.cgroup_not_enforced')|default:'Process limits only (no delegated cgroup)' }}"
+     data-reset-confirm="{{ t('admin.plugin_limits.reset_confirm')|default:'Drop the administrator limits for this plugin and use what it declares?' }}"
+     data-error="{{ t('common.error')|default:'Error' }}"></div>
+<div id="plugin-limits-modal" class="hidden fixed z-30 inset-0 overflow-y-auto" aria-labelledby="limits-modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="gk-modal-backdrop fixed inset-0 transition-opacity" aria-hidden="true" onclick="closeLimitsModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div class="gk-modal inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full max-h-[90vh] overflow-y-auto">
+            <div class="gk-modal-header">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full" style="background: var(--gk-primary-subtle);">
+                        <svg class="h-6 w-6" style="color: var(--gk-primary);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="gk-modal-title" id="limits-modal-title">{{ t("admin.plugin_limits.title")|default:"Resource limits" }}</h3>
+                        <p class="text-sm font-mono" style="color: var(--gk-text-secondary);" id="limits-modal-name"></p>
+                    </div>
+                </div>
+                <button type="button" class="gk-modal-close" onclick="closeLimitsModal()" title="{{ t("buttons.close")|default:"Close" }}">
+                    <svg class="icon-md" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="limits-form" class="gk-modal-body space-y-4" onsubmit="saveLimits(); return false;" novalidate>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div style="color: var(--gk-text-muted);">{{ t("admin.plugin_runtime")|default:"Runtime" }}</div>
+                    <div><span class="gk-badge gk-badge-muted" id="limits-runtime">-</span></div>
+                    <div style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.source")|default:"Limits" }}</div>
+                    <div style="color: var(--gk-text-primary);" id="limits-source">-</div>
+                    <div style="color: var(--gk-text-muted);" class="limits-cgroup hidden">{{ t("admin.plugin_limits.enforcement")|default:"Enforcement" }}</div>
+                    <div style="color: var(--gk-text-primary);" class="limits-cgroup hidden" id="limits-cgroup">-</div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div id="limit-wrap-memory_mb">
+                        <label for="limit-memory_mb" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.memory")|default:"Memory (MB)" }}</label>
+                        <input type="number" id="limit-memory_mb" name="memory_mb" min="16" max="65536" step="1" class="gk-input-neon w-full">
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.memory_help")|default:"Applies to gRPC and WASM plugins; gRPC plugins need at least 128 MB. Changing it reloads the plugin." }}</p>
+                        <p class="mt-1 text-sm hidden" style="color: var(--gk-text-muted);" id="limit-na-memory_mb">{{ t("admin.plugin_limits.not_enforced")|default:"Not enforced for this runtime." }}</p>
+                        <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-memory_mb"></p>
+                    </div>
+                    <div id="limit-wrap-cpu_millis">
+                        <label for="limit-cpu_millis" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.cpu")|default:"CPU (millicores)" }}</label>
+                        <input type="number" id="limit-cpu_millis" name="cpu_millis" min="100" max="64000" step="100" class="gk-input-neon w-full">
+                        <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.cpu_help")|default:"gRPC plugins only. 1000 is one full core. Changing it reloads the plugin." }}</p>
+                        <p class="mt-1 text-sm hidden" style="color: var(--gk-text-muted);" id="limit-na-cpu_millis">{{ t("admin.plugin_limits.not_enforced")|default:"Not enforced for this runtime." }}</p>
+                        <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-cpu_millis"></p>
+                    </div>
+                </div>
+
+                <div id="limit-wrap-network">
+                    <label class="inline-flex items-center gap-2 text-sm font-medium" style="color: var(--gk-text-secondary);">
+                        <input type="checkbox" id="limit-network" name="network" class="h-4 w-4">
+                        {{ t("admin.plugin_limits.network")|default:"Allow direct network access" }}
+                    </label>
+                    <p class="mt-1 text-sm" style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.network_help")|default:"gRPC plugins only. Without it the plugin process reaches the network only through the host API. Changing it reloads the plugin." }}</p>
+                    <p class="mt-1 text-sm hidden" style="color: var(--gk-text-muted);" id="limit-na-network">{{ t("admin.plugin_limits.not_enforced")|default:"Not enforced for this runtime." }}</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="limit-call_timeout" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.call_timeout")|default:"Call timeout" }}</label>
+                        <input type="text" id="limit-call_timeout" name="call_timeout" class="gk-input-neon w-full">
+                        <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-call_timeout"></p>
+                    </div>
+                    <div>
+                        <label for="limit-init_timeout" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.init_timeout")|default:"Start-up timeout" }}</label>
+                        <input type="text" id="limit-init_timeout" name="init_timeout" class="gk-input-neon w-full">
+                        <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-init_timeout"></p>
+                    </div>
+                </div>
+                <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.timeout_help")|default:"A duration from 1s to 24h, for example 30s, 5m or 1h. Takes effect without a reload." }}</p>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="limit-max_calls_per_second" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.calls_per_second")|default:"Calls per second" }}</label>
+                        <input type="number" id="limit-max_calls_per_second" name="max_calls_per_second" min="0" max="1000000" step="1" class="gk-input-neon w-full">
+                        <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-max_calls_per_second"></p>
+                    </div>
+                    <div>
+                        <label for="limit-max_db_queries_per_min" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.db_queries_per_min")|default:"Database queries per minute" }}</label>
+                        <input type="number" id="limit-max_db_queries_per_min" name="max_db_queries_per_min" min="0" max="1000000" step="1" class="gk-input-neon w-full">
+                        <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-max_db_queries_per_min"></p>
+                    </div>
+                    <div>
+                        <label for="limit-max_http_req_per_min" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.http_req_per_min")|default:"Host HTTP requests per minute" }}</label>
+                        <input type="number" id="limit-max_http_req_per_min" name="max_http_req_per_min" min="0" max="1000000" step="1" class="gk-input-neon w-full">
+                        <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-max_http_req_per_min"></p>
+                    </div>
+                </div>
+                <p class="text-sm" style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.rate_help")|default:"0 means unlimited. Rates take effect without a reload." }}</p>
+
+                <div>
+                    <label for="limit-status" class="block text-sm font-medium mb-1" style="color: var(--gk-text-secondary);">{{ t("admin.plugin_limits.status")|default:"Review status" }}</label>
+                    <select id="limit-status" name="status" class="gk-select-neon w-full">
+                        <option value="pending_review">{{ t("admin.plugin_limits.status_pending_review")|default:"Pending review" }}</option>
+                        <option value="approved">{{ t("admin.plugin_limits.status_approved")|default:"Approved" }}</option>
+                        <option value="restricted">{{ t("admin.plugin_limits.status_restricted")|default:"Restricted" }}</option>
+                        <option value="blocked">{{ t("admin.plugin_limits.status_blocked")|default:"Blocked" }}</option>
+                    </select>
+                    <p class="mt-1 text-sm hidden limit-error" style="color: var(--gk-error);" id="limit-error-status"></p>
+                </div>
+
+                <div id="limits-usage" class="hidden">
+                    <div class="text-sm font-semibold mb-2" style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.usage")|default:"Usage since start" }}</div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                        <div style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.usage_calls")|default:"Calls" }}: <span style="color: var(--gk-text-primary);" id="limits-usage-calls">0</span></div>
+                        <div style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.usage_errors")|default:"Errors" }}: <span style="color: var(--gk-text-primary);" id="limits-usage-errors">0</span></div>
+                        <div style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.usage_db")|default:"Database queries" }}: <span style="color: var(--gk-text-primary);" id="limits-usage-db">0</span></div>
+                        <div style="color: var(--gk-text-muted);">{{ t("admin.plugin_limits.usage_http")|default:"HTTP requests" }}: <span style="color: var(--gk-text-primary);" id="limits-usage-http">0</span></div>
+                    </div>
+                </div>
+
+                <div id="limits-message" class="hidden gk-alert">
+                    <div class="text-sm" id="limits-message-text"></div>
+                </div>
+            </form>
+            <div class="gk-modal-footer">
+                <button type="button" onclick="resetLimits()" class="gk-btn-secondary" id="limits-reset-btn">{{ t("admin.plugin_limits.reset")|default:"Reset to declared" }}</button>
+                <button type="button" onclick="closeLimitsModal()" class="gk-btn-secondary">{{ t("buttons.close")|default:"Close" }}</button>
+                <button type="button" onclick="saveLimits()" class="gk-btn-neon" id="limits-save-btn">{{ t("admin.plugin_limits.save")|default:"Save limits" }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 let plugins = [];
 let sortColumn = 'name';
@@ -348,7 +483,8 @@ const i18n = {
     appModeTurnOn: "{{ t('admin.plugin_app_mode_turn_on')|default:'Turn on' }}",
     appModeTurnOff: "{{ t('admin.plugin_app_mode_turn_off')|default:'Turn off' }}",
     appModeAllAgents: "{{ t('admin.plugin_app_mode_all_agents')|default:'All agents' }}",
-    appModeOtherPlugins: "{{ t('admin.plugin_app_mode_other_plugins')|default:'menus of other plugins' }}"
+    appModeOtherPlugins: "{{ t('admin.plugin_app_mode_other_plugins')|default:'menus of other plugins' }}",
+    limits: "{{ t('admin.plugin_limits.action')|default:'Limits' }}"
 };
 
 function escapeHtml(text) {
@@ -550,6 +686,18 @@ function renderPluginRow(plugin) {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                 </svg>
                             </button>`}
+                    ${plugin.loaded
+                        ? `<button
+                                onclick="showLimitsModal('${escapeHtml(plugin.name)}')"
+                                title="${i18n.limits}"
+                                class="p-2 rounded-lg transition-all duration-200 hover:bg-[var(--gk-primary-subtle)]"
+                                style="color: var(--gk-primary);"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                </svg>
+                            </button>`
+                        : ''}
                     <button
                         onclick="confirmDeletePlugin('${escapeHtml(plugin.name)}')"
                         title="${i18n.deletePlugin}"
@@ -751,6 +899,168 @@ function showPluginDetails(name) {
 
 function closePluginModal() {
     document.getElementById('plugin-details-modal').classList.add('hidden');
+}
+
+// Resource limits
+let limitsPlugin = null;
+const LIMIT_FIELDS = ['memory_mb', 'cpu_millis', 'call_timeout', 'init_timeout', 'max_calls_per_second', 'max_db_queries_per_min', 'max_http_req_per_min', 'status'];
+const LIMIT_NUMBER_FIELDS = ['memory_mb', 'cpu_millis', 'max_calls_per_second', 'max_db_queries_per_min', 'max_http_req_per_min'];
+
+function limitsText(key) {
+    return document.getElementById('plugin-limits-i18n').dataset[key] || '';
+}
+
+function limitInput(field) {
+    return document.getElementById('limit-' + field);
+}
+
+function setLimitsMessage(type, text) {
+    const box = document.getElementById('limits-message');
+    box.classList.remove('gk-alert-success', 'gk-alert-error', 'gk-alert-warning');
+    if (!text) {
+        box.classList.add('hidden');
+        return;
+    }
+    box.classList.add('gk-alert-' + type);
+    document.getElementById('limits-message-text').textContent = text;
+    box.classList.remove('hidden');
+}
+
+function clearLimitsErrors() {
+    document.querySelectorAll('#limits-form .limit-error').forEach(el => {
+        el.textContent = '';
+        el.classList.add('hidden');
+    });
+}
+
+function setLimitEnforced(field, enforced) {
+    limitInput(field).disabled = !enforced;
+    document.getElementById('limit-wrap-' + field).style.opacity = enforced ? '1' : '0.5';
+    document.getElementById('limit-na-' + field).classList.toggle('hidden', !!enforced);
+}
+
+function fillLimitsForm(data) {
+    const p = data.policy || {};
+    const launch = data.launch || {};
+    const enforced = data.enforced || {};
+    limitInput('memory_mb').value = launch.memory_mb;
+    limitInput('cpu_millis').value = launch.cpu_millis;
+    limitInput('network').checked = !!launch.network;
+    limitInput('call_timeout').value = p.call_timeout || '';
+    limitInput('init_timeout').value = p.init_timeout || '';
+    limitInput('max_calls_per_second').value = p.max_calls_per_second || 0;
+    limitInput('max_db_queries_per_min').value = p.max_db_queries_per_min || 0;
+    limitInput('max_http_req_per_min').value = p.max_http_req_per_min || 0;
+    limitInput('status').value = p.status || 'pending_review';
+    setLimitEnforced('memory_mb', enforced.memory);
+    setLimitEnforced('cpu_millis', enforced.cpu);
+    setLimitEnforced('network', enforced.network);
+    limitInput('memory_mb').min = data.runtime === 'grpc' ? 128 : 16;
+
+    document.getElementById('limits-runtime').textContent = data.runtime || '-';
+    document.getElementById('limits-source').textContent = data.stored ? limitsText('stored') : limitsText('declared');
+    document.getElementById('limits-reset-btn').disabled = !data.stored;
+
+    const hasCgroup = typeof data.cgroup_enforced === 'boolean';
+    document.querySelectorAll('.limits-cgroup').forEach(el => el.classList.toggle('hidden', !hasCgroup));
+    if (hasCgroup) {
+        document.getElementById('limits-cgroup').textContent = data.cgroup_enforced ? limitsText('cgroupOn') : limitsText('cgroupOff');
+    }
+
+    const usage = data.usage;
+    document.getElementById('limits-usage').classList.toggle('hidden', !usage);
+    if (usage) {
+        document.getElementById('limits-usage-calls').textContent = usage.calls;
+        document.getElementById('limits-usage-errors').textContent = usage.errors;
+        document.getElementById('limits-usage-db').textContent = usage.db_queries;
+        document.getElementById('limits-usage-http').textContent = usage.http_requests;
+    }
+}
+
+async function showLimitsModal(name) {
+    limitsPlugin = name;
+    clearLimitsErrors();
+    setLimitsMessage('', '');
+    document.getElementById('limits-form').reset();
+    document.getElementById('limits-modal-name').textContent = name;
+    document.getElementById('plugin-limits-modal').classList.remove('hidden');
+    try {
+        const response = await fetch(`/api/v1/plugins/${encodeURIComponent(name)}/policy`, { credentials: 'same-origin' });
+        const data = await response.json();
+        if (!response.ok) {
+            setLimitsMessage('error', data.error || limitsText('loadFailed'));
+            return;
+        }
+        fillLimitsForm(data);
+    } catch (err) {
+        setLimitsMessage('error', `${limitsText('error')}: ${err.message}`);
+    }
+}
+
+function closeLimitsModal() {
+    document.getElementById('plugin-limits-modal').classList.add('hidden');
+    limitsPlugin = null;
+}
+
+function showLimitsResult(response, data) {
+    if (response.ok) {
+        fillLimitsForm(data);
+        setLimitsMessage(data.reload_error ? 'warning' : 'success', data.message || '');
+        loadPlugins();
+        return;
+    }
+    const fields = data.fields || {};
+    Object.keys(fields).forEach(field => {
+        const el = document.getElementById('limit-error-' + field);
+        if (el) {
+            el.textContent = fields[field];
+            el.classList.remove('hidden');
+        }
+    });
+    setLimitsMessage('error', data.error || limitsText('error'));
+}
+
+async function saveLimits() {
+    if (!limitsPlugin) return;
+    clearLimitsErrors();
+    const body = {};
+    LIMIT_FIELDS.forEach(field => {
+        const input = limitInput(field);
+        if (input.disabled) return;
+        body[field] = LIMIT_NUMBER_FIELDS.includes(field) ? Number(input.value) : input.value.trim();
+    });
+    if (!limitInput('network').disabled) {
+        body.network = limitInput('network').checked;
+    }
+    const btn = document.getElementById('limits-save-btn');
+    btn.disabled = true;
+    try {
+        const response = await fetch(`/api/v1/plugins/${encodeURIComponent(limitsPlugin)}/policy`, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        showLimitsResult(response, await response.json());
+    } catch (err) {
+        setLimitsMessage('error', `${limitsText('error')}: ${err.message}`);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function resetLimits() {
+    if (!limitsPlugin || !confirm(limitsText('resetConfirm'))) return;
+    clearLimitsErrors();
+    try {
+        const response = await fetch(`/api/v1/plugins/${encodeURIComponent(limitsPlugin)}/policy`, {
+            method: 'DELETE',
+            credentials: 'same-origin'
+        });
+        showLimitsResult(response, await response.json());
+    } catch (err) {
+        setLimitsMessage('error', `${limitsText('error')}: ${err.message}`);
+    }
 }
 
 async function togglePlugin(name, enable) {

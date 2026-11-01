@@ -421,6 +421,84 @@
         ]
       }
     },
+    "/admin/api/audit-log": {
+      "get": {
+        "responses": {
+          "default": {
+            "description": "Defined by the handler"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "List audit events (filtered, paginated)",
+        "tags": [
+          "admin"
+        ],
+        "x-handler": "handleAdminAuditLogList",
+        "x-middleware": [
+          "auth",
+          "admin"
+        ]
+      }
+    },
+    "/admin/api/audit-log/export.csv": {
+      "get": {
+        "responses": {
+          "default": {
+            "description": "Defined by the handler"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Export filtered audit events as CSV",
+        "tags": [
+          "admin"
+        ],
+        "x-handler": "handleAdminAuditLogExport",
+        "x-middleware": [
+          "auth",
+          "admin"
+        ]
+      }
+    },
+    "/admin/api/audit-log/settings": {
+      "post": {
+        "responses": {
+          "default": {
+            "description": "Defined by the handler"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Save audit log retention and read-access settings",
+        "tags": [
+          "admin"
+        ],
+        "x-handler": "handleSaveAdminAuditSettings",
+        "x-middleware": [
+          "auth",
+          "admin"
+        ]
+      }
+    },
     "/admin/api/custom-fields": {
       "post": {
         "responses": {
@@ -2863,6 +2941,32 @@
           "admin"
         ],
         "x-handler": "handleAdminAttachmentTemplatesEdit",
+        "x-middleware": [
+          "auth",
+          "admin"
+        ]
+      }
+    },
+    "/admin/audit-log": {
+      "get": {
+        "responses": {
+          "default": {
+            "description": "Defined by the handler"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "summary": "Display the audit log",
+        "tags": [
+          "admin"
+        ],
+        "x-handler": "handleAdminAuditLog",
         "x-middleware": [
           "auth",
           "admin"

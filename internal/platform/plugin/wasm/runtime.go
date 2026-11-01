@@ -21,6 +21,7 @@ import (
 	"math"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/goatkit/goatflow/internal/platform/plugin"
@@ -36,8 +37,10 @@ type WASMPlugin struct {
 	manifest plugin.GKRegistration
 	host     plugin.HostAPI
 
-	runtime wazero.Runtime
-	module  api.Module
+	runtime      wazero.Runtime
+	compiled     wazero.CompiledModule
+	moduleConfig wazero.ModuleConfig
+	module       api.Module
 
 	// Exported functions from the plugin
 	gkRegister api.Function
@@ -46,7 +49,7 @@ type WASMPlugin struct {
 	gkFree     api.Function
 
 	// Resource limits
-	callTimeout time.Duration
+	callTimeout atomic.Int64 // time.Duration; 0 = none
 }
 
 // LoadOption is a functional option for loading WASM plugins.
@@ -72,12 +75,36 @@ func WithMemoryLimit(pages uint32) LoadOption {
 	}
 }
 
+const (
+	pagesPerMB     = 16    // 64KB pages
+	maxMemoryPages = 65536 // wasm32 address space: 4GB
+)
+
+// WithMemoryLimitMB sets the maximum memory in megabytes, capped at the
+// wasm32 maximum of 4GB. mb <= 0 keeps the default.
+func WithMemoryLimitMB(mb int) LoadOption {
+	return func(o *loadOptions) {
+		if mb <= 0 {
+			return
+		}
+		o.memoryLimitPages = maxMemoryPages
+		if mb < maxMemoryPages/pagesPerMB {
+			o.memoryLimitPages = uint32(mb) * pagesPerMB // #nosec G115 -- 0 < mb < 4096
+		}
+	}
+}
+
 // WithCallTimeout sets the timeout for plugin function calls.
 // Default is 30 seconds.
 func WithCallTimeout(d time.Duration) LoadOption {
 	return func(o *loadOptions) {
 		o.callTimeout = d
 	}
+}
+
+// SetCallTimeout changes the deadline for later calls; 0 means none.
+func (p *WASMPlugin) SetCallTimeout(d time.Duration) {
+	p.callTimeout.Store(int64(d))
 }
 
 // LoadFromFile loads a WASM plugin from a file path.
@@ -96,62 +123,85 @@ func Load(ctx context.Context, wasmBytes []byte, opts ...LoadOption) (*WASMPlugi
 		opt(&options)
 	}
 
-	// Create runtime with memory limits
+	// Memory limit, and calls interrupted when their context ends so a
+	// looping guest cannot hold a host goroutine past its deadline.
 	runtimeConfig := wazero.NewRuntimeConfig().
-		WithMemoryLimitPages(options.memoryLimitPages)
+		WithMemoryLimitPages(options.memoryLimitPages).
+		WithCloseOnContextDone(true)
 	r := wazero.NewRuntimeWithConfig(ctx, runtimeConfig)
 
 	// Instantiate WASI for plugins that need it (filesystem, env, etc.)
 	wasi_snapshot_preview1.MustInstantiate(ctx, r)
 
 	p := &WASMPlugin{
-		runtime:     r,
-		callTimeout: options.callTimeout,
+		runtime: r,
+		// wazero's default clocks are fake (walltime starts at 2022-01-01
+		// and advances 1ms per read), so give the guest the real system
+		// clocks or time.Now() inside a plugin is wrong.
+		moduleConfig: wazero.NewModuleConfig().WithSysWalltime().WithSysNanotime(),
 	}
+	p.callTimeout.Store(int64(options.callTimeout))
 
+	if err := p.load(ctx, wasmBytes); err != nil {
+		_ = r.Close(ctx)
+		return nil, err
+	}
+	return p, nil
+}
+
+// load compiles and instantiates the module and reads its manifest.
+func (p *WASMPlugin) load(ctx context.Context, wasmBytes []byte) error {
 	// Define host functions before compiling the module
 	if err := p.defineHostFunctions(ctx); err != nil {
-		_ = r.Close(ctx)
-		return nil, fmt.Errorf("define host functions: %w", err)
+		return fmt.Errorf("define host functions: %w", err)
 	}
-
-	// Compile and instantiate the module. wazero's default clocks are fake
-	// (walltime starts at 2022-01-01 and advances 1ms per read), so give the
-	// guest the real system clocks or time.Now() inside a plugin is wrong.
-	moduleConfig := wazero.NewModuleConfig().WithSysWalltime().WithSysNanotime()
-	module, err := r.InstantiateWithConfig(ctx, wasmBytes, moduleConfig)
+	compiled, err := p.runtime.CompileModule(ctx, wasmBytes)
 	if err != nil {
-		_ = r.Close(ctx)
-		return nil, fmt.Errorf("instantiate wasm: %w", err)
+		return fmt.Errorf("compile wasm: %w", err)
 	}
-	p.module = module
-
-	// Get required exports
-	p.gkRegister = module.ExportedFunction("gk_register")
-	p.gkCall = module.ExportedFunction("gk_call")
-	p.gkMalloc = module.ExportedFunction("gk_malloc")
-	p.gkFree = module.ExportedFunction("gk_free")
-
-	if p.gkRegister == nil {
-		return nil, fmt.Errorf("plugin missing gk_register export")
-	}
-	if p.gkCall == nil {
-		return nil, fmt.Errorf("plugin missing gk_call export")
-	}
-	if p.gkMalloc == nil {
-		return nil, fmt.Errorf("plugin missing gk_malloc export")
+	p.compiled = compiled
+	if err := p.instantiate(ctx); err != nil {
+		return err
 	}
 
-	// Call gk_register to get manifest
 	manifest, err := p.callRegister(ctx)
 	if err != nil {
-		_ = r.Close(ctx)
-		return nil, fmt.Errorf("gk_register failed: %w", err)
+		return fmt.Errorf("gk_register failed: %w", err)
 	}
 	p.manifest = manifest
 	p.name = manifest.Name
+	return nil
+}
 
-	return p, nil
+// instantiate starts a fresh instance of the compiled module and binds its
+// exports.
+func (p *WASMPlugin) instantiate(ctx context.Context) error {
+	module, err := p.runtime.InstantiateModule(ctx, p.compiled, p.moduleConfig)
+	if err != nil {
+		return fmt.Errorf("instantiate wasm: %w", err)
+	}
+	gkRegister := module.ExportedFunction("gk_register")
+	gkCall := module.ExportedFunction("gk_call")
+	gkMalloc := module.ExportedFunction("gk_malloc")
+	var missing string
+	switch {
+	case gkRegister == nil:
+		missing = "gk_register"
+	case gkCall == nil:
+		missing = "gk_call"
+	case gkMalloc == nil:
+		missing = "gk_malloc"
+	}
+	if missing != "" {
+		_ = module.Close(ctx)
+		return fmt.Errorf("plugin missing %s export", missing)
+	}
+	p.module = module
+	p.gkRegister = gkRegister
+	p.gkCall = gkCall
+	p.gkMalloc = gkMalloc
+	p.gkFree = module.ExportedFunction("gk_free")
+	return nil
 }
 
 // defineHostFunctions registers host API functions the plugin can call.
@@ -202,7 +252,7 @@ func (p *WASMPlugin) hostCall(ctx context.Context, fnPtr, fnLen, argsPtr, argsLe
 	}
 
 	// Write result to plugin memory
-	return p.writeBytes(result)
+	return p.writeBytes(ctx, result)
 }
 
 // hostLog handles plugin logging.
@@ -273,33 +323,47 @@ func (p *WASMPlugin) Init(ctx context.Context, host plugin.HostAPI) error {
 	return nil
 }
 
+// callContext bounds ctx by the plugin's call timeout.
+func (p *WASMPlugin) callContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	if d := time.Duration(p.callTimeout.Load()); d > 0 {
+		return context.WithTimeout(ctx, d)
+	}
+	return context.WithCancel(ctx)
+}
+
 // Call implements plugin.Plugin.
 func (p *WASMPlugin) Call(ctx context.Context, fn string, args json.RawMessage) (json.RawMessage, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	// Apply timeout if configured and not already set on context
-	if p.callTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, p.callTimeout)
-		defer cancel()
+	ctx, cancel := p.callContext(ctx)
+	defer cancel()
+
+	// A call whose context ended was interrupted and wazero closed the
+	// module. Start a fresh instance so the plugin keeps serving; only the
+	// guest's in-memory state is lost (Init only hands over the host API,
+	// which the new instance reaches through p.host).
+	if p.module.IsClosed() {
+		if err := p.instantiate(ctx); err != nil {
+			return nil, fmt.Errorf("restart wasm module: %w", err)
+		}
 	}
 
 	// Allocate and write function name
-	fnPtr := p.writeString(fn)
+	fnPtr := p.writeString(ctx, fn)
 	if fnPtr == 0 {
 		return nil, fmt.Errorf("failed to allocate memory for function name")
 	}
-	defer p.free(uint32(fnPtr >> 32))
+	defer p.free(ctx, uint32(fnPtr>>32))
 
 	// Allocate and write args (nil/empty args is valid - pass 0, 0)
 	var argsPtr uint64
 	if len(args) > 0 {
-		argsPtr = p.writeBytes(args)
+		argsPtr = p.writeBytes(ctx, args)
 		if argsPtr == 0 {
 			return nil, fmt.Errorf("failed to allocate memory for args")
 		}
-		defer p.free(uint32(argsPtr >> 32))
+		defer p.free(ctx, uint32(argsPtr>>32))
 	}
 
 	// Call gk_call(fn_ptr, fn_len, args_ptr, args_len)
@@ -329,7 +393,7 @@ func (p *WASMPlugin) Call(ctx context.Context, fn string, args json.RawMessage) 
 	}
 
 	// Free result memory
-	p.free(ptr)
+	p.free(ctx, ptr)
 
 	return result, nil
 }
@@ -372,17 +436,17 @@ func (p *WASMPlugin) readBytes(ptr, length uint32) ([]byte, bool) {
 	return mem.Read(ptr, length)
 }
 
-func (p *WASMPlugin) writeString(s string) uint64 {
-	return p.writeBytes([]byte(s))
+func (p *WASMPlugin) writeString(ctx context.Context, s string) uint64 {
+	return p.writeBytes(ctx, []byte(s))
 }
 
-func (p *WASMPlugin) writeBytes(data []byte) uint64 {
+func (p *WASMPlugin) writeBytes(ctx context.Context, data []byte) uint64 {
 	if len(data) == 0 {
 		return 0
 	}
 
 	// Allocate memory in plugin
-	results, err := p.gkMalloc.Call(context.Background(), uint64(len(data)))
+	results, err := p.gkMalloc.Call(ctx, uint64(len(data)))
 	if err != nil || len(results) == 0 {
 		return 0
 	}
@@ -410,9 +474,9 @@ func (p *WASMPlugin) writeBytes(data []byte) uint64 {
 	return (uint64(ptr) << 32) | uint64(len(data))
 }
 
-func (p *WASMPlugin) free(ptr uint32) {
+func (p *WASMPlugin) free(ctx context.Context, ptr uint32) {
 	if p.gkFree != nil && ptr != 0 {
 		// Best-effort: a failing guest free only leaks guest memory.
-		_, _ = p.gkFree.Call(context.Background(), uint64(ptr))
+		_, _ = p.gkFree.Call(ctx, uint64(ptr))
 	}
 }

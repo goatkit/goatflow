@@ -303,14 +303,32 @@ Every plugin receives a **SandboxedHostAPI** (`internal/platform/plugin/sandbox.
 
 ### OS-Level Process Isolation (gRPC)
 
-On Linux, gRPC plugin processes run with OS-level restrictions (`internal/platform/plugin/grpc/sandbox_linux.go`):
+On Linux, gRPC plugin processes are started through `goatflow-plugin-exec` (shipped next to `goats`; `GOATFLOW_PLUGIN_LAUNCHER` overrides the path), which applies the plugin's policy and then runs the plugin binary. If the launcher is missing, or any limit can't be applied, the plugin is not started.
 
-- **Namespace isolation** — `CLONE_NEWNS` and `CLONE_NEWPID` separate the plugin's mount and PID namespaces from the host
+- **Memory** — `memory_mb` (default 512) caps the process heap (`RLIMIT_DATA`); `GOMEMLIMIT` is set to 90% of it. A Go plugin needs at least 128 MB
+- **CPU** — `cpu_millis` (default 1000, one core) sets `GOMAXPROCS` (rounded up) and the process runs at lower priority (nice +10)
+- **Hard CPU and memory limits** — when GoatFlow can write a delegated cgroup v2 (for example a systemd service with `Delegate=yes`, or a Kubernetes/Docker setup that hands the container its own writable cgroup), each plugin gets its own cgroup with `cpu.max` and `memory.max` from the same values. Otherwise only the limits above apply; the start-up log says which
+- **Network** — without the `network` permission the process can't open network sockets (a seccomp filter allows only Unix sockets, which the host connection uses), so all its traffic goes through the host HTTP API and its URL patterns. `GOATFLOW_NO_NETWORK=1` is set in that case. Plugins that talk to services directly declare `{type: network}`
+- **Timeouts** — `call_timeout` (default 30s) bounds every call and changes take effect immediately; `init_timeout` (default 10s) bounds `Init`, and a plugin that doesn't finish is not registered
 - **Pdeathsig** — `SIGKILL` ensures plugin processes die when the host dies (no orphans)
-- **Minimal environment** — plugins receive a stripped-down environment: `PATH`, `HOME`, `TMPDIR` (plugin-specific under `/tmp/goatflow-plugin-<name>`), and `TZ`. No database credentials, secrets, or host environment variables are passed through
-- **Network hint** — plugins without `http` permission get `GOATFLOW_NO_NETWORK=1` set in their environment
+- **Minimal environment** — plugins receive a stripped-down environment: `PATH`, `HOME` and `TMPDIR` (plugin-specific under `/app/tmp/goatflow-plugin-<name>`), and `TZ`. No database credentials, secrets, or host environment variables are passed through
+- **Namespaces** — on a bare Linux host running as root, the process also gets its own mount and PID namespaces; this is skipped in the standard rootless container deployments
+
+Memory, CPU and network are fixed when the plugin starts: changing them in Admin -> Plugins -> Limits restarts the plugin. WASM plugins get the same `memory_mb` as their linear-memory limit and the same call timeout, and a call that runs past it is stopped; they have no network access other than the host API.
+
+The policy comes from, in order: what an administrator saved in Admin -> Plugins -> Limits (`GET`/`PUT`/`DELETE /api/v1/plugins/:name/policy`), what the plugin declares in its registration (or `plugin.yaml` for gRPC), and the defaults. If a plugin's registration asks for different start-time limits than it was started with, it is restarted once with them.
 
 On non-Linux platforms, process sandboxing is not available and a warning is logged. Use containers or limit gRPC plugins to trusted code on these platforms.
+
+### Host HTTP Requests
+
+`HTTPRequest` goes to a URL only if its host matches the plugin's `http` permission scope (`*`, `*.example.com` for the domain and its subdomains, an exact hostname or an IP literal; no ports). In addition:
+
+- **Internal addresses** (loopback, private, link-local, CGNAT, unspecified, multicast and other reserved ranges, including IPv4 addresses inside IPv6 forms) are reachable only when the scope names that host exactly; wildcards never reach them. The check runs on every resolved address when connecting, so DNS can't be used to slip past it
+- **Cloud metadata addresses** (169.254.169.254, 169.254.170.2, 100.100.100.200, fd00:ec2::254) are always refused
+- **Redirects** — at most 5; every hop must match the scope and passes the same address check; credentials headers are dropped when the host or port changes
+- **Response size** — 32 MiB at most; a larger response is an error, never truncated
+- **No proxy** — proxy environment variables are ignored for plugin requests, because the destination has to be checked
 
 ### Kubernetes Pod Isolation
 

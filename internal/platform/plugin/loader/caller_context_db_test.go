@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -21,8 +20,13 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/database"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	grpcplugin "github.com/goatkit/goatflow/internal/platform/plugin/grpc"
+	"github.com/goatkit/goatflow/internal/platform/plugin/grpc/grpctest"
 	"github.com/goatkit/goatflow/internal/platform/plugin/loader"
 )
+
+func TestMain(m *testing.M) {
+	os.Exit(grpctest.Run(m))
+}
 
 // orgFixture is two organisations, each with one gk_org_plugin_access row
 // whose plugin_name starts with marker and ends in its org's letter.
@@ -96,14 +100,7 @@ func TestGRPCPluginCallRunsForCallerOrg(t *testing.T) {
 	mgr, db := newCallerContextManager(t)
 	f := seedTwoOrgs(t, db)
 
-	_, filename, _, _ := runtime.Caller(0)
-	repoRoot := filepath.Join(filepath.Dir(filename), "..", "..", "..", "..")
-	bin := filepath.Join(t.TempDir(), "hostcaller")
-	build := exec.Command("go", "build", "-o", bin, "./internal/platform/plugin/grpc/testdata/hostcaller")
-	build.Dir = repoRoot
-	build.Env = os.Environ()
-	out, err := build.CombinedOutput()
-	require.NoError(t, err, string(out))
+	bin := grpctest.BuildPlugin(t, "./internal/platform/plugin/grpc/testdata/hostcaller", "hostcaller")
 
 	ctx := context.Background()
 	p, err := grpcplugin.LoadGRPCPlugin(bin, "hostcaller", plugin.DefaultResourcePolicy("hostcaller"))

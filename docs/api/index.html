@@ -1720,6 +1720,34 @@
                 
                 <div class="route">
                     <span class="method GET">GET</span>
+                    <code class="path">/admin/audit-log</code>
+                    
+                    <p>Display the audit log <small>(handleAdminAuditLog)</small></p>
+                </div>
+                
+                <div class="route">
+                    <span class="method GET">GET</span>
+                    <code class="path">/admin/api/audit-log</code>
+                    
+                    <p>List audit events (filtered, paginated) <small>(handleAdminAuditLogList)</small></p>
+                </div>
+                
+                <div class="route">
+                    <span class="method GET">GET</span>
+                    <code class="path">/admin/api/audit-log/export.csv</code>
+                    
+                    <p>Export filtered audit events as CSV <small>(handleAdminAuditLogExport)</small></p>
+                </div>
+                
+                <div class="route">
+                    <span class="method POST">POST</span>
+                    <code class="path">/admin/api/audit-log/settings</code>
+                    
+                    <p>Save audit log retention and read-access settings <small>(handleSaveAdminAuditSettings)</small></p>
+                </div>
+                
+                <div class="route">
+                    <span class="method GET">GET</span>
                     <code class="path">/admin/dynamic-fields</code>
                     
                     <p>List all dynamic fields <small>(handleAdminDynamicFields)</small></p>

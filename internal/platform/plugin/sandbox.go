@@ -222,18 +222,16 @@ func (s *SandboxedHostAPI) checkDBTableAccess(query string) error {
 
 // checkHTTPAccess validates that the URL matches the allowed patterns.
 func (s *SandboxedHostAPI) checkHTTPAccess(url string) error {
-	scope, all, _ := s.grant("http", "")
-	if all {
-		return nil // No URL restrictions
+	scope := s.httpScope()
+	if scope.allows(url) {
+		return nil
 	}
+	return fmt.Errorf("plugin %q: HTTP access to %q not permitted (allowed: %v)", s.pluginName, url, scope.patterns)
+}
 
-	for _, pattern := range scope {
-		if matchURLPattern(pattern, url) {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("plugin %q: HTTP access to %q not permitted (allowed: %v)", s.pluginName, url, scope)
+func (s *SandboxedHostAPI) httpScope() httpScope {
+	patterns, all, _ := s.grant("http", "")
+	return httpScope{patterns: patterns, all: all}
 }
 
 // checkEntityAccess gates the entity deletion methods. Scope lists the
@@ -262,9 +260,11 @@ func (s *SandboxedHostAPI) requirePermission(permType, access string) error {
 
 // matchURLPattern checks if a URL matches a scope pattern.
 // Patterns: "*" matches every host, "*.example.com" matches the domain and
-// its subdomains, "api.example.com" matches exact host. The host is the one
-// net/http will connect to (url.Parse, then Hostname), so a query string,
-// fragment or userinfo placed before the first "/" cannot pose as the host.
+// its subdomains, "api.example.com" matches exact host, an IP literal
+// (brackets optional for IPv6) matches that address. Ports are not part of
+// a pattern. The host is the one net/http will connect to (url.Parse, then
+// Hostname), so a query string, fragment or userinfo placed before the
+// first "/" cannot pose as the host.
 func matchURLPattern(pattern, rawURL string) bool {
 	if pattern == "*" {
 		return true
@@ -273,8 +273,8 @@ func matchURLPattern(pattern, rawURL string) bool {
 	if err != nil || u.Host == "" {
 		return false
 	}
-	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
-	pattern = strings.ToLower(pattern)
+	host := normaliseHost(u.Hostname())
+	pattern = normaliseHost(pattern)
 
 	if strings.HasPrefix(pattern, "*.") {
 		suffix := pattern[1:] // ".example.com"
@@ -383,7 +383,7 @@ func (s *SandboxedHostAPI) HTTPRequest(ctx context.Context, method, url string, 
 	}
 	s.stats.HTTPRequests.Add(1)
 	s.stats.LastCallAt.Store(time.Now().UnixMilli())
-	return s.inner.HTTPRequest(ctx, method, url, headers, body)
+	return s.inner.HTTPRequest(withHTTPScope(ctx, s.httpScope()), method, url, headers, body)
 }
 
 func (s *SandboxedHostAPI) SendEmail(ctx context.Context, to, subject, body string, html bool) error {

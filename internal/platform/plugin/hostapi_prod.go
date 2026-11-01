@@ -65,7 +65,7 @@ type ProdHostAPI struct {
 	databases        map[string]*sql.DB // Named database connections
 	defaultDB        string             // Name of the default database
 	cache            *cache.RedisCache
-	httpClient       *http.Client
+	httpOut          *pluginHTTP
 	logger           *slog.Logger
 	PluginManager    *Manager           // For plugin-to-plugin calls
 	SSEBroker        *SSEBroker         // For publishing SSE events to browsers
@@ -186,10 +186,8 @@ func NewProdHostAPI(opts ...ProdHostAPIOption) *ProdHostAPI {
 	h := &ProdHostAPI{
 		databases: make(map[string]*sql.DB),
 		defaultDB: "default",
-		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
-		},
-		logger: slog.Default(),
+		httpOut:   newPluginHTTP(),
+		logger:    slog.Default(),
 	}
 	for _, opt := range opts {
 		opt(h)
@@ -367,7 +365,9 @@ func (h *ProdHostAPI) CacheDelete(ctx context.Context, key string) error {
 	return h.cache.Delete(ctx, key)
 }
 
-// HTTPRequest makes an outbound HTTP request.
+// HTTPRequest makes an outbound HTTP request. Internal destinations are
+// refused unless the plugin's http scope names the host exactly (see
+// pluginHTTP); the response body is capped.
 func (h *ProdHostAPI) HTTPRequest(ctx context.Context, method, url string, headers map[string]string, body []byte) (int, []byte, error) {
 	var bodyReader io.Reader
 	if body != nil {
@@ -383,15 +383,15 @@ func (h *ProdHostAPI) HTTPRequest(ctx context.Context, method, url string, heade
 		req.Header.Set(k, v)
 	}
 
-	resp, err := h.httpClient.Do(req)
+	resp, err := h.httpOut.do(req)
 	if err != nil {
-		return 0, nil, fmt.Errorf("request failed: %w", err)
+		return 0, nil, err
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := h.httpOut.readBody(resp)
 	if err != nil {
-		return resp.StatusCode, nil, fmt.Errorf("read response: %w", err)
+		return resp.StatusCode, nil, err
 	}
 
 	return resp.StatusCode, respBody, nil

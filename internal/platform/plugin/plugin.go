@@ -43,6 +43,14 @@ type UIAuthSpec = pkgplugin.UIAuthSpec
 type UIPWASpec = pkgplugin.UIPWASpec
 type MCPToolSpec = pkgplugin.MCPToolSpec
 type AppModeSpec = pkgplugin.AppModeSpec
+type LaunchLimits = pkgplugin.LaunchLimits
 
 // DefaultResourcePolicy re-exports the default policy constructor.
 var DefaultResourcePolicy = pkgplugin.DefaultResourcePolicy
+
+// Re-exported policy constants.
+const (
+	DefaultMemoryMB   = pkgplugin.DefaultMemoryMB
+	DefaultCPUMillis  = pkgplugin.DefaultCPUMillis
+	PermissionNetwork = pkgplugin.PermissionNetwork
+)

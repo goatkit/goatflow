@@ -25,9 +25,6 @@ func TestNewProdHostAPI(t *testing.T) {
 	if h.defaultDB != "default" {
 		t.Errorf("expected default db name 'default', got %s", h.defaultDB)
 	}
-	if h.httpClient == nil {
-		t.Error("httpClient should be initialized")
-	}
 	if h.logger == nil {
 		t.Error("logger should be initialized")
 	}
@@ -441,7 +438,7 @@ func TestProdHostAPI_Log(t *testing.T) {
 
 func TestProdHostAPI_HTTPRequest(t *testing.T) {
 	h := NewProdHostAPI()
-	ctx := context.Background()
+	ctx := withHTTPScope(context.Background(), httpScope{patterns: []string{"127.0.0.1"}})
 
 	t.Run("GET request", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

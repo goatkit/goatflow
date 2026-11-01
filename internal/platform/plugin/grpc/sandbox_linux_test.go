@@ -59,36 +59,68 @@ func TestBuildPluginEnv_BasicEntries(t *testing.T) {
 	}
 }
 
-func TestBuildPluginEnv_NoNetwork(t *testing.T) {
-	policy := plugin.ResourcePolicy{
-		Status:      "approved",
-		Permissions: []plugin.Permission{}, // No HTTP
-	}
-	env := buildPluginEnv(policy, "test-plugin")
-
-	found := false
-	for _, kv := range env {
-		if kv == "GOATFLOW_NO_NETWORK=1" {
-			found = true
+func hasEnv(env []string, kv string) bool {
+	for _, e := range env {
+		if e == kv {
+			return true
 		}
 	}
-	if !found {
-		t.Error("expected GOATFLOW_NO_NETWORK=1 when no HTTP permission")
+	return false
+}
+
+func TestBuildPluginEnv_NoNetwork(t *testing.T) {
+	// The host-mediated http permission does not open the plugin's own network.
+	policy := plugin.ResourcePolicy{
+		Status:      "approved",
+		Permissions: []plugin.Permission{{Type: "http", Access: "*"}},
+	}
+	if !hasEnv(buildPluginEnv(policy, "test-plugin"), "GOATFLOW_NO_NETWORK=1") {
+		t.Error("expected GOATFLOW_NO_NETWORK=1 without network permission")
 	}
 }
 
-func TestBuildPluginEnv_WithHTTP(t *testing.T) {
+func TestBuildPluginEnv_WithNetwork(t *testing.T) {
 	policy := plugin.ResourcePolicy{
-		Status: "approved",
-		Permissions: []plugin.Permission{
-			{Type: "http"},
-		},
+		Status:      "approved",
+		Permissions: []plugin.Permission{{Type: plugin.PermissionNetwork}},
 	}
-	env := buildPluginEnv(policy, "test-plugin")
+	if hasEnv(buildPluginEnv(policy, "test-plugin"), "GOATFLOW_NO_NETWORK=1") {
+		t.Error("GOATFLOW_NO_NETWORK should not be set with network permission")
+	}
+}
 
+func TestBuildPluginEnv_LauncherSettingStaysWithHost(t *testing.T) {
+	t.Setenv(launcherEnv, "/opt/goatflow/goatflow-plugin-exec")
+	env := buildPluginEnv(plugin.ResourcePolicy{Status: "approved"}, "test-plugin")
 	for _, kv := range env {
-		if kv == "GOATFLOW_NO_NETWORK=1" {
-			t.Error("GOATFLOW_NO_NETWORK should not be set when HTTP permission exists")
+		if strings.Contains(kv, "goatflow-plugin-exec") {
+			t.Errorf("launcher setting forwarded to the plugin: %s", kv)
+		}
+	}
+}
+
+func TestLauncherArgsCarryPolicyLimits(t *testing.T) {
+	policy := plugin.ResourcePolicy{MemoryMB: 256, CPUMillis: 500}
+	got := strings.Join(launcherArgs(policy.Launch(), "/app/plugins/x/x"), " ")
+	if want := "--memory-mb 256 --cpu-millis 500 --deny-network -- /app/plugins/x/x"; got != want {
+		t.Errorf("args = %q, want %q", got, want)
+	}
+	withNetwork := plugin.ResourcePolicy{Permissions: []plugin.Permission{{Type: plugin.PermissionNetwork}}}
+	got = strings.Join(launcherArgs(withNetwork.Launch(), "/p"), " ")
+	if want := "--memory-mb 512 --cpu-millis 1000 -- /p"; got != want {
+		t.Errorf("args with defaults and network = %q, want %q", got, want)
+	}
+}
+
+func TestSafePluginName(t *testing.T) {
+	for _, name := range []string{"hostcaller", "goatkit-llm", "My_Plugin.v2"} {
+		if !safePluginName(name) {
+			t.Errorf("%q refused", name)
+		}
+	}
+	for _, name := range []string{"", ".", "..", "../x", "a/b", "a b", ".hidden", strings.Repeat("a", 129)} {
+		if safePluginName(name) {
+			t.Errorf("%q accepted", name)
 		}
 	}
 }

@@ -115,6 +115,15 @@ There is no SMS or email one-time code.
   (`UISpec.RateLimit`, 60 requests per minute per IP when unset; excess gets 429).
   A plugin can set `EventAuthorizer` to decide who may subscribe to its
   event channels. See [plugins/AUTHOR_GUIDE.md](plugins/AUTHOR_GUIDE.md).
+- **Plugin limits.** Every plugin has a memory limit and call and start-up
+  timeouts; gRPC plugin processes also have a CPU limit and can't open network
+  connections without the `network` permission (seccomp). Memory and CPU are
+  hard cgroup limits where the host delegates a cgroup, otherwise a heap limit,
+  `GOMAXPROCS` and lower priority. Plugin HTTP requests through the host reach
+  internal addresses only when the plugin's scope names the host, never cloud
+  metadata, with at most 5 checked redirects and 32 MiB per response. Admins
+  view and change limits at Admin -> Plugins -> Limits. Details:
+  [PLUGIN_PLATFORM.md](PLUGIN_PLATFORM.md#os-level-process-isolation-grpc).
 
 There is no attribute-based (ABAC) policy engine.
 

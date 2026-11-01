@@ -274,6 +274,10 @@ Administrative routes for system management
 | GET | `/admin/customer-user-services/default` | `handleAdminDefaultServices` |  | Get default service assignments |
 | POST | `/admin/customer-user-services/default` | `handleAdminDefaultServicesUpdate` |  | Update default service assignments |
 | GET | `/admin/reports` | `handleAdminReports` |  | Display ticket reports (queue-scoped statistics, trends, CSV export) |
+| GET | `/admin/audit-log` | `handleAdminAuditLog` |  | Display the audit log |
+| GET | `/admin/api/audit-log` | `handleAdminAuditLogList` |  | List audit events (filtered, paginated) |
+| GET | `/admin/api/audit-log/export.csv` | `handleAdminAuditLogExport` |  | Export filtered audit events as CSV |
+| POST | `/admin/api/audit-log/settings` | `handleSaveAdminAuditSettings` |  | Save audit log retention and read-access settings |
 | GET | `/admin/dynamic-fields` | `handleAdminDynamicFields` |  | List all dynamic fields |
 | GET | `/admin/dynamic-fields/new` | `handleAdminDynamicFieldNew` |  | Create new dynamic field form |
 | GET | `/admin/dynamic-fields/screens` | `handleAdminDynamicFieldScreenConfig` |  | Dynamic field screen configuration |

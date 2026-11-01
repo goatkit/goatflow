@@ -3,35 +3,126 @@
 package grpc
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 )
 
+const (
+	// launcherName is the binary that applies a plugin's launch limits and
+	// then execs it; it ships next to goats.
+	launcherName = "goatflow-plugin-exec"
+	// launcherEnv overrides where the launcher is found.
+	launcherEnv = "GOATFLOW_PLUGIN_LAUNCHER"
+)
+
+// pluginCommand returns the command that starts the plugin at execPath
+// through the launcher with policy's launch limits, and the cgroup it starts
+// in (nil when hard cgroup limits are unavailable). It fails when the
+// launcher cannot be found: plugins never start without their limits.
+func pluginCommand(execPath, pluginName string, policy plugin.ResourcePolicy) (*exec.Cmd, *pluginCgroup, error) {
+	if !safePluginName(pluginName) {
+		return nil, nil, fmt.Errorf("plugin name %q is not usable as a path component", pluginName)
+	}
+	launcher, err := launcherPath()
+	if err != nil {
+		return nil, nil, err
+	}
+	limits := policy.Launch()
+
+	// #nosec G204 -- launcher and plugin binary are chosen by the host, not by request input
+	cmd := exec.Command(launcher, launcherArgs(limits, execPath)...)
+	cmd.SysProcAttr = buildSysProcAttr()
+	cmd.Env = buildPluginEnv(policy, pluginName)
+
+	cg := newPluginCgroup(pluginName, limits, launcher)
+	if cg != nil {
+		cmd.SysProcAttr.UseCgroupFD = true
+		cmd.SysProcAttr.CgroupFD = cg.fd
+	}
+	return cmd, cg, nil
+}
+
+// launcherArgs is the launcher's argv (after its own name) for the plugin.
+func launcherArgs(limits plugin.LaunchLimits, execPath string) []string {
+	args := make([]string, 0, 7)
+	args = append(args,
+		"--memory-mb", strconv.Itoa(limits.MemoryMB),
+		"--cpu-millis", strconv.Itoa(limits.CPUMillis))
+	if !limits.Network {
+		args = append(args, "--deny-network")
+	}
+	return append(args, "--", execPath)
+}
+
+// launcherPath finds the launcher: $GOATFLOW_PLUGIN_LAUNCHER, else next to
+// this executable, else on PATH.
+func launcherPath() (string, error) {
+	if p := os.Getenv(launcherEnv); p != "" {
+		if err := checkExecutable(p); err != nil {
+			return "", fmt.Errorf("plugin launcher %s=%s: %w", launcherEnv, p, err)
+		}
+		return p, nil
+	}
+	if exe, err := os.Executable(); err == nil {
+		p := filepath.Join(filepath.Dir(exe), launcherName)
+		if checkExecutable(p) == nil {
+			return p, nil
+		}
+	}
+	p, err := exec.LookPath(launcherName)
+	if err != nil {
+		return "", fmt.Errorf("plugin launcher %s not found next to the goatflow binary or on PATH (set %s): %w",
+			launcherName, launcherEnv, err)
+	}
+	return p, nil
+}
+
+func checkExecutable(path string) error {
+	fi, err := os.Stat(path) // #nosec G703 -- launcher path comes from host configuration
+	if err != nil {
+		return err
+	}
+	if !fi.Mode().IsRegular() || fi.Mode().Perm()&0o111 == 0 {
+		return errors.New("not an executable file")
+	}
+	return nil
+}
+
+// safePluginName reports whether name can be used as a single path component.
+func safePluginName(name string) bool {
+	if name == "" || len(name) > 128 || name[0] == '.' {
+		return false
+	}
+	for _, r := range name {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '-', r == '_', r == '.':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
 // buildSysProcAttr creates OS-level process restrictions for gRPC plugin processes on Linux.
-func buildSysProcAttr(policy plugin.ResourcePolicy) *syscall.SysProcAttr {
+func buildSysProcAttr() *syscall.SysProcAttr {
 	attr := &syscall.SysProcAttr{
 		// Plugin dies when host dies - prevent orphaned processes
 		Pdeathsig: syscall.SIGKILL,
 	}
 
 	// Apply namespace isolation where available and permitted (requires Linux
-	// kernel support and privileges). This provides basic process isolation but
-	// isn't as strong as containers.
+	// kernel support and privileges).
 	if supportsNamespaces() {
 		attr.Cloneflags = syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
 	}
-
-	// Note: Setting rlimits through SysProcAttr.Setrlimit is not available in Go's standard library.
-	// For production use, consider using a wrapper script or external tools like systemd-run
-	// with resource constraints, or container technologies for stronger isolation.
-	//
-	// For now, we document the intended limits and rely on namespace isolation where available.
-
 	return attr
 }
 
@@ -69,9 +160,10 @@ func buildPluginEnv(policy plugin.ResourcePolicy, pluginName string) []string {
 	// GOATFLOW_PLUGIN_ADB_SERVER_HOST=localhost appears in the plugin
 	// environment as both GOATFLOW_PLUGIN_ADB_SERVER_HOST and ADB_SERVER_HOST.
 	// This lets plugins use standard env var names while keeping the
-	// namespaced originals available for disambiguation.
+	// namespaced originals available for disambiguation. The launcher
+	// setting is the host's, not the plugin's.
 	for _, kv := range os.Environ() {
-		if strings.HasPrefix(kv, "GOATFLOW_PLUGIN_") {
+		if strings.HasPrefix(kv, "GOATFLOW_PLUGIN_") && !strings.HasPrefix(kv, launcherEnv+"=") {
 			env = append(env, kv)
 			// Strip prefix: GOATFLOW_PLUGIN_FOO=bar -> FOO=bar
 			stripped := strings.TrimPrefix(kv, "GOATFLOW_PLUGIN_")
@@ -79,17 +171,9 @@ func buildPluginEnv(policy plugin.ResourcePolicy, pluginName string) []string {
 		}
 	}
 
-	// Check if plugin has network permissions - if not, limit network access
-	hasHTTP := false
-	for _, perm := range policy.Permissions {
-		if perm.Type == "http" {
-			hasHTTP = true
-			break
-		}
-	}
-
-	// If no HTTP permission, set environment variable that compliant plugins should check
-	if !hasHTTP {
+	// Tell the plugin its own network connections are refused (the launcher
+	// enforces it).
+	if !policy.Launch().Network {
 		env = append(env, "GOATFLOW_NO_NETWORK=1")
 	}
 
@@ -130,15 +214,4 @@ func supportsNamespaces() bool {
 	}
 
 	return true
-}
-
-// applyProcessSandbox applies OS-level restrictions to the plugin command.
-func applyProcessSandbox(cmd *exec.Cmd, policy plugin.ResourcePolicy, pluginName string) error {
-	// Set process attributes (resource limits, namespaces)
-	cmd.SysProcAttr = buildSysProcAttr(policy)
-
-	// Set restricted environment
-	cmd.Env = buildPluginEnv(policy, pluginName)
-
-	return nil
 }

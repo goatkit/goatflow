@@ -372,6 +372,7 @@ Registered in Go (`internal/api/plugin_handlers.go`).
 | GET | `/api/v1/plugins/:name/events/:channel` | agent | Plugin event stream (SSE) |
 | POST | `/api/v1/plugins/:name/call/:fn` | admin | Call a plugin function |
 | POST | `/api/v1/plugins/:name/enable`, `/disable`, `/reset-crashloop` | admin | Lifecycle |
+| GET, PUT, DELETE | `/api/v1/plugins/:name/policy` | admin | Resource limits: view, edit (reloads the plugin when memory, CPU or network changed), reset to the plugin's declarations |
 | DELETE | `/api/v1/plugins/:name` | admin | Uninstall |
 | POST | `/api/v1/plugins/upload` | admin | Upload a plugin |
 | GET, DELETE | `/api/v1/plugins/logs` | admin | Plugin logs |

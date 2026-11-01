@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -15,7 +13,12 @@ import (
 
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	grpcplugin "github.com/goatkit/goatflow/internal/platform/plugin/grpc"
+	"github.com/goatkit/goatflow/internal/platform/plugin/grpc/grpctest"
 )
+
+func TestMain(m *testing.M) {
+	os.Exit(grpctest.Run(m))
+}
 
 // mockHostAPI for integration tests
 type mockHostAPI struct{}
@@ -94,34 +97,7 @@ func (m *mockHostAPI) CustomFieldsQuery(ctx context.Context, entityType string, 
 
 func buildGRPCPlugin(t *testing.T) string {
 	t.Helper()
-	return buildPluginBinary(t, "./internal/platform/plugin/grpc/example", "hello-grpc-plugin")
-}
-
-// buildPluginBinary builds the plugin main package pkg (relative to the repo
-// root) into a temp dir and returns the binary path.
-func buildPluginBinary(t *testing.T, pkg, name string) string {
-	t.Helper()
-
-	// Find repo root
-	_, filename, _, _ := runtime.Caller(0)
-	repoRoot := filepath.Join(filepath.Dir(filename), "..", "..", "..", "..")
-
-	// Build to temp location
-	pluginPath := filepath.Join(t.TempDir(), name)
-	if runtime.GOOS == "windows" {
-		pluginPath += ".exe"
-	}
-
-	cmd := exec.Command("go", "build", "-o", pluginPath, pkg)
-	cmd.Dir = repoRoot
-	cmd.Env = os.Environ()
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("Failed to build gRPC plugin: %v\n%s", err, output)
-	}
-
-	return pluginPath
+	return grpctest.BuildPlugin(t, "./internal/platform/plugin/grpc/example", "hello-grpc-plugin")
 }
 
 // sandboxProbeHost records the host methods a plugin process reached and the
@@ -166,7 +142,7 @@ func (h *sandboxProbeHost) EntityHardDelete(ctx context.Context, entityType stri
 // Manager hands to Init: ungranted calls are refused before the host runs
 // them, and calls made with the call's context carry the acting user.
 func TestGRPCHostCallsGoThroughSandbox(t *testing.T) {
-	pluginPath := buildPluginBinary(t, "./internal/platform/plugin/grpc/testdata/hostcaller", "hostcaller")
+	pluginPath := grpctest.BuildPlugin(t, "./internal/platform/plugin/grpc/testdata/hostcaller", "hostcaller")
 	inner := &sandboxProbeHost{reached: map[string]int64{}}
 	policy := plugin.ResourcePolicy{
 		PluginName: "hostcaller",
@@ -327,6 +303,7 @@ func TestLoadGRPCPlugin(t *testing.T) {
 }
 
 func TestLoadGRPCPlugin_InvalidPath(t *testing.T) {
+	grpctest.UseLauncher(t)
 	_, err := grpcplugin.LoadGRPCPlugin("/nonexistent/plugin", "test-plugin", plugin.DefaultResourcePolicy("test-plugin"))
 	if err == nil {
 		t.Error("expected error for nonexistent plugin")
@@ -334,6 +311,7 @@ func TestLoadGRPCPlugin_InvalidPath(t *testing.T) {
 }
 
 func TestLoadGRPCPlugin_NotExecutable(t *testing.T) {
+	grpctest.UseLauncher(t)
 	// Create a non-executable file
 	tmpFile := filepath.Join(t.TempDir(), "not-a-plugin")
 	os.WriteFile(tmpFile, []byte("not executable"), 0644)

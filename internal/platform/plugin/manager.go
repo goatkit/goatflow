@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -127,10 +128,10 @@ func (m *Manager) Host() HostAPI {
 
 // getOrCreatePolicy returns the existing policy for a plugin, or creates one.
 // An admin-stored policy always wins. Without one, the plugin gets the
-// platform default limits and exactly the permissions it declares in its
-// ResourceRequest (the default permissions when it declares none). A
-// declared entity "hard_delete" is dropped: permanent deletion needs an
-// explicit admin grant in a stored policy.
+// limits it declares in its ResourceRequest (defaults for the rest) and
+// exactly the permissions it declares (the default permissions when it
+// declares none). A declared entity "hard_delete" is dropped: permanent
+// deletion needs an explicit admin grant in a stored policy.
 func (m *Manager) getOrCreatePolicy(name string, requested *ResourceRequest) *ResourcePolicy {
 	if p, ok := m.policies[name]; ok && !m.declaredPolicy[name] {
 		return p
@@ -145,19 +146,59 @@ func (m *Manager) getOrCreatePolicy(name string, requested *ResourceRequest) *Re
 
 	policy := policyFromDeclarations(name, requested)
 	m.policies[name] = &policy
+	m.markDeclared(name)
+	return &policy
+}
+
+func (m *Manager) markDeclared(name string) {
 	if m.declaredPolicy == nil {
 		m.declaredPolicy = make(map[string]bool)
 	}
 	m.declaredPolicy[name] = true
-	return &policy
+}
+
+// ResolvePolicy returns the policy a plugin runs under: the admin-stored
+// policy when there is one, otherwise requested applied to the defaults
+// (see policyFromDeclarations). Nothing is cached.
+func (m *Manager) ResolvePolicy(name string, requested *ResourceRequest) ResourcePolicy {
+	m.mu.RLock()
+	var stored *ResourcePolicy
+	if p, ok := m.policies[name]; ok && !m.declaredPolicy[name] {
+		cp := *p
+		stored = &cp
+	}
+	m.mu.RUnlock()
+	if stored != nil {
+		return *stored
+	}
+	if p, err := m.loadPolicy(context.Background(), name); err == nil {
+		return *p
+	}
+	return policyFromDeclarations(name, requested)
 }
 
 // policyFromDeclarations builds the effective policy for a plugin that has
-// no admin-stored policy: default limits plus the declared permissions.
+// no admin-stored policy: default limits overridden by the declared ones,
+// plus the declared permissions.
 func policyFromDeclarations(name string, requested *ResourceRequest) ResourcePolicy {
 	policy := DefaultResourcePolicy(name)
 	if requested == nil {
 		return policy
+	}
+	if requested.MemoryMB > 0 {
+		policy.MemoryMB = requested.MemoryMB
+	}
+	if requested.CPUMillis > 0 {
+		policy.CPUMillis = requested.CPUMillis
+	}
+	if requested.CallTimeout != "" {
+		policy.CallTimeout = requested.CallTimeout
+	}
+	if requested.InitTimeout != "" {
+		policy.InitTimeout = requested.InitTimeout
+	}
+	if requested.ShutdownTimeout != "" {
+		policy.ShutdownTimeout = requested.ShutdownTimeout
 	}
 	if requested.MaxFileStorageBytes > 0 {
 		policy.MaxFileStorageBytes = requested.MaxFileStorageBytes
@@ -175,8 +216,49 @@ func policyFromDeclarations(name string, requested *ResourceRequest) ResourcePol
 	return policy
 }
 
+// Fallbacks for a policy duration that is empty or invalid.
+const (
+	DefaultCallTimeout = 30 * time.Second
+	defaultInitTimeout = 10 * time.Second
+)
+
+// LimitDuration parses a policy duration such as CallTimeout, returning
+// fallback when it is empty, invalid or not positive.
+func LimitDuration(value string, fallback time.Duration) time.Duration {
+	if d, err := time.ParseDuration(value); err == nil && d > 0 {
+		return d
+	}
+	return fallback
+}
+
+// callTimeoutSetter is a plugin runtime that enforces a per-call deadline
+// itself (gRPC and WASM plugins).
+type callTimeoutSetter interface {
+	SetCallTimeout(time.Duration)
+}
+
+// applyCallTimeout gives a plugin its policy's per-call deadline. The
+// deadline is not a launch limit, so a running plugin picks up a change.
+func applyCallTimeout(p Plugin, policy ResourcePolicy) {
+	if s, ok := p.(callTimeoutSetter); ok {
+		s.SetCallTimeout(LimitDuration(policy.CallTimeout, DefaultCallTimeout))
+	}
+}
+
+// applyLivePolicy pushes a changed policy to a loaded plugin's sandbox and
+// call deadline. Launch limits wait for the next load. Caller holds m.mu.
+func (m *Manager) applyLivePolicy(name string, policy ResourcePolicy) {
+	if sandbox, ok := m.sandboxes[name]; ok {
+		sandbox.UpdatePolicy(policy)
+	}
+	if rp, ok := m.plugins[name]; ok {
+		applyCallTimeout(rp.plugin, policy)
+	}
+}
+
 // SetPolicy sets the resource policy for a plugin (admin override).
-// Policy changes take effect immediately and are persisted to the database.
+// Policy changes take effect immediately and are persisted to the database;
+// launch limits (see ResourcePolicy.Launch) apply from the next load.
 func (m *Manager) SetPolicy(name string, policy ResourcePolicy) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -191,10 +273,39 @@ func (m *Manager) SetPolicy(name string, policy ResourcePolicy) {
 		fmt.Printf("Warning: failed to persist plugin policy for %s: %v\n", name, err)
 	}
 
-	// If plugin is already loaded, update its sandbox policy immediately
-	if sandbox, ok := m.sandboxes[name]; ok {
-		sandbox.UpdatePolicy(policy)
+	m.applyLivePolicy(name, policy)
+}
+
+// HasStoredPolicy reports whether an admin-stored policy is in effect for a
+// plugin, rather than one built from its declarations.
+func (m *Manager) HasStoredPolicy(name string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	_, ok := m.policies[name]
+	return ok && !m.declaredPolicy[name]
+}
+
+// ResetPolicy deletes a plugin's admin-stored policy and returns the policy
+// built from the loaded plugin's declarations (the defaults when it is not
+// loaded), applied like SetPolicy.
+func (m *Manager) ResetPolicy(name string) (ResourcePolicy, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.host != nil {
+		if _, err := m.host.DBExec(context.Background(),
+			`DELETE FROM sysconfig_modified WHERE name = ?`, policyConfigKey(name)); err != nil {
+			return ResourcePolicy{}, fmt.Errorf("delete stored policy: %w", err)
+		}
 	}
+	var requested *ResourceRequest
+	if rp, ok := m.plugins[name]; ok {
+		requested = rp.manifest.Resources
+	}
+	policy := policyFromDeclarations(name, requested)
+	m.policies[name] = &policy
+	m.markDeclared(name)
+	m.applyLivePolicy(name, policy)
+	return policy, nil
 }
 
 // GetPolicy returns the current policy for a plugin.
@@ -437,10 +548,11 @@ func (m *Manager) Register(ctx context.Context, p Plugin) error {
 	m.applyManifestSideEffectsPreInit(ctx, manifest)
 
 	// Initialize the plugin with sandboxed host API access
-	if err := p.Init(ctx, sandbox); err != nil {
+	if err := initWithTimeout(ctx, p, sandbox, *policy); err != nil {
 		delete(m.sandboxes, manifest.Name)
 		return fmt.Errorf("plugin %q init failed: %w", manifest.Name, err)
 	}
+	applyCallTimeout(p, *policy)
 
 	// Seed default-disabled state for example plugins on first registration
 	m.seedDefaultDisabled(ctx, manifest.Name)
@@ -470,6 +582,27 @@ func checkHostVersion(manifest GKRegistration) error {
 	if err != nil {
 		slog.Error("plugin refused: incompatible GoatFlow version", "plugin", manifest.Name, "error", err)
 		GetLogBuffer().Log(manifest.Name, "error", "Plugin not loaded: "+err.Error(), nil)
+	}
+	return err
+}
+
+// initWithTimeout runs p.Init within the policy's InitTimeout. A plugin
+// whose Init ignores its context is abandoned at the deadline; the caller
+// shuts it down.
+func initWithTimeout(ctx context.Context, p Plugin, host HostAPI, policy ResourcePolicy) error {
+	timeout := LimitDuration(policy.InitTimeout, defaultInitTimeout)
+	ictx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- p.Init(ictx, host) }()
+	var err error
+	select {
+	case err = <-done:
+	case <-ictx.Done():
+		err = ictx.Err()
+	}
+	if err != nil && ctx.Err() == nil && errors.Is(ictx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("init timed out after %s: %w", timeout, err)
 	}
 	return err
 }
@@ -798,6 +931,17 @@ func (m *Manager) Get(name string) (Plugin, bool) {
 	return rp.plugin, true
 }
 
+// Lookup returns a registered plugin by name, enabled or not.
+func (m *Manager) Lookup(name string) (Plugin, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	rp, exists := m.plugins[name]
+	if !exists {
+		return nil, false
+	}
+	return rp.plugin, true
+}
+
 // IsRegistered reports whether a plugin is in the registry, enabled or not.
 func (m *Manager) IsRegistered(name string) bool {
 	m.mu.RLock()
@@ -958,9 +1102,10 @@ func (m *Manager) ReplacePlugin(ctx context.Context, oldName string, newPlugin P
 	// CustomFieldSpec would leave the def missing until a full restart.
 	m.applyManifestSideEffectsPreInit(ctx, newManifest)
 
-	if err := newPlugin.Init(ctx, sandbox); err != nil {
+	if err := initWithTimeout(ctx, newPlugin, sandbox, *policy); err != nil {
 		return fmt.Errorf("new plugin %q init failed: %w", newManifest.Name, err)
 	}
+	applyCallTimeout(newPlugin, *policy)
 
 	// Shutdown old plugin
 	if err := oldRp.plugin.Shutdown(ctx); err != nil {
@@ -1432,10 +1577,8 @@ func (m *Manager) ShutdownAll(ctx context.Context) error {
 
 	for name, rp := range plugins {
 		timeout := defaultShutdownTimeout
-		if pol, ok := policies[name]; ok && pol != nil && pol.ShutdownTimeout != "" {
-			if parsed, parseErr := time.ParseDuration(pol.ShutdownTimeout); parseErr == nil && parsed > 0 {
-				timeout = parsed
-			}
+		if pol, ok := policies[name]; ok && pol != nil {
+			timeout = LimitDuration(pol.ShutdownTimeout, defaultShutdownTimeout)
 		}
 
 		wg.Add(1)

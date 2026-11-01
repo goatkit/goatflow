@@ -332,7 +332,7 @@ func (l *Loader) EnsureLoaded(ctx context.Context, name string) error {
 
 	switch d.Type {
 	case "wasm":
-		registered, err := l.loadWASMPlugin(ctx, d.Path)
+		registered, err := l.loadWASMPlugin(ctx, name, d.Path)
 		if err != nil {
 			return err
 		}
@@ -442,7 +442,7 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 				}
 			case "wasm":
 				var registered string
-				if registered, loadErr = l.loadWASMPlugin(ctx, d.Path); loadErr == nil {
+				if registered, loadErr = l.loadWASMPlugin(ctx, d.Name, d.Path); loadErr == nil {
 					l.recordWASMLoaded(d.Path, registered)
 				}
 			default:
@@ -486,9 +486,9 @@ func (l *Loader) LoadAll(ctx context.Context) (int, []error) {
 		ext := strings.ToLower(filepath.Ext(path))
 		switch ext {
 		case ".wasm":
-			registered, err := l.loadWASMPlugin(ctx, path)
+			name := strings.TrimSuffix(filepath.Base(path), ".wasm")
+			registered, err := l.loadWASMPlugin(ctx, name, path)
 			if err != nil {
-				name := strings.TrimSuffix(filepath.Base(path), ".wasm")
 				l.mu.Lock()
 				l.discovered[name] = &DiscoveredPlugin{Name: name, Path: path, Type: "wasm"}
 				l.mu.Unlock()
@@ -571,17 +571,90 @@ func (l *Loader) loadGRPCPlugins(ctx context.Context) (int, []error) {
 	return loaded, errors
 }
 
-// loadGRPCPlugin loads a single gRPC plugin from its directory.
-func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest *PluginManifest) error {
+// grpcBinaryPath is the plugin binary named by manifest, relative paths
+// resolved against the plugin directory.
+func grpcBinaryPath(pluginDir string, manifest *PluginManifest) string {
 	binaryPath := manifest.Binary
 	if binaryPath == "" {
 		binaryPath = manifest.Name
 	}
-
-	// Resolve relative binary path against plugin directory
 	if !filepath.IsAbs(binaryPath) {
 		binaryPath = filepath.Join(pluginDir, binaryPath)
 	}
+	return binaryPath
+}
+
+// pluginStarter starts one instance of a plugin under policy.
+type pluginStarter func(ctx context.Context, policy plugin.ResourcePolicy) (plugin.Plugin, error)
+
+// startPlugin starts a plugin under the policy resolved from what is known
+// before it runs: its name and declarations so far. Its registration may
+// resolve to other launch limits (its own declarations, or a stored policy
+// under the name it registers with); then the first instance is shut down
+// and the plugin started once more under those. limits selects the launch
+// limits the runtime applies.
+func (l *Loader) startPlugin(ctx context.Context, name string, declared *plugin.ResourceRequest,
+	limits func(plugin.ResourcePolicy) plugin.LaunchLimits, start pluginStarter) (plugin.Plugin, error) {
+	policy := l.manager.ResolvePolicy(name, declared)
+	p, err := start(ctx, policy)
+	if err != nil {
+		return nil, err
+	}
+	reg := p.GKRegister()
+	resolved := l.manager.ResolvePolicy(reg.Name, reg.Resources)
+	from, to := limits(policy), limits(resolved)
+	if from == to {
+		return p, nil
+	}
+	l.logger.Info("restarting plugin under its resolved limits", "name", reg.Name,
+		"memory_mb", to.MemoryMB, "cpu_millis", to.CPUMillis, "network", to.Network,
+		"started_memory_mb", from.MemoryMB, "started_cpu_millis", from.CPUMillis, "started_network", from.Network)
+	plugin.GetLogBuffer().Log(reg.Name, "info", "Plugin restarted under its resolved resource limits", map[string]any{
+		"memory_mb": to.MemoryMB, "cpu_millis": to.CPUMillis, "network": to.Network,
+	})
+	if err := p.Shutdown(ctx); err != nil {
+		l.logger.Warn("failed to shut down plugin before restart", "name", reg.Name, "error", err)
+	}
+	return start(ctx, resolved)
+}
+
+// startGRPC starts a gRPC plugin process under its resolved limits.
+func (l *Loader) startGRPC(ctx context.Context, binaryPath string, manifest *PluginManifest) (plugin.Plugin, error) {
+	return l.startPlugin(ctx, manifest.Name, manifest.Resources, plugin.ResourcePolicy.Launch,
+		func(_ context.Context, policy plugin.ResourcePolicy) (plugin.Plugin, error) {
+			gp, err := grpc.LoadGRPCPlugin(binaryPath, manifest.Name, policy)
+			if err != nil {
+				return nil, err
+			}
+			// plugin.yaml declarations stand in for a registration without any.
+			gp.SetDeclaredResources(manifest.Resources)
+			return gp, nil
+		})
+}
+
+// wasmLaunchLimits is the part of the launch limits a WASM runtime applies.
+func wasmLaunchLimits(policy plugin.ResourcePolicy) plugin.LaunchLimits {
+	return plugin.LaunchLimits{MemoryMB: policy.Launch().MemoryMB}
+}
+
+// startWASM loads a WASM module under its resolved limits. name is what the
+// loader knows the plugin as before the module reports its own.
+func (l *Loader) startWASM(ctx context.Context, name, path string) (plugin.Plugin, error) {
+	return l.startPlugin(ctx, name, nil, wasmLaunchLimits,
+		func(ctx context.Context, policy plugin.ResourcePolicy) (plugin.Plugin, error) {
+			wp, err := wasm.LoadFromFile(ctx, path,
+				wasm.WithMemoryLimitMB(policy.Launch().MemoryMB),
+				wasm.WithCallTimeout(plugin.LimitDuration(policy.CallTimeout, plugin.DefaultCallTimeout)))
+			if err != nil {
+				return nil, err
+			}
+			return wp, nil
+		})
+}
+
+// loadGRPCPlugin loads a single gRPC plugin from its directory.
+func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest *PluginManifest) error {
+	binaryPath := grpcBinaryPath(pluginDir, manifest)
 
 	// Check binary exists and is executable
 	info, err := os.Stat(binaryPath)
@@ -609,14 +682,7 @@ func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest 
 
 	l.logger.Info("loading gRPC plugin", "name", manifest.Name, "binary", binaryPath)
 
-	// Get or create the resource policy for this plugin
-	policy, _ := l.manager.GetPolicy(manifest.Name)
-	if policy.PluginName == "" {
-		// Create default policy if none exists
-		policy = plugin.DefaultResourcePolicy(manifest.Name)
-	}
-
-	gp, err := grpc.LoadGRPCPlugin(binaryPath, manifest.Name, policy)
+	gp, err := l.startGRPC(ctx, binaryPath, manifest)
 	if err != nil {
 		return fmt.Errorf("load gRPC plugin: %w", err)
 	}
@@ -638,8 +704,8 @@ func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest 
 }
 
 // loadWASMPlugin loads a single WASM plugin file and returns the name it
-// registered with the manager.
-func (l *Loader) loadWASMPlugin(ctx context.Context, path string) (string, error) {
+// registered with the manager. name is what the loader tracks it as so far.
+func (l *Loader) loadWASMPlugin(ctx context.Context, name, path string) (string, error) {
 	l.logger.Info("loading WASM plugin", "path", path)
 
 	// Verify WASM signature if verification is enabled
@@ -657,7 +723,7 @@ func (l *Loader) loadWASMPlugin(ctx context.Context, path string) (string, error
 	}
 
 	// Load the WASM module
-	wp, err := wasm.LoadFromFile(ctx, path)
+	wp, err := l.startWASM(ctx, name, path)
 	if err != nil {
 		return "", fmt.Errorf("load wasm: %w", err)
 	}
@@ -688,13 +754,13 @@ func (l *Loader) loadWASMPlugin(ctx context.Context, path string) (string, error
 // LoadWASM loads a single WASM plugin by name (without .wasm extension).
 func (l *Loader) LoadWASM(ctx context.Context, name string) error {
 	path := filepath.Join(l.pluginDir, name+".wasm")
-	_, err := l.loadWASMPlugin(ctx, path)
+	_, err := l.loadWASMPlugin(ctx, name, path)
 	return err
 }
 
 // LoadWASMFromPath loads a WASM plugin from an arbitrary path.
 func (l *Loader) LoadWASMFromPath(ctx context.Context, path string) error {
-	_, err := l.loadWASMPlugin(ctx, path)
+	_, err := l.loadWASMPlugin(ctx, l.wasmNameForPath(path), path)
 	return err
 }
 
@@ -725,7 +791,7 @@ func (l *Loader) Reload(ctx context.Context, name string) error {
 
 	switch d.Type {
 	case "wasm":
-		newPlugin, err = wasm.LoadFromFile(ctx, d.Path)
+		newPlugin, err = l.startWASM(ctx, name, d.Path)
 		if err != nil {
 			return fmt.Errorf("failed to load new WASM plugin: %w", err)
 		}
@@ -733,23 +799,7 @@ func (l *Loader) Reload(ctx context.Context, name string) error {
 		if manifest == nil {
 			return fmt.Errorf("plugin %q missing manifest", name)
 		}
-
-		// Get or create the resource policy for this plugin
-		policy, _ := l.manager.GetPolicy(manifest.Name)
-		if policy.PluginName == "" {
-			// Create default policy if none exists
-			policy = plugin.DefaultResourcePolicy(manifest.Name)
-		}
-
-		binaryPath := manifest.Binary
-		if binaryPath == "" {
-			binaryPath = manifest.Name
-		}
-		if !filepath.IsAbs(binaryPath) {
-			binaryPath = filepath.Join(d.Path, binaryPath)
-		}
-
-		newPlugin, err = grpc.LoadGRPCPlugin(binaryPath, manifest.Name, policy)
+		newPlugin, err = l.startGRPC(ctx, grpcBinaryPath(d.Path, manifest), manifest)
 		if err != nil {
 			return fmt.Errorf("failed to load new gRPC plugin: %w", err)
 		}
@@ -757,8 +807,8 @@ func (l *Loader) Reload(ctx context.Context, name string) error {
 		return fmt.Errorf("unknown plugin type %q", d.Type)
 	}
 
-	// Check if plugin is currently registered
-	if _, found := l.manager.Get(name); found {
+	// Check if plugin is currently registered (a disabled one included)
+	if l.manager.IsRegistered(name) {
 		// Use atomic replacement to avoid race conditions
 		if err := l.manager.ReplacePlugin(ctx, name, newPlugin); err != nil {
 			// Shutdown the new plugin since replacement failed
@@ -818,7 +868,7 @@ func (l *Loader) reloadWASM(ctx context.Context, name string) error {
 		}
 	}
 
-	_, err := l.loadWASMPlugin(ctx, path)
+	_, err := l.loadWASMPlugin(ctx, name, path)
 	return err
 }
 
@@ -1170,7 +1220,7 @@ func (l *Loader) processFileChange(event fsnotify.Event) {
 	switch {
 	case event.Op&fsnotify.Create == fsnotify.Create:
 		l.logger.Info("🔌 new plugin detected", "name", name)
-		if registered, err := l.loadWASMPlugin(l.watchCtx, path); err != nil {
+		if registered, err := l.loadWASMPlugin(l.watchCtx, name, path); err != nil {
 			l.logger.Error("failed to load new plugin", "name", name, "error", err)
 		} else {
 			l.recordWASMLoaded(path, registered)
