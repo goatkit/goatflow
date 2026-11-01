@@ -7,6 +7,29 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-01
+
+**Upgrading from 0.10.0**
+- **Reinstall Knowledge Base and Kanban from Admin -> Marketplace.** Plugins must now be signed,
+  and only releases from goat-kb 0.2.2 and goat-kanban 0.1.2 carry the binary signature GoatFlow
+  checks. Plugins from other publishers need their key in `GOATFLOW_TRUSTED_KEYS`. On a development
+  system that runs plugins built from source, set `GOATFLOW_REQUIRE_SIGNATURES=0`.
+- **Update plugins that open their own connections or call internal services.** gRPC plugins need
+  the `network` permission to connect directly, and `HTTPRequest` reaches localhost and LAN
+  addresses only when the plugin's `http` scope or an administrator names the host. Update
+  goatkit-llm, goatkit-memory and goatkit-tts (`network`) and goatkit-rag and goatkit-chat
+  (`localhost`), or grant the same on Admin -> Plugins -> Limits.
+- **gRPC plugins run in a sandbox with limits.** A plugin that writes outside its `TMPDIR`, reads
+  outside its own directory and the system paths, or reads `/proc` gets "permission denied", and
+  each plugin now has a memory limit (512 MB by default; raise it on the Limits page).
+- **GoatFlow refuses to run as root.** Run `goats` as an unprivileged user (the images, compose
+  files, Helm chart and TrueNAS app already do).
+- **Docker Compose: hand root-owned volumes over once** before starting the new version (see
+  "Every container runs as a non-root user" below for the command).
+- **The audit log replaces `admin_action_log`.** Migration 000035 copies its rows into
+  `gk_audit_event` and drops the old tables.
+- **Plugin authors:** the Go SDK (`sdk/go`) needs Go 1.25 or later.
+
 ### Added
 - **Per-plugin limits, enforced, and an admin page for them.** Admin -> Plugins -> Limits shows
   and edits each plugin's memory, CPU, call and start-up timeouts, rate limits, network access and

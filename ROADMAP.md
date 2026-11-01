@@ -4,9 +4,9 @@ Current status, upcoming releases, and future plans for GoatFlow. Full release h
 
 ## 🚀 Current Status
 
-**Version**: 0.10.0 (released 2026-10-04). Previous release: 0.9.0 (2026-08-06).
+**Version**: 0.11.0 (released 2026-11-01). Previous release: 0.10.0 (2026-10-04).
 
-0.10.0 theme: sign-in and self-service (LDAP, password reset, customer sign-up, passkey management), full PostgreSQL support, OTRS article storage and import, outbound webhooks, admin reports, route-level authorization, plugin platform expansion, ops hardening.
+0.11.0 theme: security basics (signed plugins required, a Landlock sandbox and enforced per-plugin CPU, memory and network limits, an audit log of sign-ins and admin changes, non-root containers and GoatFlow refusing to run as root, signed and attested release artifacts, govulncheck in CI), plus the inbound mail decision filter, agent time zones, plugin app mode and marketplace dependency installs.
 
 GoatFlow is an ITSM and helpdesk system built on the GoatKit platform. It is written in Go as a modular monolith. It covers support ticketing, ITSM features and customization through plugins.
 
@@ -260,9 +260,9 @@ Already done towards 1.0.0:
 - [x] Migration guide from OTRS 6.x with automation scripts — [docs/OTRS_MIGRATION_GUIDE.md](docs/OTRS_MIGRATION_GUIDE.md), `goatflow-migrate`, `make migrate-analyze` / `migrate-import` / `otrs-import` (0.10.0)
 - [x] Automated smoke test on the production demo after every release deploy (`build.yml`, job `deploy-demo`)
 
-#### 0.11.0 - Security basics (next release)
+#### 0.11.0 - Security basics (released 2026-11-01)
 
-What is on `dev` for 0.11.0; the full list is the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md).
+Full list of changes: [CHANGELOG.md](CHANGELOG.md) section `[0.11.0]`.
 
 - [x] Security response policy and CVE process (`SECURITY.md`: GitHub private reporting with email fallback, response targets by severity, advisory and CVE flow)
 - [x] Dependency vulnerability scanning in CI: govulncheck on GoatFlow and the plugin SDK fails the build when the code calls a known vulnerability; Dependabot alerts are on and `.github/dependabot.yml` opens weekly update PRs against `dev`. Go 1.26.10, with 25 reachable vulnerabilities fixed
@@ -421,8 +421,8 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 | 0.14.0 | — | 🔮 Future | Calendar & Appointments plugin |
 | 0.13.0 | — | 🔮 Future | Documentation and quality |
 | 0.12.0 | — | 🔮 Future | Security review (general API rate limit, OWASP Top 10, hardening guide), performance and observability |
-| 0.11.0 | — | 🔜 Next | Security basics: signed plugins, plugin sandbox and limits, audit log, non-root, signed release artifacts |
-| 0.10.0 | Oct 2026 | 🚀 Current | Sign-in and self-service, PostgreSQL, OTRS storage and import, webhooks, reports, route-level authorization |
+| 0.11.0 | Nov 2026 | 🚀 Current | Security basics: signed plugins, plugin sandbox and limits, audit log, non-root, signed release artifacts |
+| 0.10.0 | Oct 2026 | ✅ Released | Sign-in and self-service, PostgreSQL, OTRS storage and import, webhooks, reports, route-level authorization |
 | 0.9.0 | Aug 2026 | ✅ Released | Setup Assistant, SAML2 + OIDC identity providers, platform/product decoupling, customer KB pages |
 | 0.8.3 | May 2026 | ✅ Released | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |
 | 0.8.2 | Apr 2026 | ✅ Released | **MCP v2** + Plugin Manager Resilience (health checks, bounded shutdown) |

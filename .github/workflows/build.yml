@@ -782,7 +782,13 @@ jobs:
             install -m 0755 reset-demo-db.sh.new reset-demo-db.sh
             rm reset-demo-db.sh.new
 
-            docker compose pull
+            # Caddy runs as uid 1000 from 0.11.0; volumes written by an older,
+            # root Caddy are handed over once (a no-op once they belong to 1000)
+            docker compose build --pull caddy
+            if [ "$(docker compose run --rm -T --no-deps --entrypoint stat caddy -c %u /data)" != 1000 ]; then
+              docker compose run --rm -T --no-deps --user 0 --entrypoint chown caddy -R 1000:1000 /data /config
+            fi
+            docker compose pull --ignore-buildable
             docker compose up -d --remove-orphans --wait --wait-timeout 300
             # Load the demo seed data, then wait for the migrated services
             ./reset-demo-db.sh
