@@ -1,6 +1,6 @@
 services:
   postgres-test:
-    image: docker.io/postgres:15-alpine
+    image: docker.io/postgres:18-alpine
     container_name: goatflow-postgres-test
     user: "70:70"
     environment:
