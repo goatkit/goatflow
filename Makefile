@@ -1307,6 +1307,22 @@ gosec:
 gosec-host:
 	gosec $(GOSEC_FLAGS) $(GOSEC_EXTRA) ./...
 
+# govulncheck over the main module and the plugin SDK (sdk/go has its own
+# go.mod). Fails when code reaches a known vulnerability; vulnerable code that
+# is only imported, not called, is reported but does not fail.
+GOVULNCHECK_CMD = govulncheck ./... && cd sdk/go && govulncheck ./...
+
+# Run govulncheck in the toolbox (pinned GOVULNCHECK_VERSION in Dockerfile.toolbox)
+govulncheck:
+	@$(MAKE) toolbox-build
+	@printf "🔒 Running govulncheck...\n"
+	@$(MAKE) toolbox-exec ARGS="sh -c '$(GOVULNCHECK_CMD)'"
+
+# Run govulncheck with a host-installed binary (used by CI; install the version
+# pinned in Dockerfile.toolbox)
+govulncheck-host:
+	$(GOVULNCHECK_CMD)
+
 # Run Trivy vulnerability scan locally
 trivy-scan:
 	@printf "🔍 Running Trivy vulnerability scan...\n"

@@ -87,16 +87,16 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # Notes:
 # - golangci-lint v2 changed its import path to /v2/cmd/...; the
 #   line below reflects that.
-# - gosec and govulncheck are pinned to the newest releases that still
-#   build with Go 1.25: `latest` broke the toolbox build when
-#   golang.org/x/vuln v1.8.0 started requiring Go >= 1.26.
+# - gosec is pinned to the newest release that built with Go 1.25. The
+#   toolbox is now on Go 1.26, which govulncheck v1.8.0+ needs; govulncheck
+#   also runs in CI at GOVULNCHECK_VERSION.
 # - staticcheck is pinned to v0.7.0: v0.8.0+ requires Go >= 1.26,
 #   which the 1.25 toolchain in this image can't satisfy (GOTOOLCHAIN=local).
 ARG GOIMPORTS_VERSION=v0.42.0
 ARG GOSEC_VERSION=v2.29.0
 ARG STATICCHECK_VERSION=v0.7.0
 ARG GOLANGCI_LINT_VERSION=v2.5.0
-ARG GOVULNCHECK_VERSION=v1.7.0
+ARG GOVULNCHECK_VERSION=v1.9.0
 ARG SWAG_VERSION=v1.16.4
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \

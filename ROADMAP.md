@@ -260,17 +260,28 @@ Already done towards 1.0.0:
 - [x] Migration guide from OTRS 6.x with automation scripts — [docs/OTRS_MIGRATION_GUIDE.md](docs/OTRS_MIGRATION_GUIDE.md), `goatflow-migrate`, `make migrate-analyze` / `migrate-import` / `otrs-import` (0.10.0)
 - [x] Automated smoke test on the production demo after every release deploy (`build.yml`, job `deploy-demo`)
 
-#### 0.11.0 - Security basics
+#### 0.11.0 - Security basics (next release)
+
+What is on `dev` for 0.11.0; the full list is the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md).
 
 - [x] Security response policy and CVE process (`SECURITY.md`: GitHub private reporting with email fallback, response targets by severity, advisory and CVE flow)
+- [x] Dependency vulnerability scanning in CI: govulncheck on GoatFlow and the plugin SDK fails the build when the code calls a known vulnerability; Dependabot alerts are on and `.github/dependabot.yml` opens weekly update PRs against `dev`. Go 1.26.10, with 25 reachable vulnerabilities fixed
+- [x] Plugins must be signed: every gRPC binary and WASM module needs a signature from a trusted publisher (GoatKit key built in), checked at install and on every start; release images ship the bundled plugins signed
+- [x] Plugin sandbox: Landlock confines gRPC plugins to their own files (no access to GoatFlow's files, memory, environment or other processes); per-plugin memory, CPU, network and timeout limits with an admin page; host HTTP requests reach internal addresses only when named
+- [x] Audit log of sign-ins, credential changes and every admin change, with viewer, CSV export and retention
+- [x] Every container runs as a non-root user, and GoatFlow refuses to start as root
+- [x] Signed release artifacts: cosign on the images, SLSA build provenance on images, Helm chart, air-gapped bundle and first-party plugins
+- [x] Also: inbound mail decision filter, agent time zone, plugin app mode, marketplace dependency installs
+
+#### 0.12.0 - Security review, performance and observability
+
+Moved from 0.11.0:
 - General rate limit for JWT/session API calls — *login, second-factor codes, passkey, self-service forms, API tokens (per-token hourly limit), plugin webhooks and public plugin UIs are already rate limited*
-- Dependency vulnerability scanning in CI (`govulncheck`, failing the build on known-exploitable findings) — *Dependabot alerts are on and `.github/dependabot.yml` opens weekly update PRs against `dev`; govulncheck and `bun audit` were clean after the October dependency update*
 - OWASP Top 10 review, with findings fixed or recorded
 - Security hardening guide (deployment, secrets, TLS, headers, backups)
 - Book the third-party security audit for the 1.0.0 release candidate
 
-#### 0.12.0 - Performance and observability
-
+Performance and observability:
 - Load-test harness in the repo, with a baseline for 1000+ concurrent users and p95 per endpoint
 - Database index, Valkey cache and connection pool tuning, driven by the baseline
 - Performance regression check in CI against the baseline
@@ -409,8 +420,8 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 | 0.15.0 | — | 🔮 Future | Process engine (core), OTRS process import |
 | 0.14.0 | — | 🔮 Future | Calendar & Appointments plugin |
 | 0.13.0 | — | 🔮 Future | Documentation and quality |
-| 0.12.0 | — | 🔮 Future | Performance and observability |
-| 0.11.0 | — | 🔮 Future | Security basics |
+| 0.12.0 | — | 🔮 Future | Security review (general API rate limit, OWASP Top 10, hardening guide), performance and observability |
+| 0.11.0 | — | 🔜 Next | Security basics: signed plugins, plugin sandbox and limits, audit log, non-root, signed release artifacts |
 | 0.10.0 | Oct 2026 | 🚀 Current | Sign-in and self-service, PostgreSQL, OTRS storage and import, webhooks, reports, route-level authorization |
 | 0.9.0 | Aug 2026 | ✅ Released | Setup Assistant, SAML2 + OIDC identity providers, platform/product decoupling, customer KB pages |
 | 0.8.3 | May 2026 | ✅ Released | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |

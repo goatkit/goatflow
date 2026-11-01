@@ -218,11 +218,9 @@ GOATFLOW_STATIC_USERS="alice:password:Agent,bob:secret:Customer,carol:adminpass:
 GoatFlow maintains high code quality and security standards through comprehensive automated testing:
 
 ### 🔒 Security Pipeline
-- **Vulnerability Scanning**: Go (`govulncheck`), NPM dependencies (`npm audit`), container images (Trivy)
-- **Static Analysis**: Security (gosec, Semgrep), code quality (golangci-lint, ESLint)
-- **Secret Detection**: GitLeaks scans for accidentally committed secrets
-- **License Compliance**: Automated license checking for all dependencies
-- **SAST**: GitHub CodeQL for comprehensive static application security testing
+- **In CI** on every push, pull request and weekly: Gitleaks secret scanning, gosec (fails the build on any finding), govulncheck on GoatFlow and the plugin SDK (fails when the code calls a known vulnerability), `go vet`, and the route authorization matrix test
+- **Semgrep managed scans** (Semgrep Code and Supply Chain) of the repository, and Dependabot alerts with weekly update pull requests
+- **By hand** with Makefile targets: Trivy (`make trivy-scan`, `make trivy-images`), `bun audit` (`make check-deps`), staticcheck and golangci-lint (`make toolbox-staticcheck`, `make lint`)
 
 ### 🧪 Testing Pipeline  
 - **Unit Tests**: Go backend with race detection, HTMX frontend

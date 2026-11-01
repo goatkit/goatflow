@@ -76,6 +76,16 @@ jobs:
       - name: Run go vet
         run: go vet ./...
 
+      - name: Run govulncheck
+        # Fails the job when GoatFlow or the plugin SDK calls code with a known
+        # vulnerability. Version comes from Dockerfile.toolbox
+        # (GOVULNCHECK_VERSION), as for gosec and `make govulncheck`.
+        run: |
+          GOVULNCHECK_VERSION=$(sed -n 's/^ARG GOVULNCHECK_VERSION=//p' Dockerfile.toolbox)
+          test -n "$GOVULNCHECK_VERSION"
+          go install "golang.org/x/vuln/cmd/govulncheck@${GOVULNCHECK_VERSION}"
+          make govulncheck-host
+
       - name: Upload security artifacts
         uses: actions/upload-artifact@v7.0.1
         if: always()

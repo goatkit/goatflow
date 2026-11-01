@@ -264,7 +264,7 @@ From `.github/workflows/test.yml`:
 | Job | Tool |
 |-----|------|
 | Secret Scanning | Gitleaks |
-| Security Analysis | gosec (fails the build on any finding; same pinned version and flags as `make gosec`; JSON report uploaded; false positives carry a `// #nosec G<rule> -- <reason>` annotation), `go vet` |
+| Security Analysis | gosec (fails the build on any finding; same pinned version and flags as `make gosec`; JSON report uploaded; false positives carry a `// #nosec G<rule> -- <reason>` annotation), govulncheck on the main module and `sdk/go` (fails the build when the code calls a known vulnerability; same pinned version as `make govulncheck`), `go vet` |
 | Tests | Route authorization matrix test, platform boundary lint |
 
 Outside the repository's workflows, Semgrep managed scans cover the repository: Semgrep Code

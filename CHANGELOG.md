@@ -166,6 +166,10 @@ project adheres to [Semantic Versioning](https://semver.org/).
   volume can simply be removed. Helm installs need nothing.
 
 ### Fixed
+- **Knowledge Base screens are translated in every language.** 30 `kb.*` strings (editor labels,
+  search controls, filter chips, category and attachment prompts) were still English in all 14
+  other languages; they are translated now, plus 15 new keys for the KB attachment and editor
+  scripts. The delete-category prompt also gets its missing closing quote.
 - **PostMaster filter rules that set a priority by name, a ticket type or a state now apply.**
   `X-GoatFlow-Priority` / `X-OTRS-Priority`, `X-GoatFlow-Type` and `X-GoatFlow-State` Set rules
   were stored and matched but nothing read them, so the new ticket kept the defaults. A name that
@@ -256,6 +260,9 @@ project adheres to [Semantic Versioning](https://semver.org/).
   PRs against `dev` for Go modules, `bun.lock`, GitHub Actions, Dockerfile and Compose base images
   and the Helm chart. Minor and patch updates are grouped per ecosystem; nothing merges
   automatically.
+- **govulncheck runs in CI.** The Security Analysis job fails when GoatFlow or the plugin SDK
+  (`sdk/go`) calls code with a known vulnerability (`make govulncheck` runs the same check in the
+  toolbox; govulncheck v1.9.0).
 
 ## [0.10.0] - 2026-10-04
 
