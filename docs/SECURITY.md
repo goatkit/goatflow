@@ -122,8 +122,14 @@ There is no SMS or email one-time code.
   `GOMAXPROCS` and lower priority. Plugin HTTP requests through the host reach
   internal addresses only when the plugin's scope names the host, never cloud
   metadata, with at most 5 checked redirects and 32 MiB per response. Admins
-  view and change limits at Admin -> Plugins -> Limits. Details:
-  [PLUGIN_PLATFORM.md](PLUGIN_PLATFORM.md#os-level-process-isolation-grpc).
+  view and change limits at Admin -> Plugins -> Limits. gRPC plugin processes
+  run in a Landlock sandbox: they read only their own directory and system
+  paths, write only their temp directory, have no `/proc` (other processes are
+  invisible), can't read GoatFlow's files, memory or environment, and on Linux
+  6.12 or later can't signal other processes; the Limits page says which parts
+  the kernel enforces. `goats` marks itself non-dumpable, so same-user
+  processes can't read its `/proc` files either.
+  Details: [PLUGIN_PLATFORM.md](PLUGIN_PLATFORM.md#os-level-process-isolation-grpc).
 
 There is no attribute-based (ABAC) policy engine.
 
@@ -216,8 +222,9 @@ start:
 | Makefile tools (Trivy, Gitleaks, Dive, curl) | the calling user; container-socket tools add its group |
 
 Helm pods also have a read-only root filesystem, no privilege escalation and all capabilities
-dropped. The one exception is the TrueNAS app, whose TrueNAS permissions helper runs as root
-(without network) to set dataset ownership, as in every TrueNAS catalog app.
+dropped. `goats` (backend, runner and customer-fe) refuses to start as root (uid 0). The one
+exception is the TrueNAS app, whose TrueNAS permissions helper runs as root (without network) to
+set dataset ownership, as in every TrueNAS catalog app.
 
 ## Release artifacts
 

@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/goatkit/goatflow/internal/platform/audit"
+	"github.com/goatkit/goatflow/internal/platform/landlock"
 	"github.com/goatkit/goatflow/internal/platform/middleware"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	plugingrpc "github.com/goatkit/goatflow/internal/platform/plugin/grpc"
@@ -248,6 +249,14 @@ func pluginPolicyView(name string, policy plugin.ResourcePolicy) gin.H {
 	if p, ok := pluginManager.Lookup(name); ok {
 		if cg, ok := p.(interface{ CgroupEnforced() bool }); ok {
 			view["cgroup_enforced"] = cg.CgroupEnforced()
+		}
+		if sb, ok := p.(interface{ SandboxABI() int }); ok {
+			abi := sb.SandboxABI()
+			view["sandbox"] = gin.H{
+				"files":       abi >= landlock.FilesABI,
+				"signals":     abi >= landlock.SignalsABI,
+				"full_kernel": landlock.FullKernel,
+			}
 		}
 	}
 	return view

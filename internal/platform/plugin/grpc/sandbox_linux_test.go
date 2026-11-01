@@ -101,13 +101,13 @@ func TestBuildPluginEnv_LauncherSettingStaysWithHost(t *testing.T) {
 
 func TestLauncherArgsCarryPolicyLimits(t *testing.T) {
 	policy := plugin.ResourcePolicy{MemoryMB: 256, CPUMillis: 500}
-	got := strings.Join(launcherArgs(policy.Launch(), "/app/plugins/x/x"), " ")
-	if want := "--memory-mb 256 --cpu-millis 500 --deny-network -- /app/plugins/x/x"; got != want {
+	got := strings.Join(launcherArgs(policy.Launch(), "/app/tmp/goatflow-plugin-x", "/app/plugins/x/x"), " ")
+	if want := "--memory-mb 256 --cpu-millis 500 --write-dir /app/tmp/goatflow-plugin-x --deny-network -- /app/plugins/x/x"; got != want {
 		t.Errorf("args = %q, want %q", got, want)
 	}
 	withNetwork := plugin.ResourcePolicy{Permissions: []plugin.Permission{{Type: plugin.PermissionNetwork}}}
-	got = strings.Join(launcherArgs(withNetwork.Launch(), "/p"), " ")
-	if want := "--memory-mb 512 --cpu-millis 1000 -- /p"; got != want {
+	got = strings.Join(launcherArgs(withNetwork.Launch(), "/w", "/p"), " ")
+	if want := "--memory-mb 512 --cpu-millis 1000 --write-dir /w -- /p"; got != want {
 		t.Errorf("args with defaults and network = %q, want %q", got, want)
 	}
 }

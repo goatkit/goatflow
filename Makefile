@@ -2696,15 +2696,15 @@ css-build: css-deps-stable
 js-build: css-deps-stable
 	@printf "🔨 Building JavaScript bundles (rootless)...\n"
 	@[ -d static/js ] || mkdir -p static/js
-	@# Probe write as container user (touch). If fails, repair ownership.
+	@# Probe write as the toolbox user (the caller's UID); never repair as root.
 	@if echo "$(COMPOSE_CMD)" | grep -q "podman-compose"; then \
 		COMPOSE_PROFILES=toolbox $(COMPOSE_CMD) run --rm toolbox sh -c 'cd /workspace && touch static/js/.permcheck 2>/dev/null || exit 23'; status=$$?; \
 	else \
 		$(COMPOSE_CMD) --profile toolbox run --rm toolbox sh -c 'cd /workspace && touch static/js/.permcheck 2>/dev/null || exit 23'; status=$$?; \
 	fi; \
 	if [ $$status -eq 23 ]; then \
-		printf "⚠️  static/js not writable by uid 1000 – fixing...\n"; \
-		$(MAKE) frontend-fix-js-dir; \
+		printf "❌ static/js is not writable by uid %s (files left by an old root build?).\n   Fix once with: sudo chown -R %s:%s static/js\n" "$(HOST_UID)" "$(HOST_UID)" "$(HOST_GID)"; \
+		exit 1; \
 	else \
 		rm -f static/js/.permcheck || true; \
 	fi
@@ -2730,11 +2730,6 @@ js-build: css-deps-stable
 	fi
 	@SIZE=$$(stat -c%s static/js/tiptap.min.js); if [ "$$SIZE" -lt 300000 ]; then echo "❌ Bundle suspiciously small: $$SIZE bytes"; exit 1; fi
 	@ls -lh static/js/tiptap.min.js | awk '{print "✅ JavaScript built:" $$9 " (" $$5 ")"}'
-.PHONY: frontend-fix-js-dir
-frontend-fix-js-dir:
-	@printf "🩹 Fixing static/js ownership inside container (one-time)...\n"
-	@$(CONTAINER_CMD) run --rm -v "$$PWD:/workspace:Z" -w /workspace --user 0 alpine:3.19 sh -c 'chown -R 1000:1000 static/js'
-	@printf "✅ static/js now owned by uid 1000 (container view)\n"
 # Build all frontend assets
 frontend-build: css-build js-build
 	@printf "✅ All frontend assets built\n"
@@ -2754,12 +2749,6 @@ frontend-clean-cache:
 frontend-reset-deps: frontend-clean-cache
 	@printf "🔄 Forcing fresh dependency install next build\\n"
 
-.PHONY: frontend-perms-fix
-frontend-perms-fix:
-	@printf "🔧 Normalizing frontend file permissions...\n"
-	@find static/js -maxdepth 1 -type f -name 'tiptap.min.js' -exec $(CONTAINER_CMD) run --rm -v "$$PWD:/workspace" -w /workspace --user 0 alpine:3.19 sh -c 'chown 1000:1000 /workspace/{} || true' \;
-	@chmod ug+rw static/js 2>/dev/null || true
-	@printf "✅ Permissions normalized (owner=uid 1000 for built assets where possible)\n"
 # Watch and rebuild CSS on changes (in container with user permissions)
 css-watch: css-deps
 	@printf "👁️  Watching for CSS changes...\n"

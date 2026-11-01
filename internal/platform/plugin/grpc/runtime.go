@@ -18,12 +18,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 	goplugin "github.com/hashicorp/go-plugin"
 
+	"github.com/goatkit/goatflow/internal/platform/landlock"
 	"github.com/goatkit/goatflow/internal/platform/plugin"
 	"github.com/goatkit/goatflow/internal/platform/version"
 	"github.com/goatkit/goatflow/pkg/plugin/grpcutil"
@@ -223,6 +225,16 @@ func (p *GRPCPlugin) SetDeclaredResources(r *plugin.ResourceRequest) {
 // limits apply.
 func (p *GRPCPlugin) CgroupEnforced() bool {
 	return p.cgroup != nil
+}
+
+// landlockABI is the kernel's Landlock ABI version, the same for every
+// plugin the launcher starts.
+var landlockABI = sync.OnceValue(landlock.ABI)
+
+// SandboxABI is the Landlock ABI version the launcher confines the plugin
+// process with; 0 means it runs without the file and process sandbox.
+func (p *GRPCPlugin) SandboxABI() int {
+	return landlockABI()
 }
 
 // Init implements plugin.Plugin. host is the plugin's SandboxedHostAPI: from

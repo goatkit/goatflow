@@ -240,6 +240,7 @@ On Linux, gRPC plugin processes are started through GoatFlow's launcher with the
 - **CPU** — `cpu_millis` sets `GOMAXPROCS` and the process runs at lower priority; where the host delegates a cgroup, `cpu.max` and `memory.max` are hard limits too
 - **Network** — without the `network` permission your process can't open network connections; use the HostAPI `HTTPRequest`, which is checked against your `http` scope
 - **Parent death signal** (`Pdeathsig: SIGKILL`) — if GoatFlow crashes, plugin processes are killed immediately (no orphans)
+- **Files and other processes** — a Landlock sandbox: you can read and execute your plugin's own directory and system paths (`/usr`, `/lib`, `/bin`, `/etc`, ...) and write only `TMPDIR`. There is no `/proc`, so other processes are invisible and `os.Executable` fails; from Linux 6.12 you can't signal other processes. Store lasting data through the HostAPI, not on disk
 - **Minimal environment** — your process receives only:
   - `PATH=/usr/local/bin:/usr/bin:/bin`
   - `HOME=/app/tmp/goatflow-plugin-<name>` (plugin-specific temp dir)

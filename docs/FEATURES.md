@@ -270,7 +270,7 @@ See [HIGH_AVAILABILITY.md](HIGH_AVAILABILITY.md).
 - ✅ Plugin navigation control (hide built-in nav items, custom landing page, Profile menu location)
 - ⚠️ Hooks (plugins can register scheduled jobs and deletion cascades; no ticket-event hooks)
 - ⚠️ Plugin events (plugins publish events to browsers over SSE, with an optional EventAuthorizer; plugins cannot subscribe to platform events)
-- ⚠️ Sandboxed execution (WASM memory and call-time limits; gRPC plugins get mount and PID namespaces when GoatFlow runs as root outside a container; no CPU or memory limits)
+- ✅ Sandboxed execution (WASM memory and call-time limits; gRPC plugins get memory, CPU and network limits and a Landlock sandbox: own directory and temp dir only, no access to GoatFlow's files, memory or environment, no signals to other processes on Linux 6.12+)
 - ✅ Hot reload (on unless `GOATFLOW_PLUGIN_HOT_RELOAD=false`; the container image sets it to `false`)
 
 ### Monitoring & Observability

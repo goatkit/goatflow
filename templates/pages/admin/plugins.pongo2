@@ -334,6 +334,9 @@
      data-declared="{{ t('admin.plugin_limits.stored_declared')|default:'Declared by the plugin' }}"
      data-cgroup-on="{{ t('admin.plugin_limits.cgroup_enforced')|default:'Hard cgroup limits in force' }}"
      data-cgroup-off="{{ t('admin.plugin_limits.cgroup_not_enforced')|default:'Process limits only (no delegated cgroup)' }}"
+     data-sandbox-full="{{ t('admin.plugin_limits.sandbox_full')|default:'Landlock: files, process memory and signals isolated' }}"
+     data-sandbox-partial="{{ t('admin.plugin_limits.sandbox_partial')|default:'Landlock: files and process memory isolated. Upgrade the kernel to Linux {kernel} or later to isolate signals too.' }}"
+     data-sandbox-off="{{ t('admin.plugin_limits.sandbox_off')|default:'Not enforced. Upgrade the kernel to Linux {kernel} or later, with Landlock enabled, to isolate files, process memory and signals.' }}"
      data-reset-confirm="{{ t('admin.plugin_limits.reset_confirm')|default:'Drop the administrator limits for this plugin and use what it declares?' }}"
      data-error="{{ t('common.error')|default:'Error' }}"></div>
 <div id="plugin-limits-modal" class="hidden fixed z-30 inset-0 overflow-y-auto" aria-labelledby="limits-modal-title" role="dialog" aria-modal="true">
@@ -367,6 +370,8 @@
                     <div style="color: var(--gk-text-primary);" id="limits-source">-</div>
                     <div style="color: var(--gk-text-muted);" class="limits-cgroup hidden">{{ t("admin.plugin_limits.enforcement")|default:"Enforcement" }}</div>
                     <div style="color: var(--gk-text-primary);" class="limits-cgroup hidden" id="limits-cgroup">-</div>
+                    <div style="color: var(--gk-text-muted);" class="limits-sandbox hidden">{{ t("admin.plugin_limits.sandbox")|default:"Sandbox" }}</div>
+                    <div style="color: var(--gk-text-primary);" class="limits-sandbox hidden" id="limits-sandbox">-</div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -981,6 +986,13 @@ function fillLimitsForm(data) {
     document.querySelectorAll('.limits-cgroup').forEach(el => el.classList.toggle('hidden', !hasCgroup));
     if (hasCgroup) {
         document.getElementById('limits-cgroup').textContent = data.cgroup_enforced ? limitsText('cgroupOn') : limitsText('cgroupOff');
+    }
+
+    const sandbox = data.sandbox;
+    document.querySelectorAll('.limits-sandbox').forEach(el => el.classList.toggle('hidden', !sandbox));
+    if (sandbox) {
+        const key = sandbox.signals ? 'sandboxFull' : (sandbox.files ? 'sandboxPartial' : 'sandboxOff');
+        document.getElementById('limits-sandbox').textContent = limitsText(key).replace('{kernel}', sandbox.full_kernel);
     }
 
     const usage = data.usage;

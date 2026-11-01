@@ -14,8 +14,11 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
+
+	"github.com/goatkit/goatflow/internal/platform/landlock"
 )
 
 // The test binary doubles as the launcher (GOATFLOW_EXEC_TEST_LAUNCHER=1) and
@@ -69,6 +72,15 @@ func probe(mode string, args []string) error {
 		return nil
 	case "touch":
 		return os.WriteFile(args[0], nil, 0o600)
+	case "read":
+		_, err := os.ReadFile(args[0])
+		return err
+	case "signal":
+		pid, _ := strconv.Atoi(args[0])
+		return syscall.Kill(pid, 0)
+	case "list":
+		_, err := os.ReadDir(args[0])
+		return err
 	}
 	return errors.New("unknown probe " + mode)
 }
@@ -108,11 +120,23 @@ func tcpListener(t *testing.T) string {
 	return l.Addr().String()
 }
 
-var defaultFlags = []string{"--memory-mb", "512", "--cpu-millis", "1000"}
+// flags returns launcher flags with defaults for anything extra omits; the
+// plugin may write only dir.
+func flags(dir string, extra ...string) []string {
+	return append([]string{"--memory-mb", "512", "--cpu-millis", "1000", "--write-dir", dir}, extra...)
+}
+
+func requireLandlock(t *testing.T, abi int) {
+	t.Helper()
+	if landlock.ABI() < abi {
+		t.Skipf("kernel has Landlock ABI %d, this test needs %d", landlock.ABI(), abi)
+	}
+}
 
 func TestDenyNetworkBlocksTCPButNotUnixSockets(t *testing.T) {
 	addr := tcpListener(t)
-	deny := append([]string{"--deny-network"}, defaultFlags...)
+	dir := t.TempDir()
+	deny := flags(dir, "--deny-network")
 
 	out, err := launch(t, deny, "dial", addr)
 	if err == nil {
@@ -122,7 +146,7 @@ func TestDenyNetworkBlocksTCPButNotUnixSockets(t *testing.T) {
 		t.Errorf("TCP dial failed for the wrong reason: %s", out)
 	}
 
-	sock := filepath.Join(t.TempDir(), "p.sock")
+	sock := filepath.Join(dir, "p.sock")
 	if out, err := launch(t, deny, "listen-unix", sock); err != nil {
 		t.Errorf("unix socket refused under --deny-network: %v: %s", err, out)
 	}
@@ -130,13 +154,13 @@ func TestDenyNetworkBlocksTCPButNotUnixSockets(t *testing.T) {
 
 func TestNetworkAllowedWithoutDenyNetwork(t *testing.T) {
 	addr := tcpListener(t)
-	if out, err := launch(t, defaultFlags, "dial", addr); err != nil {
+	if out, err := launch(t, flags(t.TempDir()), "dial", addr); err != nil {
 		t.Errorf("TCP dial failed without --deny-network: %v: %s", err, out)
 	}
 }
 
 func TestMemoryLimitStopsOverAllocation(t *testing.T) {
-	limit := []string{"--memory-mb", "128", "--cpu-millis", "1000"}
+	limit := []string{"--memory-mb", "128", "--cpu-millis", "1000", "--write-dir", t.TempDir()}
 	if out, err := launch(t, limit, "alloc", "16"); err != nil {
 		t.Fatalf("allocating 16 MiB under a 128 MiB limit failed: %v: %s", err, out)
 	}
@@ -154,7 +178,7 @@ func TestGoRuntimeLimitsFollowFlags(t *testing.T) {
 	t.Setenv("GOMEMLIMIT", "")
 	_ = os.Unsetenv("GOMAXPROCS") // t.Setenv restores them afterwards
 	_ = os.Unsetenv("GOMEMLIMIT")
-	out, err := launch(t, []string{"--memory-mb", "200", "--cpu-millis", "1500"}, "runtime")
+	out, err := launch(t, []string{"--memory-mb", "200", "--cpu-millis", "1500", "--write-dir", t.TempDir()}, "runtime")
 	if err != nil {
 		t.Fatalf("%v: %s", err, out)
 	}
@@ -166,9 +190,11 @@ func TestGoRuntimeLimitsFollowFlags(t *testing.T) {
 
 func TestRefusesToStartPluginWithoutLimits(t *testing.T) {
 	for name, flags := range map[string][]string{
-		"no memory": {"--cpu-millis", "1000", "--deny-network"},
-		"no cpu":    {"--memory-mb", "512"},
-		"bad flag":  {"--memory-mb", "512", "--cpu-millis", "1000", "--allow-everything"},
+		"no memory":    {"--cpu-millis", "1000", "--write-dir", "/tmp", "--deny-network"},
+		"no cpu":       {"--memory-mb", "512", "--write-dir", "/tmp"},
+		"no write dir": {"--memory-mb", "512", "--cpu-millis", "1000"},
+		"relative dir": {"--memory-mb", "512", "--cpu-millis", "1000", "--write-dir", "tmp"},
+		"bad flag":     {"--memory-mb", "512", "--cpu-millis", "1000", "--write-dir", "/tmp", "--allow-everything"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			marker := filepath.Join(t.TempDir(), "started")
@@ -183,5 +209,51 @@ func TestRefusesToStartPluginWithoutLimits(t *testing.T) {
 				t.Error("plugin ran although its limits were not applied")
 			}
 		})
+	}
+}
+
+func TestSandboxConfinesFilesToWriteDir(t *testing.T) {
+	requireLandlock(t, landlock.FilesABI)
+	dir, elsewhere := t.TempDir(), t.TempDir()
+	secret := filepath.Join(elsewhere, "secret")
+	if err := os.WriteFile(secret, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := launch(t, flags(dir), "touch", filepath.Join(dir, "ok")); err != nil {
+		t.Errorf("writing the write dir failed: %v: %s", err, out)
+	}
+	for name, probeArgs := range map[string][]string{
+		"write elsewhere": {"touch", filepath.Join(elsewhere, "new")},
+		"read elsewhere":  {"read", secret},
+	} {
+		out, err := launch(t, flags(dir), probeArgs...)
+		if err == nil || !strings.Contains(out, "permission denied") {
+			t.Errorf("%s: want permission denied, got %v: %s", name, err, out)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(elsewhere, "new")); err == nil {
+		t.Error("the plugin created a file outside its write dir")
+	}
+}
+
+// The launcher's parent stands in for goats: same user, outside the sandbox.
+func TestSandboxClosesOtherProcesses(t *testing.T) {
+	requireLandlock(t, landlock.FilesABI)
+	parent := strconv.Itoa(os.Getpid())
+	for name, probeArgs := range map[string][]string{
+		"parent's environment":  {"read", "/proc/" + parent + "/environ"},
+		"parent's command line": {"read", "/proc/" + parent + "/cmdline"},
+		"process list":          {"list", "/proc"},
+	} {
+		out, err := launch(t, flags(t.TempDir()), probeArgs...)
+		if err == nil || !strings.Contains(out, "permission denied") {
+			t.Errorf("%s: want permission denied, got %v: %s", name, err, out)
+		}
+	}
+
+	requireLandlock(t, landlock.SignalsABI)
+	out, err := launch(t, flags(t.TempDir()), "signal", parent)
+	if err == nil || !strings.Contains(out, "operation not permitted") {
+		t.Errorf("signalling the parent: want operation not permitted, got %v: %s", err, out)
 	}
 }

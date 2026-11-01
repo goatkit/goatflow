@@ -84,6 +84,10 @@ func main() {
 	// both slog and legacy stdlib log call sites behave consistently.
 	logging.Configure()
 	defer logging.RunCleanupHooks()
+	if err := checkNotRoot(os.Geteuid()); err != nil {
+		log.Fatal(err)
+	}
+	closeProcFiles()
 
 	// Initialize libvips for image processing (AVIF, HEIC, WebP, etc.)
 	vips.Startup(nil)

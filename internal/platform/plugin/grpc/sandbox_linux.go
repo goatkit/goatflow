@@ -38,8 +38,8 @@ func pluginCommand(execPath, pluginName string, policy plugin.ResourcePolicy) (*
 	limits := policy.Launch()
 
 	// #nosec G204 -- launcher and plugin binary are chosen by the host, not by request input
-	cmd := exec.Command(launcher, launcherArgs(limits, execPath)...)
-	cmd.SysProcAttr = buildSysProcAttr()
+	cmd := exec.Command(launcher, launcherArgs(limits, pluginTmpDir(pluginName), execPath)...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGKILL} // the plugin dies with the host
 	cmd.Env = buildPluginEnv(policy, pluginName)
 
 	cg := newPluginCgroup(pluginName, limits, launcher)
@@ -50,12 +50,14 @@ func pluginCommand(execPath, pluginName string, policy plugin.ResourcePolicy) (*
 	return cmd, cg, nil
 }
 
-// launcherArgs is the launcher's argv (after its own name) for the plugin.
-func launcherArgs(limits plugin.LaunchLimits, execPath string) []string {
-	args := make([]string, 0, 7)
+// launcherArgs is the launcher's argv (after its own name) for the plugin,
+// which may write only writeDir.
+func launcherArgs(limits plugin.LaunchLimits, writeDir, execPath string) []string {
+	args := make([]string, 0, 9)
 	args = append(args,
 		"--memory-mb", strconv.Itoa(limits.MemoryMB),
-		"--cpu-millis", strconv.Itoa(limits.CPUMillis))
+		"--cpu-millis", strconv.Itoa(limits.CPUMillis),
+		"--write-dir", writeDir)
 	if !limits.Network {
 		args = append(args, "--deny-network")
 	}
@@ -111,19 +113,20 @@ func safePluginName(name string) bool {
 	return true
 }
 
-// buildSysProcAttr creates OS-level process restrictions for gRPC plugin processes on Linux.
-func buildSysProcAttr() *syscall.SysProcAttr {
-	attr := &syscall.SysProcAttr{
-		// Plugin dies when host dies - prevent orphaned processes
-		Pdeathsig: syscall.SIGKILL,
-	}
+// pluginTmpBase is the writable app temp dir. /tmp is not writable in the
+// alpine runtime image (mode 0755, root-owned), so go-plugin could not create
+// its unix socket there; /app/tmp is created and chowned to appuser in the
+// Dockerfile runtime-base stage.
+const pluginTmpBase = "/app/tmp"
 
-	// Apply namespace isolation where available and permitted (requires Linux
-	// kernel support and privileges).
-	if supportsNamespaces() {
-		attr.Cloneflags = syscall.CLONE_NEWNS | syscall.CLONE_NEWPID
+// pluginTmpDir is the plugin's own HOME and TMPDIR, the only directory its
+// sandbox may write. It falls back to pluginTmpBase when it can't be created.
+func pluginTmpDir(pluginName string) string {
+	dir := filepath.Join(pluginTmpBase, "goatflow-plugin-"+pluginName)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return pluginTmpBase
 	}
-	return attr
+	return dir
 }
 
 // buildPluginEnv creates a minimal, restricted environment for the plugin process.
@@ -134,21 +137,8 @@ func buildPluginEnv(policy plugin.ResourcePolicy, pluginName string) []string {
 		"PATH=/usr/local/bin:/usr/bin:/bin", // Basic PATH
 	}
 
-	// Create plugin-specific temp directory under the writable app temp dir.
-	// /tmp is NOT world-writable in the alpine runtime image (mode 0755,
-	// root-owned), so go-plugin cannot create its unix socket there and the
-	// plugin exits before the handshake. /app/tmp is created and chowned to
-	// appuser in the Dockerfile runtime-base stage.
-	const pluginTmpBase = "/app/tmp"
-	tmpDir := filepath.Join(pluginTmpBase, "goatflow-plugin-"+pluginName)
-	if err := os.MkdirAll(tmpDir, 0700); err == nil {
-		env = append(env, "HOME="+tmpDir)
-		env = append(env, "TMPDIR="+tmpDir)
-	} else {
-		// Fall back to the writable app temp base (never /tmp — it is not writable).
-		env = append(env, "HOME="+pluginTmpBase)
-		env = append(env, "TMPDIR="+pluginTmpBase)
-	}
+	tmpDir := pluginTmpDir(pluginName)
+	env = append(env, "HOME="+tmpDir, "TMPDIR="+tmpDir)
 
 	// Add timezone for time-aware plugins
 	if tz := os.Getenv("TZ"); tz != "" {
@@ -178,40 +168,4 @@ func buildPluginEnv(policy plugin.ResourcePolicy, pluginName string) []string {
 	}
 
 	return env
-}
-
-// supportsNamespaces checks if namespace isolation is available and permitted.
-// Inside Docker containers, namespace creation is usually denied (EPERM)
-// even though the kernel supports it.
-func supportsNamespaces() bool {
-	// Check kernel support
-	if _, err := os.Stat("/proc/sys/user/max_user_namespaces"); err != nil {
-		return false
-	}
-
-	// CLONE_NEWNS|CLONE_NEWPID without a user namespace needs CAP_SYS_ADMIN:
-	// a non-root process gets EPERM and the plugin would never start.
-	if os.Geteuid() != 0 {
-		return false
-	}
-
-	// Detect container environment where namespace creation is typically denied.
-	// Check /.dockerenv (Docker) or /run/.containerenv (Podman).
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return false
-	}
-	if _, err := os.Stat("/run/.containerenv"); err == nil {
-		return false
-	}
-
-	// Check cgroup for container signatures
-	if data, err := os.ReadFile("/proc/1/cgroup"); err == nil {
-		s := string(data)
-		if strings.Contains(s, "docker") || strings.Contains(s, "containerd") ||
-			strings.Contains(s, "kubepods") || strings.Contains(s, "lxc") {
-			return false
-		}
-	}
-
-	return true
 }

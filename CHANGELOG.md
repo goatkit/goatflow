@@ -193,6 +193,31 @@ project adheres to [Semantic Versioning](https://semver.org/).
   `/cache/tmp`, which the toolbox no longer mounts; it now uses the workspace `tmp/`.
 
 ### Security
+- **Plugins can no longer read GoatFlow's secrets or signal it.** gRPC plugin processes run as
+  the same user as `goats`, so a plugin could read the backend's environment from
+  `/proc/<pid>/environ` (database password, `GOATFLOW_SECURE_KEY`, JWT secret) and send it
+  signals, although the plugin's own environment never carried them. Two changes close this:
+  - `goats` marks itself non-dumpable at start-up, so its `/proc` files (environment, memory,
+    open files) belong to root and no process running as the same user can read them.
+  - The plugin launcher confines every gRPC plugin with Landlock, which needs no privileges and
+    works in standard containers: the plugin reads and executes only its own directory and system
+    paths, writes only its temp directory, has no `/proc` (other processes are invisible: no
+    process list, command lines or status), and can't read GoatFlow's files or another process's
+    memory or environment; from Linux 6.12 it can't signal processes outside the sandbox, and
+    without the `network` permission it also can't bind or connect TCP (Linux 6.7). A kernel
+    without Landlock (before 5.13, or not enabled) starts the plugin with a warning; Admin ->
+    Plugins -> Limits shows what the kernel enforces and which kernel version enables the rest.
+  The mount and PID namespaces that were applied only when GoatFlow ran as root outside a
+  container are removed: GoatFlow no longer runs as root (below), and container profiles refuse
+  them. **Upgrading:** a plugin that writes files outside its `TMPDIR` (`HOME`), reads files
+  outside its own directory and the system paths, or reads `/proc` (including `os.Executable`)
+  now gets "permission denied"; store data through the HostAPI.
+- **GoatFlow refuses to run as root.** `goats` (backend, runner and customer-fe) exits at start-up
+  when its user id is 0. The container images, compose files, Helm chart and TrueNAS app already
+  run it as uid 1000. The last two Makefile targets that started a container as root
+  (`frontend-fix-js-dir`, `frontend-perms-fix`, which chowned `static/js`) are removed; `make
+  js-build` now stops with the `sudo chown` command to run if `static/js` isn't writable.
+  **Upgrading:** a setup that starts `goats` as root must run it as an unprivileged user.
 - **Go 1.26.10 (from 1.25.12).** Go 1.25 no longer receives security fixes. govulncheck found 25
   vulnerabilities reachable from GoatFlow code, most in the standard library (HTTP/2 and HTTP
   servers, TLS, `html/template`, x509 certificate distrust, XML and ASN.1 decoding), the rest in
