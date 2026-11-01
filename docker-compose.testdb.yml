@@ -35,7 +35,7 @@ services:
       - goatflow-network
 
   mariadb-test:
-    image: docker.io/mariadb:11
+    image: docker.io/mariadb:13
     container_name: goatflow-mariadb-test
     user: "999:999"
     environment:
