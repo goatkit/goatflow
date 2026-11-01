@@ -9,8 +9,8 @@ require (
 	github.com/crewjam/saml v0.5.1
 	github.com/davidbyttow/govips/v2 v2.16.0
 	github.com/dop251/goja v0.0.0-20241009100908-5f46f2705ca3
-	github.com/emersion/go-imap/v2 v2.0.0-beta.7
-	github.com/emersion/go-message v0.18.1
+	github.com/emersion/go-imap/v2 v2.0.0-beta.8
+	github.com/emersion/go-message v0.18.2
 	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gin-gonic/gin v1.11.0
@@ -47,6 +47,7 @@ require (
 	golang.org/x/mod v0.41.0
 	golang.org/x/net v0.62.0
 	golang.org/x/oauth2 v0.36.0
+	golang.org/x/sys v0.49.0
 	golang.org/x/text v0.43.0
 	golang.org/x/tools v0.51.0
 	google.golang.org/grpc v1.83.2
@@ -86,7 +87,7 @@ require (
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
-	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43 // indirect
+	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6 // indirect
 	github.com/fatih/color v1.14.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
@@ -196,7 +197,6 @@ require (
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/image v0.44.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
