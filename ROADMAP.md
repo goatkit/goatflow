@@ -4,9 +4,11 @@ Current status, upcoming releases, and future plans for GoatFlow. Full release h
 
 ## 🚀 Current Status
 
-**Version**: 0.11.0 (released 2026-11-01). Previous release: 0.10.0 (2026-10-04).
+**Version**: 0.11.1 (released 2026-11-02). Previous release: 0.11.0 (2026-11-01).
 
 0.11.0 theme: security basics (signed plugins required, a Landlock sandbox and enforced per-plugin CPU, memory and network limits, an audit log of sign-ins and admin changes, non-root containers and GoatFlow refusing to run as root, signed and attested release artifacts, govulncheck in CI), plus the inbound mail decision filter, agent time zones, plugin app mode and marketplace dependency installs.
+
+0.11.1 fixes: plugin signatures are checked on every start (hot reload and automatic restarts skipped the check), tickets can be permanently deleted, and a daily job empties the recycle bin after 60 days.
 
 GoatFlow is an ITSM and helpdesk system built on the GoatKit platform. It is written in Go as a modular monolith. It covers support ticketing, ITSM features and customization through plugins.
 
@@ -421,7 +423,8 @@ Enterprise plugins are paid, reusable horizontal capabilities built on GoatKit c
 | 0.14.0 | — | 🔮 Future | Calendar & Appointments plugin |
 | 0.13.0 | — | 🔮 Future | Documentation and quality |
 | 0.12.0 | — | 🔮 Future | Security review (general API rate limit, OWASP Top 10, hardening guide), performance and observability |
-| 0.11.0 | Nov 2026 | 🚀 Current | Security basics: signed plugins, plugin sandbox and limits, audit log, non-root, signed release artifacts |
+| 0.11.1 | Nov 2026 | 🚀 Current | Fixes: plugin signature check on every start, ticket permanent delete, recycle bin retention |
+| 0.11.0 | Nov 2026 | ✅ Released | Security basics: signed plugins, plugin sandbox and limits, audit log, non-root, signed release artifacts |
 | 0.10.0 | Oct 2026 | ✅ Released | Sign-in and self-service, PostgreSQL, OTRS storage and import, webhooks, reports, route-level authorization |
 | 0.9.0 | Aug 2026 | ✅ Released | Setup Assistant, SAML2 + OIDC identity providers, platform/product decoupling, customer KB pages |
 | 0.8.3 | May 2026 | ✅ Released | Plugin Auto-Restart, Plugin UI Offline, WebAuthn, Quality |

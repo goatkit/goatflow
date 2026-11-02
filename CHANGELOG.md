@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-02
+
 **Upgrading from 0.11.0**
 - **The recycle bin is now emptied after 60 days.** Its first run (daily at 03:45) permanently
   deletes everything soft-deleted more than 60 days ago. Restore anything you want to keep from

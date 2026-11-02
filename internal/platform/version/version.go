@@ -15,7 +15,7 @@ import (
 // the Dockerfile with -ldflags -X.
 var (
 	// Version is the GoatFlow release this source tree is (e.g. "0.10.0").
-	Version = "0.11.0"
+	Version = "0.11.1"
 
 	// GitCommit is the short git commit SHA
 	GitCommit = "unknown"
