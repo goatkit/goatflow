@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
@@ -61,6 +62,12 @@ func Active() Config {
 // ForDB returns the configured article store on db.
 func ForDB(db *sql.DB) ArticleStore {
 	return New(Active(), db)
+}
+
+// DeleteArticleContent removes an article's attachments and raw email from the
+// configured store on db as part of tx (deletion.ArticleContentDeleter).
+func DeleteArticleContent(ctx context.Context, db *sql.DB, tx *sql.Tx, articleID int64) error {
+	return ForDB(db).WithTx(tx).DeleteArticle(ctx, articleID)
 }
 
 // New returns the store for a validated cfg.

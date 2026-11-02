@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync"
 	"time"
 
@@ -51,6 +52,25 @@ func SetPreDispatchHook(fn func(ctx context.Context, entityType string)) {
 	pluginCascadeMu.Lock()
 	defer pluginCascadeMu.Unlock()
 	preDispatchHook = fn
+}
+
+// ArticleContentDeleter removes an article's attachments and raw email from
+// the product's article store (DB rows or OTRS ArticleStorageFS files) as part
+// of tx. It is injected so this platform package does not import product code.
+type ArticleContentDeleter func(ctx context.Context, db *sql.DB, tx *sql.Tx, articleID int64) error
+
+var (
+	articleContentMu      sync.RWMutex
+	articleContentDeleter ArticleContentDeleter
+)
+
+// SetArticleContentDeleter registers the article content deleter that ticket
+// hard deletes use. Without one, hard-deleting a ticket fails rather than
+// leave its files behind. Call once at boot.
+func SetArticleContentDeleter(fn ArticleContentDeleter) {
+	articleContentMu.Lock()
+	defer articleContentMu.Unlock()
+	articleContentDeleter = fn
 }
 
 // RegisterPluginCascade records a plugin's cascade handlers for an
@@ -309,7 +329,10 @@ func (s *Service) ScopeHardDelete(ctx context.Context, entityType string, entity
 	return deleted, nil
 }
 
-// PurgeExpired hard-deletes all expired recycle bin entries. Called by scheduled job.
+// PurgeExpired hard-deletes all expired recycle bin entries; the recycle-bin
+// retention job calls it. Each entry is purged in its own organisation, so the
+// deletion log and plugin cascades see the right one. Failures are logged and
+// the entry stays for the next run.
 func (s *Service) PurgeExpired(ctx context.Context) (int, error) {
 	expired, err := s.repo.ListExpired()
 	if err != nil {
@@ -318,7 +341,11 @@ func (s *Service) PurgeExpired(ctx context.Context) (int, error) {
 
 	purged := 0
 	for _, entry := range expired {
-		if err := s.HardDelete(ctx, entry.EntityType, entry.EntityID, entry.DeletedBy, "auto-purge: retention expired"); err != nil {
+		entryCtx := ctx
+		if entry.OrgID != nil {
+			entryCtx = organisation.WithOrgID(ctx, *entry.OrgID)
+		}
+		if err := s.HardDelete(entryCtx, entry.EntityType, entry.EntityID, entry.DeletedBy, "auto-purge: retention expired"); err != nil {
 			slog.Warn("auto-purge failed", "entity", entry.EntityType, "id", entry.EntityID, "error", err)
 			continue
 		}
@@ -476,12 +503,7 @@ func (s *Service) hardDeleteEntity(entityType string, entityID int64) error {
 
 	switch entityType {
 	case EntityTicket:
-		return execInTx(db, entityID,
-			"DELETE FROM ticket_history WHERE ticket_id = ?",
-			"DELETE FROM article_data_mime WHERE article_id IN (SELECT id FROM article WHERE ticket_id = ?)",
-			"DELETE FROM article WHERE ticket_id = ?",
-			"DELETE FROM ticket WHERE id = ?",
-		)
+		return hardDeleteTicket(context.Background(), db, entityID)
 
 	case EntityContact:
 		_, err := db.Exec(database.ConvertPlaceholders("DELETE FROM customer_user WHERE id = ?"), entityID)
@@ -518,6 +540,90 @@ func execInTx(db *sql.DB, entityID int64, stmts ...string) error {
 		if _, err := tx.Exec(database.ConvertPlaceholders(stmt), entityID); err != nil {
 			return err
 		}
+	}
+	return tx.Commit()
+}
+
+// ticketArticles selects the ids of a ticket's articles.
+const ticketArticles = "SELECT id FROM article WHERE ticket_id = ?"
+
+// hardDeleteTicket removes a ticket and every row that references it, in one
+// transaction. Article content goes through the injected article content
+// deleter. The ticket and article foreign keys are RESTRICT, so dependent
+// rows go first.
+func hardDeleteTicket(ctx context.Context, db *sql.DB, ticketID int64) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	articleContentMu.RLock()
+	deleteContent := articleContentDeleter
+	articleContentMu.RUnlock()
+	if deleteContent == nil {
+		return fmt.Errorf("hard delete ticket %d: no article content deleter configured", ticketID)
+	}
+
+	rows, err := tx.QueryContext(ctx, database.ConvertPlaceholders(ticketArticles), ticketID)
+	if err != nil {
+		return fmt.Errorf("list articles of ticket %d: %w", ticketID, err)
+	}
+	var articleIDs []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		articleIDs = append(articleIDs, id)
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, id := range articleIDs {
+		if err := deleteContent(ctx, db, tx, id); err != nil {
+			return err
+		}
+	}
+
+	stmts := []string{
+		"DELETE FROM article_data_mime_send_error WHERE article_id IN (" + ticketArticles + ")",
+		"DELETE FROM article_data_mime WHERE article_id IN (" + ticketArticles + ")",
+		"DELETE FROM article_data_otrs_chat WHERE article_id IN (" + ticketArticles + ")",
+		"DELETE FROM article_flag WHERE article_id IN (" + ticketArticles + ")",
+		"DELETE FROM mail_queue WHERE article_id IN (" + ticketArticles + ")",
+		"DELETE FROM dynamic_field_value WHERE object_id IN (" + ticketArticles + ")" +
+			" AND field_id IN (SELECT id FROM dynamic_field WHERE object_type = 'Article')",
+		"DELETE FROM article_search_index WHERE ticket_id = ?",
+		"DELETE FROM ticket_history WHERE ticket_id = ?",
+		"DELETE FROM time_accounting WHERE ticket_id = ?",
+		"DELETE FROM mention WHERE ticket_id = ?",
+		"DELETE FROM article WHERE ticket_id = ?",
+		"DELETE FROM ticket_flag WHERE ticket_id = ?",
+		"DELETE FROM ticket_watcher WHERE ticket_id = ?",
+		"DELETE FROM ticket_index WHERE ticket_id = ?",
+		"DELETE FROM ticket_lock_index WHERE ticket_id = ?",
+		"DELETE FROM calendar_appointment_ticket WHERE ticket_id = ?",
+		"DELETE FROM dynamic_field_value WHERE object_id = ?" +
+			" AND field_id IN (SELECT id FROM dynamic_field WHERE object_type = 'Ticket')",
+		"DELETE FROM ticket WHERE id = ?",
+	}
+	for _, stmt := range stmts {
+		if _, err := tx.ExecContext(ctx, database.ConvertPlaceholders(stmt), ticketID); err != nil {
+			return fmt.Errorf("hard delete ticket %d: %w", ticketID, err)
+		}
+	}
+	key := strconv.FormatInt(ticketID, 10)
+	if _, err := tx.ExecContext(ctx, database.ConvertPlaceholders(`
+		DELETE FROM link_relation
+		WHERE (source_key = ? AND source_object_id IN (SELECT id FROM link_object WHERE name = 'Ticket'))
+		   OR (target_key = ? AND target_object_id IN (SELECT id FROM link_object WHERE name = 'Ticket'))`),
+		key, key); err != nil {
+		return fmt.Errorf("hard delete links of ticket %d: %w", ticketID, err)
 	}
 	return tx.Commit()
 }

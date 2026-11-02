@@ -32,6 +32,7 @@ func (s *Service) registerBuiltinHandlers() {
 	s.RegisterHandler("escalation.check", s.handleEscalationCheck)
 	s.RegisterHandler("metrics.ticketActivity", s.handleMetricsTicketActivity)
 	s.RegisterHandler("audit.purge", s.handleAuditPurge)
+	s.RegisterHandler("recycleBin.purge", s.handleRecycleBinPurge)
 }
 
 func (s *Service) handleAutoClose(ctx context.Context, job *models.ScheduledJob) error {
@@ -484,6 +485,14 @@ func defaultJobs() []*models.ScheduledJob {
 			Slug:           "audit-retention",
 			Handler:        "audit.purge",
 			Schedule:       "30 3 * * *",
+			TimeoutSeconds: 600,
+			Config:         map[string]any{},
+		},
+		{
+			Name:           "Recycle Bin Retention",
+			Slug:           "recycle-bin-purge",
+			Handler:        "recycleBin.purge",
+			Schedule:       "45 3 * * *",
 			TimeoutSeconds: 600,
 			Config:         map[string]any{},
 		},

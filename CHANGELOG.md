@@ -7,6 +7,26 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+**Upgrading from 0.11.0**
+- **The recycle bin is now emptied after 60 days.** Its first run (daily at 03:45) permanently
+  deletes everything soft-deleted more than 60 days ago. Restore anything you want to keep from
+  Admin -> Recycle Bin before upgrading.
+
+### Added
+- **Recycle bin retention.** A daily job (Recycle Bin Retention, 03:45) permanently deletes
+  entries whose 60-day retention has expired, in their own organisation, and records
+  `system.recycle_bin.purge` in the audit log. Before, nothing ran the purge, so soft-deleted
+  entities stayed in the recycle bin for ever. Some entries still stay, with a warning in the log
+  on each run: agents and queues that other records refer to, and customer companies, which have
+  no permanent delete yet. An agent's name is anonymised when the agent is soft-deleted.
+
+### Fixed
+- **Permanently deleting a ticket works.** Admin -> Recycle Bin -> purge failed with a foreign key
+  error for any ticket with an email, an attachment or a seen flag, which is almost every ticket.
+  It now removes the ticket with its articles, attachments and raw emails (database or
+  ArticleStorageFS), history, time accounting, flags, watchers, search index, mentions, calendar
+  links, ticket links and dynamic field values, in one transaction.
+
 ### Security
 - **Plugin signatures are checked every time a plugin starts.** 0.11.0 checked them at boot,
   upload and marketplace install, but hot reload (a changed binary or `.wasm` file in the plugins

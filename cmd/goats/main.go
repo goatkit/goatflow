@@ -51,6 +51,7 @@ import (
 	"github.com/goatkit/goatflow/internal/platform/cache"
 	"github.com/goatkit/goatflow/internal/platform/config"
 	"github.com/goatkit/goatflow/internal/platform/database"
+	"github.com/goatkit/goatflow/internal/platform/deletion"
 	"github.com/goatkit/goatflow/internal/platform/email/inbound/connector"
 	"github.com/goatkit/goatflow/internal/platform/logging"
 	"github.com/goatkit/goatflow/internal/platform/lookups"
@@ -396,6 +397,10 @@ func main() {
 	}
 	shared.SetGlobalRenderer(renderer)
 	log.Printf("✅ Template renderer initialized (dir=%s)", templateDir) // #nosec G706 -- TEMPLATES_DIR is operator config, not request input
+
+	// Ticket hard deletes (recycle bin purge) remove article content through
+	// the configured article store.
+	deletion.SetArticleContentDeleter(storage.DeleteArticleContent)
 
 	// Initialize plugin system
 	log.Println("🔌 Initializing plugin system...")
