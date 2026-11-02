@@ -37,7 +37,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # ============================================
 # Minimal runtime
 # ============================================
-FROM alpine:3.19
+FROM alpine:3.24
 
 RUN apk add --no-cache ca-certificates bash git
 

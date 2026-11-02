@@ -1,6 +1,6 @@
 # Go + Playwright runner for Go e2e tests
 # Multi-arch: supports both amd64 and arm64
-FROM mcr.microsoft.com/playwright:v1.60.0-jammy
+FROM mcr.microsoft.com/playwright:v1.64.1-jammy
 
 # MCR base ships /tmp as 0755 root:root. apt's acquire queue verifies
 # signatures as the unprivileged _apt user, which cannot create its
