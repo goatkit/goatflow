@@ -118,7 +118,7 @@ services:
       - goatflow-network
 
   keycloak-test:
-    image: quay.io/keycloak/keycloak:26.1
+    image: quay.io/keycloak/keycloak:26.8
     container_name: goatflow-keycloak-test
     command: start-dev --db=dev-file --hostname-strict=false --import-realm
     environment:
