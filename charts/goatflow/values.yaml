@@ -170,7 +170,7 @@ database:
   mysql:
     image:
       repository: mariadb
-      tag: "11"
+      tag: "13"
       pullPolicy: IfNotPresent
 
     # Passwords: generated once and kept across upgrades when empty
