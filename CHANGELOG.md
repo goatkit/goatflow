@@ -7,6 +7,13 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+- **Plugin signatures are checked every time a plugin starts.** 0.11.0 checked them at boot,
+  upload and marketplace install, but hot reload (a changed binary or `.wasm` file in the plugins
+  directory) and the health checker's automatic restarts started the file without checking it.
+  Anyone able to write to the plugins volume could get unsigned code run although signatures were
+  required. A refused reload keeps the running plugin.
+
 ## [0.11.0] - 2026-11-01
 
 **Upgrading from 0.10.0**

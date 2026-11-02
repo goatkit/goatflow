@@ -616,10 +616,15 @@ func (l *Loader) startPlugin(ctx context.Context, name string, declared *plugin.
 	return start(ctx, resolved)
 }
 
-// startGRPC starts a gRPC plugin process under its resolved limits.
+// startGRPC starts a gRPC plugin process under its resolved limits. The
+// binary's signature is checked before every start (boot, upload, hot reload
+// and health-check restart all come through here).
 func (l *Loader) startGRPC(ctx context.Context, binaryPath string, manifest *PluginManifest) (plugin.Plugin, error) {
 	return l.startPlugin(ctx, manifest.Name, manifest.Resources, plugin.ResourcePolicy.Launch,
 		func(_ context.Context, policy plugin.ResourcePolicy) (plugin.Plugin, error) {
+			if err := l.verifier.Check(binaryPath); err != nil {
+				return nil, fmt.Errorf("signature check failed for %s: %w", manifest.Name, err)
+			}
 			gp, err := grpc.LoadGRPCPlugin(binaryPath, manifest.Name, policy)
 			if err != nil {
 				return nil, err
@@ -635,11 +640,15 @@ func wasmLaunchLimits(policy plugin.ResourcePolicy) plugin.LaunchLimits {
 	return plugin.LaunchLimits{MemoryMB: policy.Launch().MemoryMB}
 }
 
-// startWASM loads a WASM module under its resolved limits. name is what the
-// loader knows the plugin as before the module reports its own.
+// startWASM loads a WASM module under its resolved limits, checking its
+// signature before every load. name is what the loader knows the plugin as
+// before the module reports its own.
 func (l *Loader) startWASM(ctx context.Context, name, path string) (plugin.Plugin, error) {
 	return l.startPlugin(ctx, name, nil, wasmLaunchLimits,
 		func(ctx context.Context, policy plugin.ResourcePolicy) (plugin.Plugin, error) {
+			if err := l.verifier.Check(path); err != nil {
+				return nil, fmt.Errorf("signature check failed for WASM plugin %s: %w", filepath.Base(path), err)
+			}
 			wp, err := wasm.LoadFromFile(ctx, path,
 				wasm.WithMemoryLimitMB(policy.Launch().MemoryMB),
 				wasm.WithCallTimeout(plugin.LimitDuration(policy.CallTimeout, plugin.DefaultCallTimeout)))
@@ -661,10 +670,6 @@ func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest 
 	}
 	if info.Mode()&0111 == 0 {
 		return fmt.Errorf("binary %s is not executable", binaryPath)
-	}
-
-	if err := l.verifier.Check(binaryPath); err != nil {
-		return fmt.Errorf("signature check failed for %s: %w", manifest.Name, err)
 	}
 
 	l.logger.Info("loading gRPC plugin", "name", manifest.Name, "binary", binaryPath)
@@ -694,10 +699,6 @@ func (l *Loader) loadGRPCPlugin(ctx context.Context, pluginDir string, manifest 
 // registered with the manager. name is what the loader tracks it as so far.
 func (l *Loader) loadWASMPlugin(ctx context.Context, name, path string) (string, error) {
 	l.logger.Info("loading WASM plugin", "path", path)
-
-	if err := l.verifier.Check(path); err != nil {
-		return "", fmt.Errorf("signature check failed for WASM plugin %s: %w", filepath.Base(path), err)
-	}
 
 	// Load the WASM module
 	wp, err := l.startWASM(ctx, name, path)
