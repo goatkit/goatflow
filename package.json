@@ -11,9 +11,9 @@
     "build": "bun run build-css && bun run build-js"
   },
   "devDependencies": {
-    "browserslist": "^4.28.4",
-    "caniuse-lite": "^1.0.30001799",
-    "esbuild": "^0.28.1"
+    "browserslist": "^4.29.5",
+    "caniuse-lite": "^1.0.30001820",
+    "esbuild": "^0.28.2"
   },
   "keywords": [
     "ticketing",
@@ -31,9 +31,9 @@
   "license": "Apache-2.0",
   "author": "GoatFlow Team",
   "dependencies": {
-    "@playwright/test": "1.57.0",
+    "@playwright/test": "1.64.1",
     "@tailwindcss/forms": "^0.5.11",
-    "@tailwindcss/typography": "^0.5.19",
+    "@tailwindcss/typography": "^0.5.20",
     "@tiptap/core": "^3.32.2",
     "@tiptap/extension-color": "^3.32.2",
     "@tiptap/extension-highlight": "^3.32.2",
