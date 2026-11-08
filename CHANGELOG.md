@@ -7,6 +7,19 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+**Upgrading from 0.11.1**
+- **SAML sign-in is stricter.** Assertions now need a bearer `SubjectConfirmation` and an
+  `AudienceRestriction` naming GoatFlow, which the SAML Web Browser SSO profile requires, and
+  encrypted assertions using RSA PKCS#1 v1.5 key transport (`rsa-1_5`) are refused. If your IdP
+  encrypts assertions with `rsa-1_5`, switch it to RSA-OAEP before upgrading.
+
+### Security
+- **SAML library updated to fix GO-2026-6909.** `github.com/crewjam/saml` 0.5.2 (from 0.5.1)
+  checks the optional elements of a signed assertion for nil, so an assertion from the configured
+  IdP that leaves out `<Subject>` or `<Conditions>` no longer panics the login request, and binds
+  `NameID` and the other assertion elements to the SAML namespace. GoatFlow reads the user from
+  the email attribute, not `NameID`, so only the panic applied.
+
 ## [0.11.1] - 2026-11-02
 
 **Upgrading from 0.11.0**
