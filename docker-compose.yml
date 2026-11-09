@@ -307,7 +307,7 @@ services:
       - goatflow-network
   # Keycloak Test Identity Provider — pre-configured realm, clients, scripted auth
   keycloak-test:
-    image: quay.io/keycloak/keycloak:26.1
+    image: quay.io/keycloak/keycloak:26.8
     container_name: goatflow-keycloak-test
     command: start-dev --db=dev-file --hostname-strict=false --import-realm
     environment:
