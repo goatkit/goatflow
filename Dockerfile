@@ -9,7 +9,7 @@ ARG GO_IMAGE=golang:1.26.10-alpine
 # ============================================
 # Stage 0: Download third-party assets
 # ============================================
-FROM docker.io/alpine:3.19 AS assets
+FROM docker.io/alpine:3.20 AS assets
 
 RUN apk add --no-cache curl unzip
 
@@ -37,7 +37,7 @@ RUN curl -sL "https://use.fontawesome.com/releases/v6.7.2/fontawesome-free-6.7.2
 # ============================================
 # Stage 0b: Build frontend assets (CSS + JS)
 # ============================================
-FROM oven/bun:1.3-alpine AS frontend
+FROM oven/bun:1.4-alpine AS frontend
 
 # Add Node.js for tailwindcss compatibility (bunx has mkdir bugs with tailwind)
 RUN apk add --no-cache nodejs
@@ -96,7 +96,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # ============================================
 # Stage 2b: Build WASM plugins
 # ============================================
-FROM docker.io/tinygo/tinygo:0.32.0 AS wasm-builder
+FROM docker.io/tinygo/tinygo:0.44.0 AS wasm-builder
 
 # COPY creates /plugins owned by tinygo (the image's build user). A WORKDIR
 # first would create it root-owned, and the mkdir below then fails on a clean
@@ -208,7 +208,7 @@ RUN gosec -fmt json -out /tmp/security.json ./... || true && \
 # ============================================
 # Stage 7: Base runtime image with utilities
 # ============================================
-FROM docker.io/alpine:3.19 AS runtime-base
+FROM docker.io/alpine:3.20 AS runtime-base
 
 # Allow customizing runtime UID/GID so host bind mounts/caches are not root-owned
 ARG UID=1000
