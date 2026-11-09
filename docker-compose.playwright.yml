@@ -1,6 +1,6 @@
 services:
   playwright:
-    image: mcr.microsoft.com/playwright:v1.55.1-jammy
+    image: mcr.microsoft.com/playwright:v1.65.0-jammy
     container_name: goatflow-playwright
     user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
     networks:
