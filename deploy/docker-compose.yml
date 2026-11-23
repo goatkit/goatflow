@@ -99,7 +99,7 @@ services:
     restart: unless-stopped
 
   valkey:
-    image: docker.io/valkey/valkey:8-alpine
+    image: docker.io/valkey/valkey:9-alpine
     user: "999:1000" # valkey user in the image
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
