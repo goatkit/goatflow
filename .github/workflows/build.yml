@@ -126,7 +126,7 @@ jobs:
 
       - name: Generate SLSA attestation
         if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build.outputs.digest }}
@@ -225,7 +225,7 @@ jobs:
 
       - name: Generate SLSA attestation
         if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-runner
           subject-digest: ${{ steps.build.outputs.digest }}
@@ -350,14 +350,14 @@ jobs:
 
       - name: Generate SLSA attestation for the OCI chart
         if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository_owner }}/charts/goatflow
           subject-digest: ${{ steps.chart_push.outputs.digest }}
 
       - name: Generate SLSA attestation for the chart package
         if: github.event.inputs.push_to_registry == 'true' || github.event_name == 'push'
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: dist/goatflow-helm-chart-${{ steps.chart.outputs.version }}.tgz
 
@@ -727,7 +727,7 @@ jobs:
           ls -lh goatflow-airgap-container-bundle-${VERSION}.tar.gz
 
       - name: Generate SLSA attestation for the bundle
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: goatflow-airgap-container-bundle-${{ steps.version.outputs.VERSION_NUM }}.tar.gz
 
