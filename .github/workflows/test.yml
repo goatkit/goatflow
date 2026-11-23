@@ -147,7 +147,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6.0.0
+        uses: codecov/codecov-action@v7.1.1
         if: always()
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
