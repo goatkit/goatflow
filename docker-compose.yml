@@ -24,7 +24,7 @@ x-plugin-signing-env: &plugin-signing-env
 services:
   # MariaDB Database - runs as the image's mysql user (999), never root
   mariadb:
-    image: docker.io/mariadb:11
+    image: docker.io/mariadb:13
     container_name: goatflow-mariadb
     user: "999:999"
     environment:

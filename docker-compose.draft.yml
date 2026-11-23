@@ -19,7 +19,7 @@ x-email-env: &email-env
 
 services:
   mariadb:
-    image: docker.io/mariadb:11
+    image: docker.io/mariadb:13
     container_name: goatflow-mariadb
     user: "999:999" # mysql user in the image
     environment:
